@@ -677,13 +677,14 @@ function spawnCrateOnField() {
   container.className = 'crate-container';
   container.id = instanceId;
   container.style.left = `${landX}%`;
+  container.style.top = `${landY}%`;
+  // Start offscreen high above with a slight squash/stretch scale
+  container.style.transform = 'translateY(-100vh) scaleY(1.3)';
+  container.style.opacity = '0';
   
   container.setAttribute('data-spawned-at', Date.now());
   container.setAttribute('data-land-x', landX);
   container.setAttribute('data-land-y', landY);
-
-  let currentY = -20;
-  container.style.top = `${currentY}%`;
 
   container.innerHTML = `
     <svg class="crate-sprite" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -699,28 +700,31 @@ function spawnCrateOnField() {
 
   if (audio) audio.playCrateDrop();
 
-  const fallSpeed = 2.0;
-  function fall() {
-    if (currentY >= landY) {
-      container.style.top = `${landY}%`;
+  // Force reflow
+  void container.offsetWidth;
+
+  // Apply smooth drop transition using transform (compositor thread)
+  container.style.transition = 'transform 0.65s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease-out';
+  container.style.transform = 'translateY(0) scaleY(1)';
+  container.style.opacity = '1';
+
+  // Listen for transition end to apply shake effect and spawn collision particles
+  container.addEventListener('transitionend', function onFallEnd(e) {
+    if (e.propertyName === 'transform') {
+      container.removeEventListener('transitionend', onFallEnd);
+      container.style.transition = ''; // reset transition
       container.classList.add('shake');
       if (particles) {
         const absolutePos = getAbsolutePosition(landX, landY);
         particles.spawnClick(absolutePos.x, absolutePos.y);
       }
-    } else {
-      currentY += fallSpeed;
-      container.style.top = `${currentY}%`;
-      requestAnimationFrame(fall);
     }
-  }
+  });
   
   container.addEventListener('click', (e) => {
     e.stopPropagation();
     openCrate(instanceId, landX, landY);
   });
-
-  fall();
 }
 
 // Helper to calculate the mean tier of active beasts on the field
@@ -1323,7 +1327,15 @@ function updateHUD() {
 
   const target = getPrestigeTarget();
   const progressPercent = Math.min((state.essence / target) * 100, 100);
-  document.getElementById('prestige-progress-pct').innerText = `${Math.floor(progressPercent)}%`;
+  
+  const pctEl = document.getElementById('prestige-progress-pct');
+  if (progressPercent >= 100) {
+    pctEl.innerText = 'Ready to Ascend!';
+    pctEl.classList.add('ready-pulse');
+  } else {
+    pctEl.innerText = `${Math.floor(progressPercent)}%`;
+    pctEl.classList.remove('ready-pulse');
+  }
   document.getElementById('prestige-progress-bar').style.width = `${progressPercent}%`;
 
   const prestigeBtn = document.getElementById('prestige-btn');
@@ -1334,6 +1346,14 @@ function updateHUD() {
   const multDisplay = document.getElementById('multiplier-display');
   const prestigeMult = 1.0 + state.prestigeLevel * 1.0;
   multDisplay.innerText = `Essence Multiplier: ${prestigeMult.toFixed(1)}x`;
+
+  // Update active biome in settings tab
+  const biomeIdx = Math.min(state.prestigeLevel, BIOME_CONFIGS.length - 1);
+  const activeBiomeName = BIOME_CONFIGS[biomeIdx].name;
+  const settingsBiomeEl = document.getElementById('settings-active-biome');
+  if (settingsBiomeEl) {
+    settingsBiomeEl.innerText = activeBiomeName;
+  }
 }
 
 // Crate Spawner UI elements

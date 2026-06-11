@@ -1078,7 +1078,7 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
           <path d="M 80 60 C 105 45, 100 20, 75 35 C 70 38, 72 50, 80 60 Z" />
         </g>
       `;
-    } else if (p.wings === 'feathered' || p.wings === 'windy' || p.wings === 'starry' || p.wings === 'golden' || p.wings === 'fire_feathers' || p.wings === 'shadow' || infected) {
+    } else if (p.wings === 'feathered' || p.wings === 'windy' || p.wings === 'starry' || p.wings === 'golden' || p.wings === 'fire_feathers' || p.wings === 'shadow' || p.wings === 'angelic' || infected) {
       svg += `
         <!-- Left Wing -->
         <g fill="${wingColor}" filter="url(#${shadowId})" class="anim-wing-left">
