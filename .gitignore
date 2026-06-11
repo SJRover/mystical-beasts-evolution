@@ -3,3 +3,5 @@ www/
 .DS_Store
 *.log
 .system_generated/
+*.mobileprovision
+*base64.txt
