@@ -33,6 +33,9 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App && pod install
+      - name: Update build version to match CI build number
+        script: |
+          cd ios/App && agvtool new-version -all $BUILD_NUMBER
       - name: Initialize keychain
         script: |
           keychain initialize
