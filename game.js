@@ -169,12 +169,16 @@ let mouseX = 0;
 let mouseY = 0;
 
 // Cached playground dimensions to prevent layout thrashing inside gameLoop
-let playgroundRect = { left: 0, top: 0, width: 800, height: 600 };
+let playgroundRect = { left: 0, top: 0, width: 0, height: 0 };
+let gameLoopFrameCount = 0;
 
 function updatePlaygroundRect() {
   const playground = document.getElementById('beast-playground');
   if (playground) {
-    playgroundRect = playground.getBoundingClientRect();
+    const rect = playground.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      playgroundRect = rect;
+    }
   }
 }
 
@@ -884,6 +888,11 @@ function gameLoop() {
   const dt = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
 
+  gameLoopFrameCount++;
+  if (playgroundRect.width === 0 || gameLoopFrameCount % 30 === 0) {
+    updatePlaygroundRect();
+  }
+
   // Use cached dimensions to completely eliminate layout thrashing
   const width = playgroundRect.width || 800;
   const height = playgroundRect.height || 600;
@@ -909,9 +918,9 @@ function gameLoop() {
       b.lastWalkChange = now + 1500 + Math.random() * 3000;
     }
 
-    // Move in percentage space
-    const pctVx = (b.vx / rect.width) * 100 * 60 * dt;
-    const pctVy = (b.vy / rect.height) * 100 * 60 * dt;
+    // Move in percentage space using cached dimensions
+    const pctVx = (b.vx / width) * 100 * 60 * dt;
+    const pctVy = (b.vy / height) * 100 * 60 * dt;
 
     b.x += pctVx;
     b.y += pctVy;
