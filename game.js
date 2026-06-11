@@ -168,8 +168,21 @@ let autoCollectTimer = 0;
 let mouseX = 0;
 let mouseY = 0;
 
+// Cached playground dimensions to prevent layout thrashing inside gameLoop
+let playgroundRect = { left: 0, top: 0, width: 800, height: 600 };
+
+function updatePlaygroundRect() {
+  const playground = document.getElementById('beast-playground');
+  if (playground) {
+    playgroundRect = playground.getBoundingClientRect();
+  }
+}
+
 // Init game
 window.addEventListener('DOMContentLoaded', () => {
+  updatePlaygroundRect();
+  window.addEventListener('resize', updatePlaygroundRect);
+
   // Disable pinch-zoom and double-tap zoom on iOS completely
   document.addEventListener('touchstart', (e) => {
     if (e.touches.length > 1) {
@@ -857,13 +870,11 @@ function spawnToastNotification(title, desc, iconSvg) {
   }, 6000);
 }
 
-// Convert coordinates pct to absolute px
+// Convert coordinates pct to absolute px using cached rect
 function getAbsolutePosition(pctX, pctY) {
-  const playground = document.getElementById('beast-playground');
-  const rect = playground.getBoundingClientRect();
   return {
-    x: rect.left + (pctX / 100) * rect.width,
-    y: rect.top + (pctY / 100) * rect.height
+    x: playgroundRect.left + (pctX / 100) * playgroundRect.width,
+    y: playgroundRect.top + (pctY / 100) * playgroundRect.height
   };
 }
 
@@ -873,8 +884,9 @@ function gameLoop() {
   const dt = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
 
-  const playground = document.getElementById('beast-playground');
-  const rect = playground.getBoundingClientRect();
+  // Use cached dimensions to completely eliminate layout thrashing
+  const width = playgroundRect.width || 800;
+  const height = playgroundRect.height || 600;
 
   // 1. Move and update active beasts on field
   for (let i = state.beastsOnField.length - 1; i >= 0; i--) {
@@ -1402,6 +1414,7 @@ function setupPlaygroundListeners() {
 }
 
 function dragStart(e) {
+  updatePlaygroundRect();
   const pageX = e.touches ? e.touches[0].clientX : e.clientX;
   const pageY = e.touches ? e.touches[0].clientY : e.clientY;
   
@@ -1437,8 +1450,7 @@ function dragMove(e) {
 
   e.preventDefault();
 
-  const playground = document.getElementById('beast-playground');
-  const rect = playground.getBoundingClientRect();
+  const rect = playgroundRect;
 
   const pctX = ((pageX - rect.left - dragStartX) / rect.width) * 100;
   const pctY = ((pageY - rect.top - dragStartY) / rect.height) * 100;
@@ -2829,6 +2841,7 @@ function executePrestigeAscent() {
   state.beastsOnField = [];
   
   document.querySelectorAll('.essence-crystal').forEach(c => c.remove());
+  document.querySelectorAll('.crate-container').forEach(c => c.remove());
 
   state.essence = 0;
 
