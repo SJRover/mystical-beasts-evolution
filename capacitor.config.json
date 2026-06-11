@@ -1,0 +1,8 @@
+{
+  "appId": "com.samjo.mysticbeastsevolution",
+  "appName": "Mystic Beasts Evolution",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mystic Beasts Evolution | Idle Merge & Clicker Game</title>
+  <meta name="description" content="Merge magical creatures, trigger rare mutations, unlock powerful upgrades, and ascend through prestige levels in this premium 2D cartoon idle clicker.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    
+    <!-- LEFT SIDE: The Meadow Biome -->
+    <div id="meadow-viewport">
+      <!-- Parallax Nature Background Layers -->
+      <div id="meadow-bg">
+        <div class="bg-cloud bg-cloud-1"></div>
+        <div class="bg-cloud bg-cloud-2"></div>
+        <div class="bg-cloud bg-cloud-3"></div>
+        <div class="meadow-hills hill-layer-1"></div>
+        <div class="meadow-hills hill-layer-2"></div>
+        
+        <!-- Interactive Biome Details (Mountains, trees, crystals, lava) -->
+        <div id="biome-decoration-layer"></div>
+      </div>
+      
+      <!-- Particle Effects Canvas -->
+      <canvas id="particles-canvas"></canvas>
+      
+      <!-- Interactive Grid/Field for Beasts and Crates -->
+      <div id="beast-playground"></div>
+
+      <!-- First Incubator Pedestal (Bottom Left corner) -->
+      <div id="incubator-pedestal" class="incubator-pedestal-container" title="Drag a beast here to Evolve or Cure it!">
+        <div class="incubator-pedestal-base">
+          <!-- Locked blueprint layout -->
+          <div id="incubator-1-lock" class="pedestal-lock-overlay">
+            <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:rgba(255,255,255,0.4);"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <div class="lock-price-label">100K</div>
+          </div>
+          
+          <div class="incubator-pedestal-glass">
+            <div id="incubator-slot-render"></div>
+            <div id="incubator-progress-overlay" class="incubator-timer-overlay" style="display:none">
+              <svg viewBox="0 0 100 100" class="incubator-timer-ring">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none" />
+                <circle id="incubator-progress-ring" cx="50" cy="50" r="42" stroke="#ffd700" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+              </svg>
+              <div id="incubator-countdown" class="incubator-countdown-text">15s</div>
+            </div>
+          </div>
+        </div>
+        <div class="incubator-label">Incubator Alpha</div>
+      </div>
+
+      <!-- Second Incubator Pedestal (Bottom Right corner) - Unlocks at Prestige 3+ in shop -->
+      <div id="incubator-pedestal-2" class="incubator-pedestal-container" style="left:auto; right:20px;" title="Drag an infected beast here to Cure it, or Evolve another!">
+        <div class="incubator-pedestal-base" style="background: linear-gradient(to bottom, #495057 0%, #1a1a24 100%)">
+          <!-- Locked blueprint layout -->
+          <div id="incubator-2-lock" class="pedestal-lock-overlay">
+            <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:rgba(255,255,255,0.4);"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <div class="lock-price-label">50M</div>
+          </div>
+          
+          <div class="incubator-pedestal-glass" style="border-color: rgba(168, 0, 255, 0.4); box-shadow: inset 0 0 10px rgba(168, 0, 255, 0.15);">
+            <div id="incubator-slot-render-2"></div>
+            <div id="incubator-progress-overlay-2" class="incubator-timer-overlay" style="display:none">
+              <svg viewBox="0 0 100 100" class="incubator-timer-ring">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none" />
+                <circle id="incubator-progress-ring-2" cx="50" cy="50" r="42" stroke="#a800ff" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+              </svg>
+              <div id="incubator-countdown-2" class="incubator-countdown-text">10s</div>
+            </div>
+          </div>
+        </div>
+        <div class="incubator-label" style="color: #a800ff">Incubator Beta</div>
+      </div>
+
+      <!-- Third Incubator Pedestal (Containment Chamber Gamma) - Unlocks at Biome 6+ in shop -->
+      <div id="incubator-pedestal-3" class="incubator-pedestal-container" style="left:auto; right:130px;" title="Drag a Shadow enemy here to Purify or Contain it!">
+        <div class="incubator-pedestal-base" style="background: linear-gradient(to bottom, #2b1c1c 0%, #140808 100%)">
+          <!-- Locked blueprint layout -->
+          <div id="incubator-3-lock" class="pedestal-lock-overlay">
+            <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:rgba(255,255,255,0.4);"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            <div class="lock-price-label">10B</div>
+          </div>
+          
+          <div class="incubator-pedestal-glass" style="border-color: rgba(255, 0, 0, 0.4); box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.15);">
+            <div id="incubator-slot-render-3"></div>
+            <div id="incubator-progress-overlay-3" class="incubator-timer-overlay" style="display:none">
+              <svg viewBox="0 0 100 100" class="incubator-timer-ring">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none" />
+                <circle id="incubator-progress-ring-3" cx="50" cy="50" r="42" stroke="#ff0000" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+              </svg>
+              <div id="incubator-countdown-3" class="incubator-countdown-text">15s</div>
+            </div>
+          </div>
+        </div>
+        <div class="incubator-label" style="color: #ff3333">Incubator Gamma</div>
+      </div>
+
+      <!-- TOP HUD (Points, CPS, Multipliers) -->
+      <div id="hud-overlay">
+        <!-- Essence Count -->
+        <div class="hud-panel hud-left">
+          <div class="hud-essence-container">
+            <svg class="essence-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" fill="#ffa800" stroke="#fff" stroke-width="1.5" />
+              <polygon points="12,5 19,9.5 19,14.5 12,19 5,14.5 5,9.5" fill="#ffd43b" />
+              <polygon points="12,8 16,11 16,13 12,16 8,13 8,11" fill="#fff" />
+            </svg>
+            <div>
+              <div id="essence-display" class="essence-amount">0</div>
+              <div class="essence-cps">+<span id="cps-display">0</span>/sec</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prestige Goal -->
+        <div class="hud-panel hud-right">
+          <div class="prestige-target-container">
+            <div class="prestige-progress-label">
+              <span>Next Biome Ascent</span>
+              <span id="prestige-progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="prestige-progress-bar" class="progress-bar-fill"></div>
+            </div>
+            <div id="multiplier-display" class="prestige-multiplier">Essence Multiplier: 1.0x</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM BAR: Crates Spawner Panel -->
+      <div id="spawner-overlay">
+        <div class="spawner-slot">
+          <button id="spawn-crate-btn" class="spawner-btn" title="Spawn Crate (Free)">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm1 1h2v10H7V7zm8 0h2v10h-2V7z" />
+            </svg>
+            <div id="crate-badge" class="spawner-badge" style="display:none">0</div>
+          </button>
+          <div id="crate-timer" class="spawner-timer">Next Crate: 10s</div>
+        </div>
+        
+        <div id="meadow-capacity" class="meadow-capacity-indicator">
+          Beasts: <span id="beast-count">0</span> / <span id="max-capacity">10</span>
+        </div>
+
+        <!-- Trash Bin Slot -->
+        <div id="trash-bin-slot" class="spawner-slot" style="margin-left: 10px;" title="Drag a beast here to trash it! Click to retrieve the last trashed beast.">
+          <div id="trash-bin" class="trash-bin-container">
+            <svg class="trash-icon" viewBox="0 0 24 24" style="width: 32px; height: 32px; fill: #adb5bd; transition: all 0.2s ease;">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+            </svg>
+            <div id="trash-badge" class="spawner-badge" style="display:none; background: #ff6b6b; color: white;">1</div>
+          </div>
+          <div class="spawner-timer">Trash Bin</div>
+        </div>
+
+        <!-- Menu Toggle Slot (Visible in Portrait Mode) -->
+        <div id="menu-toggle-slot" class="spawner-slot" style="margin-left: 10px;">
+          <button id="menu-toggle-btn" class="spawner-btn" title="Toggle Menu">
+            <svg viewBox="0 0 24 24" style="width: 32px; height: 32px; fill: white;">
+              <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+            </svg>
+          </button>
+          <div class="spawner-timer">Menu</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR BACKDROP Overlay for Mobile Drawer Close -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+    <!-- RIGHT SIDE: Control Dashboard -->
+    <div id="sidebar-panel">
+      <!-- Navigation tabs -->
+      <div class="tab-headers">
+        <button id="tab-shop" class="tab-btn active" data-tab="shop">
+          <svg viewBox="0 0 24 24"><path d="M17.21 9l-4.38-6.56c-.19-.28-.51-.44-.83-.44s-.64.16-.83.43L6.79 9H2c-1.1 0-2 .9-2 2v9c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2v-9c0-1.1-.9-2-2-2h-4.79zM9 9l3-4.5L15 9H9zm13 11H2v-9h20v9zM12 13c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          <span>Shop</span>
+        </button>
+        <button id="tab-beastopedia" class="tab-btn" data-tab="beastopedia">
+          <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>
+          <span>Beastopedia</span>
+        </button>
+        <button id="tab-sanctuary" class="tab-btn" data-tab="sanctuary">
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          <span>Sanctuary</span>
+        </button>
+        <button id="tab-settings" class="tab-btn" data-tab="settings">
+          <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+          <span>Settings</span>
+        </button>
+      </div>
+
+      <!-- Tab Bodies -->
+      <div class="tab-body">
+        
+        <!-- SHOP TAB -->
+        <div id="content-shop" class="tab-content active">
+          <!-- Buy Beasts Section -->
+          <div class="shop-section-title">Buy Mystical Beasts</div>
+          <div id="shop-beast-list" class="shop-grid">
+            <!-- Programmatically populated with unlocked beasts -->
+          </div>
+
+          <!-- Upgrades Section -->
+          <div class="shop-section-title">Field Upgrades</div>
+          <div id="shop-upgrades-list" class="shop-grid">
+            <!-- Upgrades (Capacity, Crate drop time, etc.) -->
+          </div>
+        </div>
+
+        <!-- BEASTOPEDIA TAB -->
+        <div id="content-beastopedia" class="tab-content">
+          <div class="beastopedia-stats">
+            <span>Beasts Discovered</span>
+            <span id="beastopedia-pct">0 / 45 (0%)</span>
+          </div>
+          
+          <!-- Dark Matter Progression (Visible only in Biome 10+) -->
+          <div id="dark-matter-progress-container" style="display: none; margin-bottom: 15px; padding: 12px; background: rgba(213, 0, 249, 0.08); border: 1px solid rgba(213, 0, 249, 0.3); border-radius: 16px; flex-direction: column; gap: 6px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; color: #d500f9;">
+              <span>Dark Matter Devourer Milestone</span>
+              <span id="dark-matter-progress-val">0 / 1000 Merges</span>
+            </div>
+            <div class="progress-bar-bg" style="border-color: rgba(213, 0, 249, 0.2); height: 10px;">
+              <div id="dark-matter-progress-bar" class="progress-bar-fill" style="background: linear-gradient(to right, #7b00ad, #d500f9); width: 0%;"></div>
+            </div>
+          </div>
+
+          <div id="beastopedia-grid" class="beastopedia-grid">
+            <!-- 45 slots programmatically generated -->
+          </div>
+        </div>
+
+        <!-- SANCTUARY / TROPHY TAB -->
+        <div id="content-sanctuary" class="tab-content">
+          <div class="shop-section-title">Mystical Sanctuary</div>
+          <div class="sanctuary-intro">
+            Ascend via prestige and preserve up to 3 beasts in the Sanctuary. They serve as statues and grant permanent buffs to your active meadow.
+          </div>
+          <div id="sanctuary-slots" class="sanctuary-slots-container">
+            <!-- 3 slot cards -->
+            <div class="sanctuary-slot-card" data-slot="0">
+              <div class="sanctuary-slot-icon"></div>
+              <div class="sanctuary-slot-empty-text">Empty Sanctuary Slot</div>
+            </div>
+            <div class="sanctuary-slot-card" data-slot="1">
+              <div class="sanctuary-slot-icon"></div>
+              <div class="sanctuary-slot-empty-text">Empty Sanctuary Slot</div>
+            </div>
+            <div class="sanctuary-slot-card" data-slot="2">
+              <div class="sanctuary-slot-icon"></div>
+              <div class="sanctuary-slot-empty-text">Empty Sanctuary Slot</div>
+            </div>
+          </div>
+
+          <div class="trophy-collection-title">Rarity Collection Achievements</div>
+          <div id="trophy-collection-grid" class="trophy-grid">
+            <!-- Rare and higher beasts achievements -->
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="content-settings" class="tab-content">
+          <div class="shop-section-title">Volume Control</div>
+          <div class="settings-group">
+            <div class="settings-row">
+              <span class="settings-label">Master Volume</span>
+              <div class="settings-control">
+                <input id="volume-range" class="volume-slider" type="range" min="0" max="1" step="0.05" value="0.5">
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Evolving Music</span>
+              <div class="settings-control">
+                <label class="switch">
+                  <input id="toggle-music" type="checkbox" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Sound FX</span>
+              <div class="settings-control">
+                <label class="switch">
+                  <input id="toggle-sfx" type="checkbox" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="shop-section-title">Prestige Ascent</div>
+          <div class="settings-group">
+            <button id="prestige-btn" class="settings-btn prestige" disabled>
+              Ascend to Next Tier
+            </button>
+            <div class="sanctuary-intro" style="text-align: center;">
+              Requires high essence milestones.<br>
+              Unlocks next level elements, expands Tiers, unlocks Biomes, and grants active Sanctuary buffs.
+            </div>
+          </div>
+
+          <div class="shop-section-title">Danger Zone</div>
+          <div class="settings-group">
+            <button id="reset-btn" class="settings-btn reset">
+              Wipe Save Data
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sliding Toast Container for Achievement Notifications -->
+  <div id="toast-container" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; display: flex; flex-direction: column; gap: 8px; align-items: center;"></div>
+
+  <!-- --- DIALOG MODALS --- -->
+
+  <!-- 1. Discovery Modal (New beast unlocked) -->
+  <div id="discovery-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-title">New Mutation Discovered!</div>
+      <div id="discovery-beast-rarity" class="unlock-beast-rarity common">Common</div>
+      <div class="unlock-beast-showcase">
+        <div id="discovery-beast-svg-container" style="width: 130px; height: 130px;"></div>
+      </div>
+      <div id="discovery-beast-name" class="unlock-beast-name">Sparky</div>
+      <div id="discovery-beast-lore" class="unlock-beast-lore"></div>
+      <button id="discovery-close-btn" class="modal-btn">Awesome!</button>
+    </div>
+  </div>
+
+  <!-- 2. Prestige Sanctuary Selection Modal -->
+  <div id="prestige-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 550px;">
+      <div class="modal-title" style="color: #00d2ff;">Ascend to Next Tier</div>
+      <div class="modal-desc">
+        Your current biome will reset. Select up to <b>3 beasts</b> from your active field to preserve in the Sanctuary. They will be saved as monuments and grant powerful passive multipliers!
+      </div>
+      
+      <div id="prestige-selector-grid" class="prestige-beast-selector">
+        <!-- populated with current beasts on field -->
+      </div>
+      
+      <!-- Detailed info display for selected beast -->
+      <div id="prestige-beast-info-display" class="sanctuary-intro" style="min-height: 40px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); font-size: 12px; color: var(--color-text-dim); display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; padding: 8px; border-radius: 8px;">
+        Click a beast card above to inspect its name, rarity, and active perk!
+      </div>
+      
+      <div id="prestige-buff-preview" class="sanctuary-intro" style="min-height: 40px; font-weight: bold; color: #ffd43b;">
+        No buffs active (Select beasts to save)
+      </div>
+
+      <div style="display: flex; gap: 15px; width: 100%; margin-top: 10px;">
+        <button id="prestige-cancel-btn" class="modal-btn" style="flex:1; background: #343a40;">Cancel</button>
+        <button id="prestige-confirm-btn" class="modal-btn" style="flex:1; background: linear-gradient(135deg, #00d2ff, #0070dd);" disabled>ASCEND!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Beast Details Modal (Beastopedia viewer) -->
+  <div id="details-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div id="details-beast-rarity" class="unlock-beast-rarity common">Common</div>
+      <div class="unlock-beast-showcase" style="width: 140px; height: 140px;">
+        <div id="details-beast-svg-container" style="width: 110px; height: 110px;"></div>
+      </div>
+      
+      <!-- Base/Evolved visual toggler tabs -->
+      <div class="details-toggle-container" style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <button id="details-toggle-base" class="details-tab-btn active" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border-glass-bright); border-radius: 8px; color: var(--color-text); padding: 5px 12px; font-size: 11px; cursor: pointer; font-family: var(--font-game);">Base Form</button>
+        <button id="details-toggle-evolved" class="details-tab-btn" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px; color: var(--color-text-dim); padding: 5px 12px; font-size: 11px; cursor: pointer; font-family: var(--font-game);">Evolved Form</button>
+      </div>
+
+      <div id="details-beast-name" class="unlock-beast-name">Sparky</div>
+      <div id="details-beast-info" class="modal-desc" style="font-family: var(--font-stats); color: #ffd43b; font-weight: bold;">
+        Tier 1 | Light Element | Produces 1 essence/sec
+      </div>
+      <div id="details-beast-lore" class="unlock-beast-lore" style="max-height: 120px;"></div>
+      <button id="details-close-btn" class="modal-btn">Close</button>
+    </div>
+  </div>
+
+  <!-- GAME LOGIC AND SCRIPTS -->
+  <script src="beasts.js"></script>
+  <script src="audio.js"></script>
+  <script src="particles.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
