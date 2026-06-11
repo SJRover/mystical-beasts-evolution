@@ -1939,6 +1939,52 @@ input:checked + .slider:before {
     width: 24px;
     height: 24px;
   }
+
+  /* Safe-area offsets for mobile sidebar tab headers */
+  .tab-headers {
+    padding-top: max(12px, env(safe-area-inset-top));
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  /* Compact Modals for Mobile / Short Viewports */
+  .modal-content {
+    padding: 16px 20px;
+    border-radius: 20px;
+    max-width: 380px;
+  }
+  .modal-title {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+  .modal-desc {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .unlock-beast-showcase {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 8px;
+  }
+  .unlock-beast-rarity {
+    font-size: 10px;
+    padding: 2px 10px;
+    margin-bottom: 4px;
+  }
+  .unlock-beast-name {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  .unlock-beast-lore {
+    font-size: 11px;
+    padding: 8px;
+    margin-bottom: 12px;
+    max-height: 60px;
+  }
+  .modal-btn {
+    padding: 8px 20px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
 }
 
 .beastopedia-card-rarity.rarity-dark_matter {

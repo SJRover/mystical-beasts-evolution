@@ -900,11 +900,11 @@ function gameLoop() {
     b.x += pctVx;
     b.y += pctVy;
 
-    // Expanded boundaries (beasts can roam further vertically and horizontally)
-    const paddingXMin = 3;
-    const paddingXMax = 94;
-    const paddingYMin = 10;
-    const paddingYMax = 68;
+    // Restricted boundaries to keep beasts inside screen and clear of top HUD / bottom spawner
+    const paddingXMin = 5;
+    const paddingXMax = 82;
+    const paddingYMin = 14;
+    const paddingYMax = 55;
 
     if (b.x < paddingXMin) { 
       b.x = paddingXMin; b.vx *= -1; b.direction = 1; 
@@ -2299,14 +2299,47 @@ function buyBeastFromShop(beastId, cost) {
     state.shopPurchases[beastId] = (state.shopPurchases[beastId] || 0) + 1;
     
     const x = 30 + Math.random() * 40;
-    const y = 45 + Math.random() * 25;
+    const y = 35 + Math.random() * 15;
     
     spawnBeastOnField(beastId, x, y, false, false);
     if (audio) audio.playCrateOpen();
 
     saveGame();
-    renderShop();
     updateHUD();
+    
+    // Instead of rebuilding the entire Shop DOM (which causes lag and interrupts spam clicks),
+    // we update the cost value and label in-place for the clicked item.
+    const template = BEAST_TEMPLATES[beastId];
+    const buyCount = state.shopPurchases[beastId] || 0;
+    const newCost = Math.round(template.cost * Math.pow(1.18, buyCount));
+    
+    const btn = document.querySelector(`.shop-buy-btn[data-id="${beastId}"]`);
+    if (btn) {
+      btn.setAttribute('data-cost', newCost);
+      const cardInfo = btn.previousElementSibling;
+      if (cardInfo) {
+        const meta = cardInfo.querySelector('.shop-card-meta');
+        if (meta) {
+          meta.innerHTML = `<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#ffa800"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/></svg> Cost: ${formatNumber(newCost)}`;
+        }
+      }
+    }
+    
+    // Instantly update the disabled status of all buy buttons based on current essence
+    document.querySelectorAll('.shop-buy-btn[data-id]').forEach(b => {
+      const bCost = parseFloat(b.getAttribute('data-cost'));
+      b.disabled = state.essence < bCost;
+    });
+
+    document.querySelectorAll('.shop-buy-btn[data-upgrade]').forEach(b => {
+      const bCost = parseFloat(b.getAttribute('data-cost'));
+      b.disabled = state.essence < bCost;
+    });
+
+    document.querySelectorAll('.shop-buy-btn[data-buy-inc]').forEach(b => {
+      const bCost = parseFloat(b.getAttribute('data-cost'));
+      b.disabled = state.essence < bCost;
+    });
   }
 }
 
