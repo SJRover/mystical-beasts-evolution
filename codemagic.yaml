@@ -3,6 +3,8 @@ workflows:
     name: iOS Build
     max_build_duration: 120
     instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: Personal
     environment:
       groups:
         - apple_signing
