@@ -30,6 +30,7 @@ class AudioEngine {
     this.chordIntervalId = null;
     this.melodyIntervalId = null;
     this.activePadOscillators = [];
+    this.preferredOscType = 'triangle';
   }
 
   init() {
@@ -161,7 +162,7 @@ class AudioEngine {
         const osc = this.ctx.createOscillator();
         const gainNode = this.ctx.createGain();
 
-        osc.type = 'triangle';
+        osc.type = this.preferredOscType || 'triangle';
         osc.frequency.setValueAtTime(freq, now);
         osc.detune.setValueAtTime(detune, now);
 
@@ -224,6 +225,173 @@ class AudioEngine {
     this.melodyIntervalId = setTimeout(() => {
       this.playGenerativeMelody();
     }, nextNoteDelay);
+  }
+
+  changeBiomeMusic(biomeIndex) {
+    const biomeMusic = [
+      // Biome 0: Forest Meadow (relaxing, original)
+      {
+        chords: [
+          [130.81, 164.81, 196.00, 246.94], // Cmaj7
+          [146.83, 174.61, 220.00, 261.63], // Dm7
+          [110.00, 130.81, 164.81, 196.00], // Am7
+          [174.61, 220.00, 261.63, 329.63]  // Fmaj7
+        ],
+        scale: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99],
+        oscType: 'triangle',
+        delay: 0.4,
+        feedback: 0.4
+      },
+      // Biome 1: Volcanic Canyon (deeper, darker minor)
+      {
+        chords: [
+          [97.99, 116.54, 146.83, 174.61], // Gm7
+          [110.00, 130.81, 164.81, 196.00], // Am7
+          [73.42, 92.50, 110.00, 138.59],   // Dm7
+          [97.99, 116.54, 138.59, 164.81]   // Ebmaj7
+        ],
+        scale: [196.00, 220.00, 233.08, 293.66, 349.23, 392.00, 440.00, 466.16, 587.33],
+        oscType: 'triangle',
+        delay: 0.5,
+        feedback: 0.45
+      },
+      // Biome 2: Crystal Cavern (shimmering major E)
+      {
+        chords: [
+          [164.81, 207.65, 246.94, 311.13], // Emaj7
+          [220.00, 277.18, 329.63, 415.30], // Amaj7
+          [164.81, 196.00, 246.94, 293.66], // Em7
+          [196.00, 246.94, 293.66, 392.00]  // Gmaj7
+        ],
+        scale: [329.63, 369.99, 415.30, 493.88, 554.37, 659.25, 739.99, 830.61, 987.77],
+        oscType: 'sine',
+        delay: 0.3,
+        feedback: 0.5
+      },
+      // Biome 3: Sky Sanctuary (very open, airy)
+      {
+        chords: [
+          [146.83, 220.00, 293.66, 369.99], // Dsus2
+          [164.81, 246.94, 329.63, 415.30], // Esus2
+          [174.61, 261.63, 349.23, 440.00], // Fmaj7
+          [196.00, 293.66, 392.00, 493.88]  // G6
+        ],
+        scale: [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99, 880.00],
+        oscType: 'sine',
+        delay: 0.6,
+        feedback: 0.35
+      },
+      // Biome 4: Cosmic Nebula (chilly, cold minor C)
+      {
+        chords: [
+          [130.81, 155.56, 196.00, 233.08], // Cm7
+          [116.54, 138.59, 174.61, 207.65], // Abmaj7
+          [146.83, 174.61, 220.00, 261.63], // Dm7b5
+          [155.56, 196.00, 233.08, 293.66]  // Ebmaj7
+        ],
+        scale: [261.63, 311.13, 349.23, 392.00, 466.16, 523.25, 622.25, 698.46, 783.99],
+        oscType: 'sine',
+        delay: 0.45,
+        feedback: 0.4
+      },
+      // Biome 5: Celestial Cosmos (floating open fifths)
+      {
+        chords: [
+          [110.00, 164.81, 220.00, 277.18], // Aadd9
+          [146.83, 196.00, 261.63, 293.66], // Dsus2
+          [164.81, 220.00, 293.66, 329.63], // Esus4
+          [130.81, 196.00, 246.94, 293.66]  // Cmaj9
+        ],
+        scale: [220.00, 246.94, 277.18, 329.63, 369.99, 440.00, 493.88, 554.37, 659.25],
+        oscType: 'triangle',
+        delay: 0.5,
+        feedback: 0.4
+      },
+      // Biome 6: Demonic Abyss (deep, heavy tension)
+      {
+        chords: [
+          [82.41, 98.00, 123.47, 146.83],   // Em7
+          [87.31, 110.00, 130.81, 164.81],  // Fmaj7
+          [73.42, 92.50, 110.00, 130.81],   // Dm7
+          [97.99, 123.47, 146.83, 174.61]   // G7
+        ],
+        scale: [164.81, 196.00, 220.00, 246.94, 293.66, 329.63, 392.00, 440.00, 493.88],
+        oscType: 'triangle',
+        delay: 0.4,
+        feedback: 0.5
+      },
+      // Biome 7: Omega Nexus (tech-like robotic minor)
+      {
+        chords: [
+          [110.00, 146.83, 174.61, 220.00], // Asus4
+          [130.81, 164.81, 220.00, 246.94], // C6
+          [146.83, 196.00, 220.00, 293.66], // D7sus4
+          [97.99, 130.81, 164.81, 196.00]   // Gsus4
+        ],
+        scale: [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25],
+        oscType: 'sawtooth',
+        delay: 0.35,
+        feedback: 0.4
+      },
+      // Biome 8: Eldritch Spire (mystical whole-tone)
+      {
+        chords: [
+          [116.54, 155.56, 174.61, 233.08], // Bbsus4
+          [123.47, 164.81, 196.00, 246.94], // Cbmaj7
+          [110.00, 146.83, 164.81, 220.00], // Am#5
+          [138.59, 174.61, 207.65, 277.18]  // Dbmaj7
+        ],
+        scale: [220.00, 246.94, 277.18, 311.13, 349.23, 392.00, 440.00, 493.88, 554.37],
+        oscType: 'triangle',
+        delay: 0.5,
+        feedback: 0.4
+      },
+      // Biome 9: Singularity Void (ultra-slow, deep voids)
+      {
+        chords: [
+          [65.41, 130.81, 196.00, 246.94],  // C2/C3 drone
+          [73.42, 146.83, 220.00, 277.18],  // D2/D3 drone
+          [55.00, 110.00, 164.81, 220.00],  // A1/A2 drone
+          [65.41, 130.81, 164.81, 196.00]   // C2/Eb3 drone
+        ],
+        scale: [130.81, 155.56, 196.00, 233.08, 261.63, 311.13, 349.23, 392.00],
+        oscType: 'sine',
+        delay: 0.8,
+        feedback: 0.7
+      },
+      // Biome 10+: Glittery Lava Plains (energized, fast)
+      {
+        chords: [
+          [130.81, 164.81, 196.00, 261.63], // Cmaj
+          [146.83, 174.61, 220.00, 293.66], // Dmin
+          [164.81, 196.00, 246.94, 329.63], // Emin
+          [174.61, 220.00, 261.63, 349.23]  // Fmaj
+        ],
+        scale: [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99],
+        oscType: 'triangle',
+        delay: 0.4,
+        feedback: 0.4
+      }
+    ];
+
+    const idx = Math.min(biomeIndex, biomeMusic.length - 1);
+    const music = biomeMusic[idx];
+
+    this.chords = music.chords;
+    this.pentatonicScale = music.scale;
+    this.preferredOscType = music.oscType || 'triangle';
+    this.chordIndex = 0;
+
+    // Apply delay and feedback parameters dynamically to change space size!
+    if (this.ctx && this.delayNode && this.feedbackNode) {
+      const now = this.ctx.currentTime;
+      this.delayNode.delayTime.setValueAtTime(music.delay, now);
+      this.feedbackNode.gain.setValueAtTime(music.feedback, now);
+    }
+
+    if (this.musicPlaying) {
+      this.playNextAmbientChord();
+    }
   }
 
   // --- SOUND EFFECTS ---

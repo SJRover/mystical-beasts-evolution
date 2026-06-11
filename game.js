@@ -170,6 +170,22 @@ let mouseY = 0;
 
 // Init game
 window.addEventListener('DOMContentLoaded', () => {
+  // Disable pinch-zoom and double-tap zoom on iOS completely
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+
   audio = new AudioEngine();
   particles = new ParticleSystem(document.getElementById('particles-canvas'));
   particles.loop();
@@ -439,6 +455,15 @@ function applyBiomeBg(prestigeLevel) {
   bg.className = '';
   const idx = Math.min(prestigeLevel, BIOME_CONFIGS.length - 1);
   bg.classList.add(BIOME_CONFIGS[idx].theme);
+
+  // Update generative music dynamically to match the theme of the new biome
+  if (audio) {
+    try {
+      audio.changeBiomeMusic(idx);
+    } catch (e) {
+      console.error('Audio biome transition failed:', e);
+    }
+  }
 }
 
 // Calculates the sanctuary perk multiplier based on beast tier and rarity
@@ -1442,9 +1467,9 @@ function dragMove(e) {
     }
   }
 
-  // Expanded Y coordinates: 8%-84% and X coordinates: 1%-96%
+  // Constrained Y coordinates (10%-80%) to prevent dragging behind HUD/spawner menu
   draggedBeast.x = Math.max(1, Math.min(pctX, 96));
-  draggedBeast.y = Math.max(8, Math.min(pctY, 84));
+  draggedBeast.y = Math.max(10, Math.min(pctY, 80));
 
   dragElement.style.left = `${draggedBeast.x}%`;
   dragElement.style.top = `${draggedBeast.y}%`;

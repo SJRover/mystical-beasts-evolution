@@ -39,7 +39,10 @@
   margin: 0;
   padding: 0;
   user-select: none;
+  -webkit-user-select: none;
   -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 body {
@@ -48,6 +51,11 @@ body {
   color: var(--color-text);
   overflow: hidden;
   height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  touch-action: none;
   width: 100vw;
   display: flex;
   justify-content: center;
@@ -514,9 +522,9 @@ body {
 /* TOP HUD */
 #hud-overlay {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
+  top: max(20px, calc(10px + env(safe-area-inset-top)));
+  left: max(20px, env(safe-area-inset-left));
+  right: max(20px, env(safe-area-inset-right));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -619,7 +627,7 @@ body {
 /* BOTTOM SPAWNER HUD */
 #spawner-overlay {
   position: absolute;
-  bottom: 25px;
+  bottom: max(25px, calc(10px + env(safe-area-inset-bottom)));
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
@@ -698,12 +706,21 @@ body {
 }
 
 .meadow-capacity-indicator {
+  position: absolute;
+  top: -38px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 13px;
-  color: var(--color-text-dim);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-glass);
-  padding: 8px 16px;
+  color: #fff;
+  background: rgba(11, 114, 133, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 14px;
   border-radius: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 11;
   height: max-content;
 }
 
@@ -1779,7 +1796,7 @@ input:checked + .slider:before {
 }
 
 /* PORTRAIT RESPONSIVENESS FOR IOS AND COMPACT SCREENS */
-@media (max-width: 820px), (orientation: portrait) {
+@media (max-width: 1024px), (max-height: 600px), (orientation: portrait) {
   #game-container {
     flex-direction: column;
   }
@@ -1808,15 +1825,15 @@ input:checked + .slider:before {
     transform: translateX(0);
   }
 
-  /* Show Menu Button in Portrait */
+  /* Show Menu Button in Portrait / Mobile Landscape */
   #menu-toggle-slot {
     display: flex;
   }
 
   /* Compact Spawner bottom bar for narrow screens */
   #spawner-overlay {
-    bottom: 15px;
-    padding: 8px 16px;
+    bottom: max(15px, calc(5px + env(safe-area-inset-bottom)));
+    padding: 8px 12px;
     gap: 8px;
     max-width: 95%;
   }
@@ -1831,7 +1848,7 @@ input:checked + .slider:before {
     height: 28px;
   }
   .spawner-timer {
-    font-size: 10px;
+    font-size: 9px;
   }
   .trash-bin-container {
     width: 52px;
@@ -1844,16 +1861,17 @@ input:checked + .slider:before {
   }
   
   .meadow-capacity-indicator {
-    padding: 6px 12px;
-    font-size: 11px;
-    border-radius: 10px;
+    top: -32px;
+    font-size: 10px;
+    padding: 4px 10px;
+    background: rgba(11, 114, 133, 0.9);
   }
 
-  /* Adjust Incubator Pedestals on Portrait */
+  /* Shift Incubators UP above bottom spawner bar on mobile */
   .incubator-pedestal-container {
-    bottom: 15px;
-    width: 80px;
-    height: 115px;
+    bottom: max(95px, calc(80px + env(safe-area-inset-bottom)));
+    width: 76px;
+    height: 110px;
   }
   #incubator-pedestal {
     left: 15px;
@@ -1862,40 +1880,40 @@ input:checked + .slider:before {
     right: 15px;
   }
   #incubator-pedestal-3 {
-    right: 105px;
+    right: 95px;
   }
   .incubator-pedestal-base {
-    height: 85px;
+    height: 80px;
     border-radius: 16px 16px 10px 10px;
   }
   .incubator-pedestal-glass {
-    top: -45px;
-    width: 62px;
-    height: 75px;
-    border-radius: 31px 31px 4px 4px;
+    top: -42px;
+    width: 58px;
+    height: 70px;
+    border-radius: 29px 29px 4px 4px;
   }
   .pedestal-lock-overlay {
-    top: -48px;
-    border-radius: 31px 31px 10px 10px;
+    top: -45px;
+    border-radius: 29px 29px 10px 10px;
   }
   .incubator-timer-ring {
-    width: 65px;
-    height: 65px;
-    top: -10px;
+    width: 60px;
+    height: 60px;
+    top: -8px;
   }
   .incubator-countdown-text {
-    font-size: 12px;
-    top: 15px;
+    font-size: 11px;
+    top: 14px;
   }
   .incubator-label {
-    font-size: 9px;
+    font-size: 8.5px;
   }
 
   /* Stacking HUD overlay for portrait */
   #hud-overlay {
-    top: 15px;
-    left: 15px;
-    right: 15px;
+    top: max(15px, calc(5px + env(safe-area-inset-top)));
+    left: max(15px, env(safe-area-inset-left));
+    right: max(15px, env(safe-area-inset-right));
     gap: 8px;
   }
   .hud-panel {
