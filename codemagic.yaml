@@ -1,0 +1,40 @@
+workflows:
+  ios-workflow:
+    name: iOS Build
+    max_build_duration: 120
+    instance_type: mac_mini_m1
+    environment:
+      groups:
+        - apple_signing
+      node: latest
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: '*'
+          include: true
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+      - name: Build web assets
+        script: |
+          npm run build
+      - name: Generate native iOS asset icons
+        script: |
+          npx @capacitor/assets generate --ios
+      - name: Sync web assets with Capacitor
+        script: |
+          npx cap sync
+      - name: Install CocoaPods
+        script: |
+          cd ios/App && pod install
+      - name: Build iOS Archive (.ipa)
+        script: |
+          xcode-project build-ipa \
+            --workspace ios/App/App.xcworkspace \
+            --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
