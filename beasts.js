@@ -938,6 +938,969 @@ const BEAST_TEMPLATES = {
     cost: 0,
     evolutions: [],
     svgParams: { body: 'dragon', eyes: 'cosmic', color: ['#0d0d0d', '#1a0000'], spikes: true, horns: 2, wings: 'shadow', shadow_fiend_evolved: true }
+  },
+  // --- LOW GRAVITY SOLAR SYSTEM BEASTS ---
+  floaty_ray: {
+    id: 'floaty_ray',
+    name: 'Floaty Ray',
+    tier: 1,
+    rarity: 'COMMON',
+    element: 'WIND',
+    baseCps: 1,
+    lore: 'A gentle alien ray that glides effortlessly on the thin low gravity currents.',
+    cost: 15,
+    system: 'low_gravity',
+    evolutions: [{ to: 'bubble_jelly', weight: 90 }, { to: 'drift_shimmer', weight: 10 }],
+    svgParams: { body: "ray", eyes: "cute", color: ["#00d2ff","#005f73"], gills: true, tail: "whip" }
+  },
+  bubble_jelly: {
+    id: 'bubble_jelly',
+    name: 'Bubble Jelly',
+    tier: 2,
+    rarity: 'COMMON',
+    element: 'WATER',
+    baseCps: 5,
+    lore: 'A floating translucent jellyfish that emits tiny glowing nitrogen bubbles.',
+    cost: 120,
+    system: 'low_gravity',
+    evolutions: [{ to: 'aero_skimmer', weight: 90 }, { to: 'plasma_skimmer', weight: 9 }, { to: 'nebula_skimmer', weight: 1 }],
+    svgParams: { body: 'jellyfish', eyes: 'excited', color: ['#a2d2ff', '#00b4d8'], bubbles: true }
+  },
+  drift_shimmer: {
+    id: 'drift_shimmer',
+    name: 'Drift Shimmer',
+    tier: 2,
+    rarity: 'RARE',
+    element: 'LIGHT',
+    baseCps: 8,
+    lore: 'A rare ray-jelly hybrid that glows in the dark methane rivers.',
+    cost: 250,
+    system: 'low_gravity',
+    evolutions: [{ to: 'plasma_skimmer', weight: 80 }, { to: 'nebula_skimmer', weight: 20 }],
+    svgParams: { body: 'droplet', eyes: 'cute', color: ['#ffd166', '#06d6a0'], sparks: true, gills: true }
+  },
+  aero_skimmer: {
+    id: 'aero_skimmer',
+    name: 'Aero Skimmer',
+    tier: 3,
+    rarity: 'COMMON',
+    element: 'WIND',
+    baseCps: 25,
+    lore: 'An alien bird with wide wings designed to catch the faintest thermal lift.',
+    cost: 900,
+    system: 'low_gravity',
+    evolutions: [{ to: 'fluid_shark', weight: 90 }, { to: 'sky_shark', weight: 9 }, { to: 'cosmic_shark', weight: 1 }],
+    svgParams: { body: "dragonfly", eyes: "sleepy", color: ["#48cae4","#90e0ef"], wings: "dragonfly_wings", wind_swirls: true }
+  },
+  plasma_skimmer: {
+    id: 'plasma_skimmer',
+    name: 'Plasma Skimmer',
+    tier: 3,
+    rarity: 'RARE',
+    element: 'LIGHT',
+    baseCps: 40,
+    lore: 'An energized avian that gathers static electricity from gas clouds.',
+    cost: 1800,
+    system: 'low_gravity',
+    evolutions: [{ to: 'sky_shark', weight: 75 }, { to: 'cosmic_shark', weight: 25 }],
+    svgParams: { body: "dragonfly", eyes: "cute", color: ["#ff007f","#ffd700"], wings: "dragonfly_wings", sparks: true }
+  },
+  nebula_skimmer: {
+    id: 'nebula_skimmer',
+    name: 'Nebula Skimmer',
+    tier: 3,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 110,
+    lore: 'A majestic bird surrounded by swirling gas and tiny dust rings.',
+    cost: 4000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_shark', weight: 100 }],
+    svgParams: { body: "dragonfly", eyes: "cosmic", color: ["#9c89ff","#ff85a2"], wings: "dragonfly_wings", orbits: 1, stars: true }
+  },
+  fluid_shark: {
+    id: 'fluid_shark',
+    name: 'Fluid Sky-Shark',
+    tier: 4,
+    rarity: 'COMMON',
+    element: 'WATER',
+    baseCps: 120,
+    lore: 'A hydrodynamic flying shark that swims through heavy ammonia vapors.',
+    cost: 7500,
+    system: 'low_gravity',
+    evolutions: [{ to: 'fluid_eagle', weight: 90 }, { to: 'tempest_eagle', weight: 9 }, { to: 'void_eagle', weight: 1 }],
+    svgParams: { body: "shark", eyes: "angry", color: ["#0077b6","#03045e"], tail: "shark_fin", gills: true }
+  },
+  sky_shark: {
+    id: 'sky_shark',
+    name: 'Sky-Storm Shark',
+    tier: 4,
+    rarity: 'RARE',
+    element: 'WIND',
+    baseCps: 180,
+    lore: 'A winged predator that hunts in the upper atmospheric limits.',
+    cost: 14000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'tempest_eagle', weight: 75 }, { to: 'void_eagle', weight: 25 }],
+    svgParams: { body: "shark", eyes: "excited", color: ["#4ea8de","#56cfe1"], wings: "feathered", tail: "shark_fin" }
+  },
+  cosmic_shark: {
+    id: 'cosmic_shark',
+    name: 'Cosmic Singularity Shark',
+    tier: 4,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 500,
+    lore: 'A shark wrapped in a miniature cosmic void, warping light as it floats.',
+    cost: 32000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'void_eagle', weight: 100 }],
+    svgParams: { body: "shark", eyes: "cosmic", color: ["#7209b7","#f72585"], void_core: true, orbits: 1, tail: "shark_fin" }
+  },
+  fluid_eagle: {
+    id: 'fluid_eagle',
+    name: 'Fluid Eagle',
+    tier: 5,
+    rarity: 'COMMON',
+    element: 'WIND',
+    baseCps: 600,
+    lore: 'An elegant sky eagle that produces lift using huge, leaf-like sky feathers.',
+    cost: 65000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'aero_pterodactyl', weight: 90 }, { to: 'nebula_pterodactyl', weight: 8 }, { to: 'solar_pterodactyl', weight: 1.9 }, { to: 'cosmic_pterodactyl', weight: 0.1 }],
+    svgParams: { body: "eagle", eyes: "wink", color: ["#38b000","#70e000"], wings: "leafy", tail: "leaf" }
+  },
+  tempest_eagle: {
+    id: 'tempest_eagle',
+    name: 'Tempest Eagle',
+    tier: 5,
+    rarity: 'RARE',
+    element: 'WIND',
+    baseCps: 900,
+    lore: 'A storm hunter that dive-bombs through low-grav methane monsoons.',
+    cost: 120000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nebula_pterodactyl', weight: 70 }, { to: 'cosmic_pterodactyl', weight: 29.9 }, { to: 'solar_pterodactyl', weight: 0.1 }],
+    svgParams: { body: "eagle", eyes: "angry", color: ["#007200","#008000"], wings: "feathered", wind_swirls: true, tail: "long_feathers" }
+  },
+  void_eagle: {
+    id: 'void_eagle',
+    name: 'Void Eagle',
+    tier: 5,
+    rarity: 'SUPER_RARE',
+    element: 'VOID',
+    baseCps: 2600,
+    lore: 'A shadowy eagle that bends dark energy to levitate silently.',
+    cost: 280000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_pterodactyl', weight: 100 }],
+    svgParams: { body: "eagle", eyes: "cosmic", color: ["#10002b","#240046"], wings: "shadow", orbits: 2 }
+  },
+  aero_pterodactyl: {
+    id: 'aero_pterodactyl',
+    name: 'Aero Pterodactyl',
+    tier: 6,
+    rarity: 'COMMON',
+    element: 'WIND',
+    baseCps: 3100,
+    lore: 'A prehistoric glider that rides high-speed jets in the upper stratospheres.',
+    cost: 550000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'abyss_jellyfish', weight: 90 }, { to: 'biolume_jellyfish', weight: 8 }, { to: 'chrono_jellyfish', weight: 1.9 }, { to: 'plasma_jellyfish', weight: 0.1 }],
+    svgParams: { body: "pterodactyl", eyes: "angry", color: ["#ff5400","#ff6d00"], wings: "feathered", tail: "serpent" }
+  },
+  nebula_pterodactyl: {
+    id: 'nebula_pterodactyl',
+    name: 'Nebula Pterodactyl',
+    tier: 6,
+    rarity: 'RARE',
+    element: 'COSMIC',
+    baseCps: 4700,
+    lore: 'Its wings resemble glowing gas clouds, holding tiny glittering stars.',
+    cost: 1000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'biolume_jellyfish', weight: 70 }, { to: 'plasma_jellyfish', weight: 29.9 }, { to: 'chrono_jellyfish', weight: 0.1 }],
+    svgParams: { body: "pterodactyl", eyes: "cosmic", color: ["#7209b7","#b5179e"], wings: "starry", stars: true }
+  },
+  solar_pterodactyl: {
+    id: 'solar_pterodactyl',
+    name: 'Solar Pterodactyl',
+    tier: 6,
+    rarity: 'RARE',
+    element: 'LIGHT',
+    baseCps: 4700,
+    lore: 'A pterosaur that feeds on solar radiation and emits golden rays.',
+    cost: 1000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'chrono_jellyfish', weight: 70 }, { to: 'plasma_jellyfish', weight: 30 }],
+    svgParams: { body: "pterodactyl", eyes: "excited", color: ["#ffb703","#fb8500"], wings: "golden", sparks: true }
+  },
+  cosmic_pterodactyl: {
+    id: 'cosmic_pterodactyl',
+    name: 'Cosmic Pterodactyl',
+    tier: 6,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 13000,
+    lore: 'A legendary space flyer encircled by massive orbital dust bands.',
+    cost: 2200000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'plasma_jellyfish', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "cosmic", color: ["#480ca8","#560bad"], wings: "starry", orbits: 3 }
+  },
+  abyss_jellyfish: {
+    id: 'abyss_jellyfish',
+    name: 'Abyss Jellyfish',
+    tier: 7,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 16000,
+    lore: 'A massive jellyfish that floats in the deep pressure pits of gas planets.',
+    cost: 5000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'spectral_shark', weight: 90 }, { to: 'gravity_ray', weight: 8 }, { to: 'astral_eagle', weight: 1.9 }, { to: 'dimension_pterodactyl', weight: 0.1 }],
+    svgParams: { body: 'jellyfish', eyes: 'sleepy', color: ['#240046', '#3c096c'], bubbles: true }
+  },
+  biolume_jellyfish: {
+    id: 'biolume_jellyfish',
+    name: 'Biolume Jellyfish',
+    tier: 7,
+    rarity: 'RARE',
+    element: 'WATER',
+    baseCps: 24000,
+    lore: 'Displays vibrant neon sequences to communicate through gaseous haze.',
+    cost: 8500000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'gravity_ray', weight: 70 }, { to: 'dimension_pterodactyl', weight: 29.9 }, { to: 'astral_eagle', weight: 0.1 }],
+    svgParams: { body: 'jellyfish', eyes: 'excited', color: ['#00f5d4', '#00bbf9'], bubbles: true, sparks: true }
+  },
+  chrono_jellyfish: {
+    id: 'chrono_jellyfish',
+    name: 'Chrono Jellyfish',
+    tier: 7,
+    rarity: 'RARE',
+    element: 'LIGHT',
+    baseCps: 24000,
+    lore: 'Its tentacles tick like clock hands, distorting time fields around it.',
+    cost: 8500000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'gravity_ray', weight: 70 }, { to: 'astral_eagle', weight: 25 }, { to: 'dimension_pterodactyl', weight: 5 }],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#ffd166', '#ff6b6b'], gears: true }
+  },
+  plasma_jellyfish: {
+    id: 'plasma_jellyfish',
+    name: 'Plasma Jellyfish',
+    tier: 7,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 65000,
+    lore: 'A nuclear-powered jellyfish that drifts through ionized storm zones.',
+    cost: 20000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'astral_eagle', weight: 80 }, { to: 'dimension_pterodactyl', weight: 20 }],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#ff007f', '#7928ca'], halo: 'sun', sparks: true }
+  },
+  spectral_shark: {
+    id: 'spectral_shark',
+    name: 'Spectral Sky-Shark',
+    tier: 8,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 82000,
+    lore: 'A ghostly shark that swims through solid matter due to low gravity phase shift.',
+    cost: 45000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'iron_ray', weight: 90 }, { to: 'magma_shark', weight: 8 }, { to: 'antimatter_eagle', weight: 1.9 }, { to: 'plasma_pterodactyl', weight: 0.1 }],
+    svgParams: { body: "shark", eyes: "angry", color: ["#3a0ca3","#3f37c9"], void_core: true, tail: "shark_fin" }
+  },
+  gravity_ray: {
+    id: 'gravity_ray',
+    name: 'Gravity-Bending Ray',
+    tier: 8,
+    rarity: 'RARE',
+    element: 'VOID',
+    baseCps: 125000,
+    lore: 'Creates localized gravity pockets to propel itself forward at high speeds.',
+    cost: 85000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'magma_shark', weight: 70 }, { to: 'plasma_pterodactyl', weight: 29.9 }, { to: 'antimatter_eagle', weight: 0.1 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#10002b","#5a189a"], void_core: true, gills: true, orbits: 1, tail: "whip" }
+  },
+  astral_eagle: {
+    id: 'astral_eagle',
+    name: 'Astral Storm Eagle',
+    tier: 8,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 340000,
+    lore: 'A massive eagle with wings spun from stellar cosmic dust.',
+    cost: 200000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'antimatter_eagle', weight: 80 }, { to: 'plasma_pterodactyl', weight: 20 }],
+    svgParams: { body: "eagle", eyes: "cosmic", color: ["#da77f2","#e599f7"], wings: "starry", stars: true }
+  },
+  dimension_pterodactyl: {
+    id: 'dimension_pterodactyl',
+    name: 'Dimension Pterodactyl',
+    tier: 8,
+    rarity: 'ULTRA_RARE',
+    element: 'VOID',
+    baseCps: 1300000,
+    lore: 'Its shrieks create dimensional wormholes, allowing it to warp instantly.',
+    cost: 700000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'plasma_pterodactyl', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "cosmic", color: ["#240046","#ff007f"], wings: "shadow", orbits: 3 }
+  },
+  iron_ray: {
+    id: 'iron_ray',
+    name: 'Iron Ray',
+    tier: 9,
+    rarity: 'COMMON',
+    element: 'EARTH',
+    baseCps: 450000,
+    lore: 'A heavy metallic ray that glides through high-density iron dust clouds.',
+    cost: 1300000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'methane_jellyfish', weight: 90 }, { to: 'ammonia_ray', weight: 8 }, { to: 'sulphur_shark', weight: 1.9 }, { to: 'carbon_eagle', weight: 0.1 }],
+    svgParams: { body: "ray", eyes: "sleepy", color: ["#495057","#343a40"], gills: true, spikes: true, tail: "whip" }
+  },
+  magma_shark: {
+    id: 'magma_shark',
+    name: 'Magma Sky-Shark',
+    tier: 9,
+    rarity: 'RARE',
+    element: 'FIRE',
+    baseCps: 680000,
+    lore: 'Swims through superheated silicate clouds, leaving a trail of fire.',
+    cost: 2500000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'ammonia_ray', weight: 70 }, { to: 'carbon_eagle', weight: 25 }, { to: 'sulphur_shark', weight: 5 }],
+    svgParams: { body: "shark", eyes: "angry", color: ["#9b2226","#ae2012"], magma_veins: true, tail: "shark_fin" }
+  },
+  antimatter_eagle: {
+    id: 'antimatter_eagle',
+    name: 'Antimatter Eagle',
+    tier: 9,
+    rarity: 'SUPER_RARE',
+    element: 'VOID',
+    baseCps: 1800000,
+    lore: 'A predatory bird composed of dark antimatter. Its wings leave trails of mini explosions.',
+    cost: 6000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'carbon_eagle', weight: 75 }, { to: 'helium_pterodactyl', weight: 25 }],
+    svgParams: { body: "eagle", eyes: "cosmic", color: ["#0d001a","#240046"], wings: "shadow", void_core: true }
+  },
+  plasma_pterodactyl: {
+    id: 'plasma_pterodactyl',
+    name: 'Plasma Pterodactyl',
+    tier: 9,
+    rarity: 'ULTRA_RARE',
+    element: 'COSMIC',
+    baseCps: 7500000,
+    lore: 'Breathes concentrated beams of ionized gas, lighting up the alien night skies.',
+    cost: 16000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'helium_pterodactyl', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "excited", color: ["#7209b7","#f72585"], wings: "feathered", sparks: true, halo: "sun" }
+  },
+  methane_jellyfish: {
+    id: 'methane_jellyfish',
+    name: 'Methane Jellyfish',
+    tier: 10,
+    rarity: 'COMMON',
+    element: 'WATER',
+    baseCps: 2500000,
+    lore: 'A colossal jellyfish floating on methane gas currents, absorbing organic cloud elements.',
+    cost: 35000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'gravity_serpent', weight: 90 }, { to: 'nebula_ray', weight: 8 }, { to: 'abyssal_shark', weight: 1.9 }, { to: 'cosmic_seraph', weight: 0.1 }],
+    svgParams: { body: 'jellyfish', eyes: 'cute', color: ['#0077b6', '#00b4d8'], bubbles: true }
+  },
+  ammonia_ray: {
+    id: 'ammonia_ray',
+    name: 'Ammonia Skimmer Ray',
+    tier: 10,
+    rarity: 'RARE',
+    element: 'WIND',
+    baseCps: 3800000,
+    lore: 'Sails on freezing ammonia storms, feeding on floating atmospheric crystals.',
+    cost: 70000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nebula_ray', weight: 70 }, { to: 'abyssal_shark', weight: 25 }, { to: 'cosmic_seraph', weight: 5 }],
+    svgParams: { body: "ray", eyes: "sleepy", color: ["#90e0ef","#caf0f8"], gills: true, wind_swirls: true, tail: "whip" }
+  },
+  sulphur_shark: {
+    id: 'sulphur_shark',
+    name: 'Acidic Sulphur Shark',
+    tier: 10,
+    rarity: 'RARE',
+    element: 'FIRE',
+    baseCps: 3800000,
+    lore: 'A dangerous yellow sky-predator that flies through sulfuric acid rain.',
+    cost: 70000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nebula_ray', weight: 70 }, { to: 'abyssal_shark', weight: 29.9 }, { to: 'cosmic_seraph', weight: 0.1 }],
+    svgParams: { body: "shark", eyes: "angry", color: ["#eeef20","#dddf00"], spikes: true, tail: "shark_fin" }
+  },
+  carbon_eagle: {
+    id: 'carbon_eagle',
+    name: 'Carbon-Wing Eagle',
+    tier: 10,
+    rarity: 'SUPER_RARE',
+    element: 'EARTH',
+    baseCps: 10000000,
+    lore: 'Has lightweight carbon fiber wings that beat with ultra-high efficiency.',
+    cost: 160000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'abyssal_shark', weight: 80 }, { to: 'cosmic_seraph', weight: 20 }],
+    svgParams: { body: "eagle", eyes: "wink", color: ["#212529","#495057"], wings: "leafy", tail: "leaf" }
+  },
+  helium_pterodactyl: {
+    id: 'helium_pterodactyl',
+    name: 'Helium Flyer Pterodactyl',
+    tier: 10,
+    rarity: 'ULTRA_RARE',
+    element: 'LIGHT',
+    baseCps: 45000000,
+    lore: 'Inflates its air sacs with light helium gas, making it virtually weightless.',
+    cost: 400000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_seraph', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "excited", color: ["#ffea00","#ffdd00"], wings: "golden", sparks: true }
+  },
+  gravity_serpent: {
+    id: 'gravity_serpent',
+    name: 'Gravity Serpent',
+    tier: 11,
+    rarity: 'COMMON',
+    element: 'WIND',
+    baseCps: 120000000,
+    lore: 'A long serpentine dragon that flows gracefully through low-gravity air pockets.',
+    cost: 900000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'void_glider', weight: 90 }, { to: 'solaris_wing', weight: 8 }, { to: 'hypernova_shark', weight: 1.9 }, { to: 'singularity_pterosaur', weight: 0.1 }],
+    svgParams: { body: "cobra", eyes: "excited", color: ["#00b4d8","#0077b6"], double_head: true, tail: "serpent" }
+  },
+  nebula_ray: {
+    id: 'nebula_ray',
+    name: 'Nebula Glider Ray',
+    tier: 11,
+    rarity: 'RARE',
+    element: 'COSMIC',
+    baseCps: 185000000,
+    lore: 'Its wings collect stardust, generating active cosmic shield walls.',
+    cost: 1800000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'solaris_wing', weight: 70 }, { to: 'hypernova_shark', weight: 25 }, { to: 'singularity_pterosaur', weight: 5 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#ae3ec9","#d0bfff"], orbits: 2, stars: true, tail: "whip" }
+  },
+  abyssal_shark: {
+    id: 'abyssal_shark',
+    name: 'Abyssal Sky-Shark',
+    tier: 11,
+    rarity: 'SUPER_RARE',
+    element: 'VOID',
+    baseCps: 520000000,
+    lore: 'A dark sky predator that swallows gas clouds, generating black hole ripples.',
+    cost: 4500000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'hypernova_shark', weight: 80 }, { to: 'singularity_pterosaur', weight: 20 }],
+    svgParams: { body: "shark", eyes: "angry", color: ["#0d001a","#1b002c"], void_core: true, tail: "shark_fin", wings: "shadow" }
+  },
+  cosmic_seraph: {
+    id: 'cosmic_seraph',
+    name: 'Cosmic Seraph Ray',
+    tier: 11,
+    rarity: 'ULTRA_RARE',
+    element: 'DEITY',
+    baseCps: 2100000000,
+    lore: 'A holy glider ray carrying orbital rings that hum with high frequency cosmic vibrations.',
+    cost: 12000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_pterosaur', weight: 100 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#fff5b8","#ffd700"], wings: "golden", halo: "triple_gold", orbits: 4, tail: "whip" }
+  },
+  void_glider: {
+    id: 'void_glider',
+    name: 'Void Glider',
+    tier: 12,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 6200000000,
+    lore: 'A dark fluid ray that swims silently through deep space gravity gaps.',
+    cost: 45000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'quantum_monarch', weight: 90 }, { to: 'astral_dragon', weight: 8 }, { to: 'omega_jellyfish', weight: 1.9 }, { to: 'dimension_sovereign', weight: 0.1 }],
+    svgParams: { body: "glider", eyes: "cosmic", color: ["#120024","#0d0d0d"], void_core: true, wings: "shadow" }
+  },
+  solaris_wing: {
+    id: 'solaris_wing',
+    name: 'Solaris Wing Eagle',
+    tier: 12,
+    rarity: 'RARE',
+    element: 'LIGHT',
+    baseCps: 9800000000,
+    lore: 'A solar eagle carrying a crown of active sunspots.',
+    cost: 90000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'astral_dragon', weight: 70 }, { to: 'omega_jellyfish', weight: 25 }, { to: 'dimension_sovereign', weight: 5 }],
+    svgParams: { body: "eagle", eyes: "excited", color: ["#ffd700","#ffa500"], wings: "golden", crown: true }
+  },
+  hypernova_shark: {
+    id: 'hypernova_shark',
+    name: 'Hypernova Sky-Shark',
+    tier: 12,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 28000000000,
+    lore: 'An unstable stellar predator that releases massive fusion bursts when hunting.',
+    cost: 220000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'omega_jellyfish', weight: 80 }, { to: 'dimension_sovereign', weight: 20 }],
+    svgParams: { body: "shark", eyes: "excited", color: ["#ff0055","#ff5500"], stars: true, orbits: 3, tail: "shark_fin" }
+  },
+  singularity_pterosaur: {
+    id: 'singularity_pterosaur',
+    name: 'Singularity Pterosaur',
+    tier: 12,
+    rarity: 'ULTRA_RARE',
+    element: 'VOID',
+    baseCps: 110000000000,
+    lore: 'A legendary flyer coiling around a black hole, feeding on light waves.',
+    cost: 600000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'dimension_sovereign', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "cosmic", color: ["#000","#111"], void_core: true, wings: "shadow", orbits: 4 }
+  },
+  quantum_monarch: {
+    id: 'quantum_monarch',
+    name: 'Quantum Monarch',
+    tier: 13,
+    rarity: 'COMMON',
+    element: 'DEITY',
+    baseCps: 380000000000,
+    lore: 'A reality-shifting monarch ray that exists in multiple gravity states at once.',
+    cost: 3000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'gravity_lord', weight: 100 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#e2e2e2","#ffffff"], wings: "angelic", orbits: 2, tail: "whip" }
+  },
+  astral_dragon: {
+    id: 'astral_dragon',
+    name: 'Astral Dragon-Bird',
+    tier: 13,
+    rarity: 'RARE',
+    element: 'COSMIC',
+    baseCps: 590000000000,
+    lore: 'A stellar dragon glider that navigates via gravity lines of star systems.',
+    cost: 8000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'abyssal_deity', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "cosmic", color: ["#bfdbfe","#60a5fa"], wings: "starry", stars: true }
+  },
+  omega_jellyfish: {
+    id: 'omega_jellyfish',
+    name: 'Omega Jellyfish',
+    tier: 13,
+    rarity: 'SUPER_RARE',
+    element: 'DEITY',
+    baseCps: 1800000000000,
+    lore: 'A massive sky-deity jellyfish whose glowing tentacles reach across the biome.',
+    cost: 20000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_phoenix', weight: 100 }],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#fff9db', '#ffd700'], halo: 'triple_gold', orbits: 3 }
+  },
+  dimension_sovereign: {
+    id: 'dimension_sovereign',
+    name: 'Dimension Sovereign',
+    tier: 13,
+    rarity: 'ULTRA_RARE',
+    element: 'VOID',
+    baseCps: 8500000000000,
+    lore: 'Rules the sub-dimensions of the low-gravity universe, bending space at will.',
+    cost: 65000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nebula_leviathan', weight: 100 }],
+    svgParams: { body: "angel", eyes: "cosmic", color: ["#310062","#120024"], void_core: true, wings: "shadow" }
+  },
+  gravity_lord: {
+    id: 'gravity_lord',
+    name: 'Gravity Lord',
+    tier: 14,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 1800000000000,
+    lore: 'Controls gravity waves directly, allowing it to move mountains of iron dust.',
+    cost: 100000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_jellyfish', weight: 100 }],
+    svgParams: { body: "gargoyle", eyes: "angry", color: ["#120024","#ff00ff"], horns: 2, void_core: true, wings: "shadow" }
+  },
+  abyssal_deity: {
+    id: 'abyssal_deity',
+    name: 'Abyssal Deity',
+    tier: 14,
+    rarity: 'RARE',
+    element: 'VOID',
+    baseCps: 2800000000000,
+    lore: 'A deep space entity worshiped by ancient alien civilizations.',
+    cost: 200000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nebula_seraph', weight: 100 }],
+    svgParams: { body: "angel", eyes: "cosmic", color: ["#0d001a","#240046"], void_core: true, orbits: 2, wings: "shadow" }
+  },
+  cosmic_phoenix: {
+    id: 'cosmic_phoenix',
+    name: 'Cosmic Phoenix',
+    tier: 14,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 8000000000000,
+    lore: 'A legendary stardust firebird. Its rebirth sweeps entire biomes with energy.',
+    cost: 550000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'solar_sovereign', weight: 100 }],
+    svgParams: { body: 'bird', eyes: 'excited', color: ['#ff00a0', '#ff00ff'], wings: 'starry', halo: 'sun', stars: true }
+  },
+  nebula_leviathan: {
+    id: 'nebula_leviathan',
+    name: 'Nebula Leviathan Ray',
+    tier: 14,
+    rarity: 'ULTRA_RARE',
+    element: 'COSMIC',
+    baseCps: 35000000000000,
+    lore: 'A gargantuan glider ray that swallows nebula dust clouds whole.',
+    cost: 1500000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'antimatter_leviathan', weight: 100 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#3a0ca3","#7209b7"], wings: "starry", orbits: 4, tail: "whip" }
+  },
+  gravity_lord_prime: {
+    id: 'gravity_lord_prime',
+    name: 'Gravity Lord Prime',
+    tier: 14,
+    rarity: 'LEGENDARY',
+    element: 'VOID',
+    baseCps: 25000000000000,
+    lore: 'The prime ascended form of the Gravity Lord, warping gravity vectors instantly.',
+    cost: 120000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'gravity_lord_omega', weight: 100 }],
+    svgParams: { body: "gargoyle", eyes: "angry", color: ["#120024","#ff00ff"], horns: 2, void_core: true, wings: "shadow", crown: true }
+  },
+  abyssal_deity_prime: {
+    id: 'abyssal_deity_prime',
+    name: 'Abyssal Deity Prime',
+    tier: 14,
+    rarity: 'LEGENDARY',
+    element: 'VOID',
+    baseCps: 50000000000000,
+    lore: 'The prime ascended form of the Abyssal Deity, floating between spatial coordinates.',
+    cost: 300000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'abyssal_deity_omega', weight: 100 }],
+    svgParams: { body: "angel", eyes: "cosmic", color: ["#0d001a","#240046"], void_core: true, orbits: 3, wings: "shadow", crown: true }
+  },
+  cosmic_phoenix_prime: {
+    id: 'cosmic_phoenix_prime',
+    name: 'Cosmic Phoenix Prime',
+    tier: 14,
+    rarity: 'LEGENDARY',
+    element: 'COSMIC',
+    baseCps: 99000000000000,
+    lore: 'The prime ascended form of the Cosmic Phoenix, glowing with starlight.',
+    cost: 600000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_phoenix_omega', weight: 100 }],
+    svgParams: { body: 'bird', eyes: 'excited', color: ['#ff00a0', '#ff00ff'], wings: 'starry', halo: 'sun', stars: true, crown: true }
+  },
+  singularity_jellyfish: {
+    id: 'singularity_jellyfish',
+    name: 'Singularity Jellyfish',
+    tier: 15,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 15000000000000,
+    lore: 'A black-hole weaving jellyfish that feeds on light waves.',
+    cost: 10000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nova_jellyfish', weight: 100 }],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#000', '#7b00ad'], void_core: true }
+  },
+  nebula_seraph: {
+    id: 'nebula_seraph',
+    name: 'Nebula Seraph Ray',
+    tier: 15,
+    rarity: 'RARE',
+    element: 'COSMIC',
+    baseCps: 25000000000000,
+    lore: 'An ascended nebula angel ray flowing with stardust.',
+    cost: 18000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'nova_ray', weight: 100 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#bfdbfe","#60a5fa"], wings: "starry", orbits: 3, tail: "whip" }
+  },
+  solar_sovereign: {
+    id: 'solar_sovereign',
+    name: 'Solar Sovereign Ray',
+    tier: 15,
+    rarity: 'SUPER_RARE',
+    element: 'LIGHT',
+    baseCps: 75000000000000,
+    lore: 'A sun-crowned sky ray that illuminates the entire solar system.',
+    cost: 60000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'spectral_wing', weight: 100 }],
+    svgParams: { body: "ray", eyes: "excited", color: ["#ffd700","#ff8000"], wings: "golden", halo: "sun", sparks: true, tail: "whip" }
+  },
+  antimatter_leviathan: {
+    id: 'antimatter_leviathan',
+    name: 'Antimatter Leviathan',
+    tier: 15,
+    rarity: 'ULTRA_RARE',
+    element: 'VOID',
+    baseCps: 300000000000000,
+    lore: 'A massive ray composed of antimatter that annihilates space barriers.',
+    cost: 180000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_jellyfish', weight: 100 }],
+    svgParams: { body: "shark", eyes: "cosmic", color: ["#10002b","#240046"], void_core: true, wings: "shadow", orbits: 4, tail: "shark_fin" }
+  },
+  gravity_lord_omega: {
+    id: 'gravity_lord_omega',
+    name: 'Gravity Lord Omega',
+    tier: 15,
+    rarity: 'LEGENDARY',
+    element: 'VOID',
+    baseCps: 150000000000000,
+    lore: 'The ultimate omega form of the Gravity Lord, locking gravity scales.',
+    cost: 15000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    svgParams: { body: "gargoyle", eyes: "angry", color: ["#120024","#ff00ff"], horns: 2, void_core: true, wings: "shadow", crown: true, steam: true }
+  },
+  abyssal_deity_omega: {
+    id: 'abyssal_deity_omega',
+    name: 'Abyssal Deity Omega',
+    tier: 15,
+    rarity: 'LEGENDARY',
+    element: 'VOID',
+    baseCps: 300000000000000,
+    lore: 'The ultimate omega form of the Abyssal Deity, ruling dark energy sheets.',
+    cost: 35000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    svgParams: { body: "angel", eyes: "cosmic", color: ["#0d001a","#240046"], void_core: true, orbits: 4, wings: "shadow", crown: true, crystals: true }
+  },
+  cosmic_phoenix_omega: {
+    id: 'cosmic_phoenix_omega',
+    name: 'Cosmic Phoenix Omega',
+    tier: 15,
+    rarity: 'LEGENDARY',
+    element: 'COSMIC',
+    baseCps: 600000000000000,
+    lore: 'The ultimate omega form of the Cosmic Phoenix, burning with infinite light.',
+    cost: 70000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    svgParams: { body: 'bird', eyes: 'excited', color: ['#ff00a0', '#ff00ff'], wings: 'starry', halo: 'triple_gold', stars: true, crown: true }
+  },
+  aurora_jellyfish: {
+    id: 'aurora_jellyfish',
+    name: 'Aurora Sovereign Jellyfish',
+    tier: 15,
+    rarity: 'GODLY',
+    element: 'DEITY',
+    baseCps: 1500000000000000,
+    lore: 'A supreme multicoloured alien jellyfish whose canopy shimmers like polar aurora borealis.',
+    cost: 1500000000000000000000,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#00ffff', '#ff00ff', '#ffd700'], halo: 'triple_gold', orbits: 4, sparks: true, crown: true }
+  },
+  nova_jellyfish: {
+    id: 'nova_jellyfish',
+    name: 'Nova Jellyfish',
+    tier: 16,
+    rarity: 'COMMON',
+    element: 'COSMIC',
+    baseCps: 15000000000000000,
+    lore: 'A giant jellyfish whose body pulses with active stellar fusion explosions.',
+    cost: 15000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'spectral_wing', weight: 100 }],
+    svgParams: { body: 'jellyfish', eyes: 'excited', color: ['#ff4500', '#ffd700'], bubbles: true, sparks: true }
+  },
+  nova_ray: {
+    id: 'nova_ray',
+    name: 'Nova Glider Ray',
+    tier: 16,
+    rarity: 'RARE',
+    element: 'COSMIC',
+    baseCps: 45000000000000000,
+    lore: 'A cosmic ray wing that captures the blast waves of dying stars.',
+    cost: 75000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'spectral_pterosaur', weight: 100 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#ff85a2","#f72585"], wings: "starry", orbits: 2, tail: "whip" }
+  },
+  spectral_wing: {
+    id: 'spectral_wing',
+    name: 'Spectral Glider',
+    tier: 17,
+    rarity: 'RARE',
+    element: 'WIND',
+    baseCps: 200000000000000000,
+    lore: 'An ethereal ray-like glider that drifts across dimensions.',
+    cost: 450000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_jellyfish', weight: 100 }],
+    svgParams: { body: "glider", eyes: "sleepy", color: ["#a2d2ff","#e0f2fe"], wings: "cloudy" }
+  },
+  spectral_pterosaur: {
+    id: 'spectral_pterosaur',
+    name: 'Spectral Pterosaur',
+    tier: 17,
+    rarity: 'SUPER_RARE',
+    element: 'WIND',
+    baseCps: 800000000000000000,
+    lore: 'A giant wind glider made of shimmering plasma and light rays.',
+    cost: 3000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'cosmic_jellyfish', weight: 100 }],
+    svgParams: { body: "pterodactyl", eyes: "angry", color: ["#b388ff","#8c9eff"], wings: "feathered" }
+  },
+  spectral_jellyfish: {
+    id: 'spectral_jellyfish',
+    name: 'Spectral Sovereign Jellyfish',
+    tier: 15,
+    rarity: 'GODLY',
+    element: 'DEITY',
+    baseCps: 1500000000000000,
+    lore: 'A supreme spectral jellyfish that shimmers in multiple wavelengths of light.',
+    cost: 1000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#ff00c8', '#00ffff', '#b388ff'], halo: 'triple_gold', orbits: 4, crown: true }
+  },
+  cosmic_jellyfish: {
+    id: 'cosmic_jellyfish',
+    name: 'Cosmic Jellyfish',
+    tier: 18,
+    rarity: 'SUPER_RARE',
+    element: 'COSMIC',
+    baseCps: 5000000000000000000,
+    lore: 'Weaves cosmic dust webs with its endless glowing tentacles.',
+    cost: 20000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'void_jellyfish', weight: 100 }],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#8a2be2', '#ff00ff'], stars: true, sparks: true }
+  },
+  cosmic_wing: {
+    id: 'cosmic_wing',
+    name: 'Cosmic Glider Wing',
+    tier: 18,
+    rarity: 'ULTRA_RARE',
+    element: 'COSMIC',
+    baseCps: 25000000000000000000,
+    lore: 'An ultra-light glider that captures stellar winds, accelerating time.',
+    cost: 150000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'void_jellyfish', weight: 100 }],
+    svgParams: { body: "glider", eyes: "cosmic", color: ["#3a0ca3","#7209b7"], wings: "starry", orbits: 3 }
+  },
+  void_jellyfish: {
+    id: 'void_jellyfish',
+    name: 'Void Jellyfish',
+    tier: 19,
+    rarity: 'ULTRA_RARE',
+    element: 'VOID',
+    baseCps: 150000000000000000000,
+    lore: 'A massive jellyfish floating in the dark void layers, generating starlight filters.',
+    cost: 1500000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#0d0d0d', '#3a0ca3'], void_core: true, sparks: true }
+  },
+  astral_monarch: {
+    id: 'astral_monarch',
+    name: 'Astral Monarch Ray',
+    tier: 19,
+    rarity: 'LEGENDARY',
+    element: 'COSMIC',
+    baseCps: 1000000000000000000000,
+    lore: 'The ultimate prime glider deity, carrying 4 active star systems.',
+    cost: 30000000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#f72585","#7209b7"], wings: "golden", orbits: 4, crown: true, tail: "whip" }
+  },
+  abyssal_jellyfish: {
+    id: 'abyssal_jellyfish',
+    name: 'Abyssal Sovereign Jellyfish',
+    tier: 15,
+    rarity: 'GODLY',
+    element: 'VOID',
+    baseCps: 3000000000000000,
+    lore: 'The ultimate dark-energy jellyfish deity, drawing all light into its core.',
+    cost: 1000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#03001e', '#7303c0', '#ec38bc'], halo: 'triple_gold', orbits: 4, void_core: true, crown: true }
+  },
+  singularity_monarch: {
+    id: 'singularity_monarch',
+    name: 'Singularity Monarch',
+    tier: 20,
+    rarity: 'LEGENDARY',
+    element: 'VOID',
+    baseCps: 5000000000000000000000,
+    lore: 'The ultimate ruler of low-gravity systems. An ancient ray that anchors dimensions.',
+    cost: 350000000000000000000000000,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: "ray", eyes: "cosmic", color: ["#00f0ff","#7b00ad","#10002b"], wings: "shadow", crown: true, orbits: 3, tail: "whip" }
+  },
+  dark_pterodactyl: {
+    id: 'dark_pterodactyl',
+    name: 'Dark Matter Pterodactyl',
+    tier: 20,
+    rarity: 'DARK_MATTER',
+    element: 'VOID',
+    baseCps: 1000000000000000000000000,
+    lore: 'A supreme pterodactyl of pure Dark Matter, formed from the fusion of a thousand Tier 20 low-gravity entities. Shimmers with purple glowing energy.',
+    cost: 0,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: "pterodactyl", eyes: "cosmic", color: ["#0d001a","#2c004d","#7b00ad","#ff00ff"], wings: "starry", orbits: 4, crown: true }
+  },
+  void_parasite: {
+    id: 'void_parasite',
+    name: 'Void Parasite',
+    tier: 14,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 0,
+    lore: 'A shadowy alien parasite that thrives in low gravity orbits, devouring elemental energy.',
+    cost: 0,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: 'jellyfish', eyes: 'angry', color: ['#1c1c1c', '#000000'], spikes: true, horns: 2, bubbles: true, void_parasite: true }
+  },
+  void_parasite_evolved: {
+    id: 'void_parasite_evolved',
+    name: 'Evolved Void Parasite',
+    tier: 15,
+    rarity: 'COMMON',
+    element: 'VOID',
+    baseCps: 0,
+    lore: 'An empowered, highly volatile alien shadow abomination. It consumes life force at an alarming rate.',
+    cost: 0,
+    system: 'low_gravity',
+    evolutions: [],
+    svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#0d0d0d', '#1a0000'], spikes: true, horns: 2, orbits: 2, void_parasite_evolved: true }
   }
 };
 
@@ -1029,7 +1992,7 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
   }
 
   // Shadow enemy warning backdrop glow
-  if (beastId === 'shadow_fiend' || beastId === 'shadow_fiend_evolved') {
+  if (beastId === 'shadow_fiend' || beastId === 'shadow_fiend_evolved' || beastId === 'void_parasite' || beastId === 'void_parasite_evolved') {
     svg += `
       <circle cx="60" cy="60" r="46" fill="rgba(255, 0, 0, 0.15)" filter="url(#${shadowRedGlowId})" />
     `;
@@ -1072,21 +2035,64 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
     } else if (p.wings === 'leafy' && !infected) {
       svg += `
         <g fill="#74b816" filter="url(#${shadowId})" class="anim-wing-left">
+          <!-- Main Leaf -->
           <path d="M 40 60 C 15 45, 20 20, 45 35 C 50 38, 48 50, 40 60 Z" />
+          <!-- Veins -->
+          <path d="M 42 52 Q 30 45, 25 45 M 43 46 Q 32 38, 28 35 M 44 40 Q 36 30, 34 26" stroke="#5c940d" stroke-width="1.2" fill="none" />
+          <!-- Secondary overlapping leaf -->
+          <path d="M 38 62 C 20 55, 25 35, 42 48" fill="#5c940d" opacity="0.85" />
         </g>
         <g fill="#74b816" filter="url(#${shadowId})" class="anim-wing-right">
+          <!-- Main Leaf -->
           <path d="M 80 60 C 105 45, 100 20, 75 35 C 70 38, 72 50, 80 60 Z" />
+          <!-- Veins -->
+          <path d="M 78 52 Q 90 45, 95 45 M 77 46 Q 88 38, 92 35 M 76 40 Q 84 30, 86 26" stroke="#5c940d" stroke-width="1.2" fill="none" />
+          <!-- Secondary overlapping leaf -->
+          <path d="M 82 62 C 100 55, 95 35, 78 48" fill="#5c940d" opacity="0.85" />
+        </g>
+      `;
+    } else if (p.wings === 'dragonfly_wings' && !infected) {
+      svg += `
+        <!-- Left Upper Wing -->
+        <g fill="rgba(255,255,255,0.75)" stroke="url(#${gradientId})" stroke-width="0.8" filter="url(#${shadowId})" class="anim-wing-left">
+          <path d="M 48 50 C 15 32, 10 20, 20 22 C 30 24, 40 35, 48 50 Z" />
+        </g>
+        <!-- Left Lower Wing -->
+        <g fill="rgba(255,255,255,0.6)" stroke="url(#${gradientId})" stroke-width="0.8" filter="url(#${shadowId})" class="anim-wing-left" style="animation-delay: -0.2s">
+          <path d="M 48 55 C 18 45, 15 35, 25 38 C 32 40, 42 48, 48 55 Z" />
+        </g>
+        <!-- Right Upper Wing -->
+        <g fill="rgba(255,255,255,0.75)" stroke="url(#${gradientId})" stroke-width="0.8" filter="url(#${shadowId})" class="anim-wing-right">
+          <path d="M 72 50 C 105 32, 110 20, 100 22 C 90 24, 80 35, 72 50 Z" />
+        </g>
+        <!-- Right Lower Wing -->
+        <g fill="rgba(255,255,255,0.6)" stroke="url(#${gradientId})" stroke-width="0.8" filter="url(#${shadowId})" class="anim-wing-right" style="animation-delay: -0.2s">
+          <path d="M 72 55 C 102 45, 105 35, 95 38 C 88 40, 78 48, 72 55 Z" />
         </g>
       `;
     } else if (p.wings === 'feathered' || p.wings === 'windy' || p.wings === 'starry' || p.wings === 'golden' || p.wings === 'fire_feathers' || p.wings === 'shadow' || p.wings === 'angelic' || infected) {
       svg += `
         <!-- Left Wing -->
         <g fill="${wingColor}" filter="url(#${shadowId})" class="anim-wing-left">
-          <path d="M 45 65 C 10 55, 5 25, 30 25 C 40 25, 45 40, 45 65 M 45 50 C 20 40, 25 30, 35 30" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
+          <!-- Main wing bone/joint -->
+          <path d="M 45 60 C 25 55, 10 32, 18 20 C 22 15, 30 20, 35 35 Q 38 48, 45 60 Z" opacity="0.95" />
+          <!-- Upper primary feather/blade -->
+          <path d="M 28 26 C 8 20, -5 32, 10 42 C 20 48, 28 35, 28 26 Z" opacity="0.9" />
+          <!-- Middle feather/blade -->
+          <path d="M 32 38 C 12 36, 0 52, 15 58 C 24 62, 32 50, 32 38 Z" opacity="0.8" />
+          <!-- Lower feather/blade -->
+          <path d="M 36 48 C 20 52, 8 68, 22 72 C 30 74, 36 62, 36 48 Z" opacity="0.75" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
         </g>
         <!-- Right Wing -->
         <g fill="${wingColor}" filter="url(#${shadowId})" class="anim-wing-right">
-          <path d="M 75 65 C 110 55, 115 25, 90 25 C 80 25, 75 40, 75 65 M 75 50 C 100 40, 95 30, 85 30" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
+          <!-- Main wing bone/joint -->
+          <path d="M 75 60 C 95 55, 110 32, 102 20 C 98 15, 90 20, 85 35 Q 82 48, 75 60 Z" opacity="0.95" />
+          <!-- Upper primary feather/blade -->
+          <path d="M 92 26 C 112 20, 125 32, 110 42 C 100 48, 92 35, 92 26 Z" opacity="0.9" />
+          <!-- Middle feather/blade -->
+          <path d="M 88 38 C 108 36, 120 52, 105 58 C 96 62, 88 50, 88 38 Z" opacity="0.8" />
+          <!-- Lower feather/blade -->
+          <path d="M 84 48 C 100 52, 112 68, 98 72 C 90 74, 84 62, 84 48 Z" opacity="0.75" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
         </g>
       `;
     }
@@ -1109,6 +2115,18 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
           <path d="M 25 85 L 35 80" stroke="#a9e34b" stroke-width="2" />
         </g>
       `;
+    } else if (p.tail === 'whip') {
+      svg += `
+        <g stroke="${infected ? '#862e9c' : `url(#${gradientId})`}" stroke-width="2.5" stroke-linecap="round" fill="none" filter="url(#${shadowId})" class="anim-tail">
+          <path d="M 60 92 Q 55 110, 65 118" />
+        </g>
+      `;
+    } else if (p.tail === 'shark_fin') {
+      svg += `
+        <g fill="${infected ? '#862e9c' : `url(#${gradientId})`}" filter="url(#${shadowId})" class="anim-tail">
+          <path d="M 60 92 C 50 102, 45 115, 60 112 C 75 115, 70 102, 60 92 Z" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1.2" />
+        </g>
+      `;
     } else if (p.tail === 'fin' || p.tail === 'wave' || p.tail === 'serpent' || infected) {
       svg += `
         <g fill="${infected ? '#5a1288' : '#15aabf'}" filter="url(#${shadowId})" class="anim-tail">
@@ -1117,6 +2135,43 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
         </g>
       `;
     }
+  }
+
+  if (p.body === 'jellyfish') {
+    svg += `
+      <!-- Jellyfish tentacles -->
+      <g fill="none" stroke="${infected ? '#862e9c' : `url(#${gradientId})`}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" filter="url(#${shadowId})" class="anim-jelly-tentacles">
+        <path d="M 45 60 Q 38 85, 42 105" />
+        <path d="M 52 60 Q 55 90, 50 110" />
+        <path d="M 60 60 Q 60 92, 63 112" />
+        <path d="M 68 60 Q 65 90, 70 110" />
+        <path d="M 75 60 Q 82 85, 78 105" />
+      </g>
+    `;
+  }
+
+  // Draw background parts for custom body types
+  if (p.body === 'shark') {
+    svg += `
+      <!-- Pectoral fins behind (symmetrical head-on flare) -->
+      <path d="M 40 60 C 12 55, 10 70, 40 72 Z" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1.2" />
+      <path d="M 80 60 C 108 55, 110 70, 80 72 Z" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1.2" />
+    `;
+  } else if (p.body === 'dragonfly') {
+    svg += `
+      <!-- Thorax behind -->
+      <ellipse cx="60" cy="55" rx="10" ry="12" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1.5" />
+      <!-- Segmented tail -->
+      <g fill="none" stroke="url(#${gradientId})" stroke-width="5" stroke-linecap="round" filter="url(#${shadowId})" class="anim-tail">
+        <path d="M 60 65 Q 60 85, 62 108" stroke-dasharray="8, 3" />
+      </g>
+    `;
+  } else if (p.body === 'glider') {
+    svg += `
+      <!-- Glider membrane -->
+      <path d="M 45 40 C 20 40, 15 75, 45 80 Z" fill="url(#${gradientId})" opacity="0.6" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1" />
+      <path d="M 75 40 C 100 40, 105 75, 75 80 Z" fill="url(#${gradientId})" opacity="0.6" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1" />
+    `;
   }
 
   // Draw main body shape
@@ -1133,8 +2188,13 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
     bodyPath = 'M 60 35 C 80 35, 85 50, 85 75 C 85 95, 75 95, 60 95 C 45 95, 35 95, 35 75 C 35 50, 40 35, 60 35 Z';
   } else if (p.body === 'shell') {
     bodyPath = 'M 60 30 C 85 30, 95 50, 90 75 C 85 90, 75 95, 60 95 C 45 95, 35 90, 30 75 C 25 50, 35 30, 60 30 Z';
-  } else if (p.body === 'griffin' || p.body === 'bird') {
+  } else if (p.body === 'jellyfish') {
+    bodyPath = 'M 35 60 C 35 30, 85 30, 85 60 C 85 68, 75 68, 70 60 C 65 52, 55 52, 50 60 C 45 68, 35 68, 35 60 Z';
+  } else if (p.body === 'griffin') {
     bodyPath = 'M 60 30 C 78 30, 85 45, 85 75 C 85 95, 73 95, 60 95 C 47 95, 35 95, 35 75 C 35 45, 42 30, 60 30 Z';
+  } else if (p.body === 'bird') {
+    // Proud broad-shouldered avian shape
+    bodyPath = 'M 60 18 C 70 18, 76 25, 75 35 C 82 42, 86 54, 82 72 C 78 84, 72 94, 60 98 C 48 94, 42 84, 38 72 C 34 54, 38 42, 45 35 C 44 25, 50 18, 60 18 Z';
   } else if (p.body === 'bull' || p.body === 'golem' || p.body === 'horse' || p.body === 'dragon') {
     bodyPath = 'M 60 25 C 82 25, 90 40, 90 75 C 90 98, 75 98, 60 98 C 45 98, 30 98, 30 75 C 30 40, 38 25, 60 25 Z';
   } else if (p.body === 'hydra') {
@@ -1145,6 +2205,28 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
     bodyPath = 'M 60 32 C 72 32, 74 42, 70 48 C 76 50, 76 62, 70 65 C 75 70, 75 88, 60 94 C 45 88, 45 70, 50 65 C 44 62, 44 50, 50 48 C 46 42, 48 32, 60 32 Z';
   } else if (p.body === 'tree') {
     bodyPath = 'M 50 30 C 58 32, 62 32, 70 30 C 75 45, 82 65, 78 80 C 88 92, 78 98, 70 95 C 65 92, 55 92, 50 95 C 42 98, 32 92, 42 80 C 38 65, 45 45, 50 30 Z';
+  } else if (p.body === 'ray') {
+    bodyPath = 'M 60 20 L 98 55 C 90 70, 72 80, 60 95 C 48 80, 30 70, 22 55 Z';
+  } else if (p.body === 'shark') {
+    bodyPath = 'M 60 22 C 78 22, 86 42, 84 65 C 82 82, 70 92, 60 98 C 50 92, 38 82, 36 65 C 34 42, 42 22, 60 22 Z';
+  } else if (p.body === 'eagle') {
+    // Proud broad-shouldered avian shape
+    bodyPath = 'M 60 20 C 72 20, 78 28, 76 38 C 84 44, 88 56, 84 72 C 80 82, 74 92, 60 96 C 46 92, 40 82, 36 72 C 32 56, 36 44, 44 38 C 42 28, 48 20, 60 20 Z';
+  } else if (p.body === 'pterodactyl') {
+    // Wide shoulder hinges, slender neck, head crest body
+    bodyPath = 'M 60 26 C 68 26, 74 34, 70 46 C 66 54, 66 62, 74 68 C 78 72, 76 82, 70 92 C 66 96, 62 98, 60 98 C 58 98, 54 96, 50 92 C 44 82, 42 72, 46 68 C 54 62, 54 54, 50 46 C 46 34, 52 26, 60 26 Z';
+  } else if (p.body === 'gargoyle') {
+    // Muscular stone torso and joints
+    bodyPath = 'M 60 26 C 70 26, 75 32, 74 42 C 84 46, 88 56, 82 72 C 80 78, 76 86, 74 94 C 68 96, 62 98, 60 98 C 58 98, 52 96, 46 94 C 44 86, 40 78, 38 72 C 32 56, 36 46, 46 42 C 45 32, 50 26, 60 26 Z';
+  } else if (p.body === 'angel') {
+    bodyPath = 'M 60 25 C 70 25, 75 35, 75 60 C 75 80, 85 95, 60 95 C 35 95, 45 80, 45 60 C 45 35, 50 25, 60 25 Z';
+  } else if (p.body === 'dragonfly') {
+    bodyPath = 'M 60 30 C 74 30, 80 38, 78 48 C 76 58, 68 62, 60 62 C 52 62, 44 58, 42 48 C 40 38, 46 30, 60 30 Z';
+  } else if (p.body === 'cobra') {
+    // Huge flared cobra hood and coiled tail shape
+    bodyPath = 'M 60 18 C 88 18, 98 32, 98 48 C 98 62, 84 70, 72 75 C 64 78, 58 84, 62 90 C 66 95, 74 94, 72 99 C 69 104, 51 104, 48 99 C 46 94, 54 95, 58 90 C 62 84, 56 78, 48 75 C 36 70, 22 62, 22 48 C 22 32, 32 18, 60 18 Z';
+  } else if (p.body === 'glider') {
+    bodyPath = 'M 60 25 C 80 25, 95 38, 95 60 C 95 82, 80 95, 60 95 C 40 95, 25 82, 25 60 C 25 38, 40 25, 60 25 Z';
   } else {
     bodyPath = 'M 60 30 C 85 30, 90 50, 90 75 C 90 95, 80 95, 60 95 C 40 95, 30 95, 30 75 C 30 50, 35 30, 60 30 Z';
   }
@@ -1168,7 +2250,190 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
     `;
   }
 
-  svg += `<path d="${bodyPath}" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="2" />`;
+  if (p.body === 'jellyfish') {
+    svg += `<g class="anim-jelly-bell"><path d="${bodyPath}" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="2" /></g>`;
+  } else {
+    svg += `<path d="${bodyPath}" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="2" />`;
+  }
+
+  // Draw foreground parts for custom body types
+  if (p.body === 'shark') {
+    svg += `
+      <!-- Head-on gills -->
+      <g stroke="rgba(0,0,0,0.4)" stroke-width="1.8" stroke-linecap="round">
+        <path d="M 33 55 C 31 58, 31 62, 33 65" fill="none" />
+        <path d="M 29 57 C 27 60, 27 63, 29 66" fill="none" />
+        <path d="M 87 55 C 89 58, 89 62, 87 65" fill="none" />
+        <path d="M 91 57 C 93 60, 93 63, 91 66" fill="none" />
+      </g>
+      <!-- Dorsal fin (viewed slightly from top/head-on perspective) -->
+      <path d="M 60 22 Q 60 40, 60 42" stroke="rgba(255,255,255,0.2)" stroke-width="4" stroke-linecap="round" fill="none" />
+      
+      <!-- Scary open mouth (dark red / black background) -->
+      <ellipse cx="60" cy="68" rx="20" ry="12" fill="#1b000a" stroke="rgba(255,255,255,0.15)" stroke-width="1.2" />
+      
+      <!-- Rows of sharp white triangular teeth -->
+      <!-- Upper teeth -->
+      <polygon points="42,64 45,69 48,64" fill="#ffffff" />
+      <polygon points="47,62 50,68 53,62" fill="#ffffff" />
+      <polygon points="52,60 55,67 58,60" fill="#ffffff" />
+      <polygon points="57,60 60,67 63,60" fill="#ffffff" />
+      <polygon points="62,60 65,67 68,60" fill="#ffffff" />
+      <polygon points="67,62 70,68 73,62" fill="#ffffff" />
+      <polygon points="72,64 75,69 78,64" fill="#ffffff" />
+      <!-- Lower teeth -->
+      <polygon points="44,71 47,67 50,71" fill="#ffffff" />
+      <polygon points="49,73 52,68 55,73" fill="#ffffff" />
+      <polygon points="54,75 57,69 60,75" fill="#ffffff" />
+      <polygon points="59,75 62,69 65,75" fill="#ffffff" />
+      <polygon points="64,73 67,68 70,73" fill="#ffffff" />
+      <polygon points="69,71 72,67 75,71" fill="#ffffff" />
+      
+      <!-- Glowing alien eyes -->
+      <g filter="url(#${glowId})">
+        <polygon points="42,42 54,46 48,50" fill="${infected ? '#ff0000' : '#00f0ff'}" />
+        <polygon points="78,42 66,46 72,50" fill="${infected ? '#ff0000' : '#00f0ff'}" />
+      </g>
+      <path d="M 38 40 L 53 45 M 82 40 L 67 45" stroke="#111" stroke-width="2.5" stroke-linecap="round" />
+    `;
+  } else if (p.body === 'ray') {
+    svg += `
+      <!-- Ray back ridges -->
+      <g stroke="rgba(255,255,255,0.25)" stroke-width="1.2" fill="none" opacity="0.8">
+        <path d="M 60 30 L 60 85" />
+        <path d="M 50 45 C 55 50, 65 50, 70 45" />
+        <path d="M 45 58 C 52 64, 68 64, 75 58" />
+      </g>
+    `;
+  } else if (p.body === 'eagle') {
+    svg += `
+      <!-- Symmetrical chest feathers -->
+      <g stroke="rgba(255,255,255,0.22)" stroke-width="1.5" fill="none">
+        <path d="M 45 68 C 52 73, 68 73, 75 68" />
+        <path d="M 48 76 C 54 80, 66 80, 72 76" />
+        <path d="M 52 84 C 56 87, 64 87, 68 84" />
+      </g>
+      <!-- Hooked beak with nostrils -->
+      <path d="M 55 42 Q 60 40, 65 42 Q 60 62, 60 62 Q 58 56, 55 42 Z" fill="#ff9f1c" stroke="#d9480f" stroke-width="0.8" filter="url(#${shadowId})" />
+      <circle cx="58" cy="47" r="0.8" fill="#111" />
+      <circle cx="62" cy="47" r="0.8" fill="#111" />
+      
+      <!-- Head feathers details -->
+      <path d="M 60 20 L 60 8" stroke="url(#${gradientId})" stroke-width="2" />
+      <path d="M 55 22 L 48 10" stroke="url(#${gradientId})" stroke-width="2" />
+      <path d="M 65 22 L 72 10" stroke="url(#${gradientId})" stroke-width="2" />
+      
+      <!-- Glowing slanted alien eyes -->
+      <g filter="url(#${glowId})">
+        <polygon points="40,36 52,39 46,43" fill="${infected ? '#ff0000' : '#ffd700'}" />
+        <polygon points="80,36 68,39 74,43" fill="${infected ? '#ff0000' : '#ffd700'}" />
+      </g>
+      <path d="M 37 34 L 53 38 M 83 34 L 67 38" stroke="#111" stroke-width="2.2" stroke-linecap="round" />
+      
+      <!-- Forehead alien gem / third eye -->
+      <polygon points="60,24 64,29 60,34 56,29" fill="${infected ? '#ff0000' : '#af40ff'}" filter="url(#${glowId})" />
+    `;
+  } else if (p.body === 'pterodactyl') {
+    svg += `
+      <!-- Double alien crest -->
+      <path d="M 52 28 C 44 14, 28 8, 30 3 C 38 6, 48 18, 52 28 Z" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1" />
+      <path d="M 68 28 C 76 14, 92 8, 90 3 C 82 6, 72 18, 68 28 Z" fill="url(#${gradientId})" filter="url(#${shadowId})" stroke="${infected ? '#862e9c' : 'rgba(255,255,255,0.15)'}" stroke-width="1" />
+      
+      <!-- Long sharp pointed beak -->
+      <path d="M 54 44 Q 60 43, 66 44 L 60 78 Z" fill="#ffb703" stroke="#e65100" stroke-width="0.8" filter="url(#${shadowId})" />
+      
+      <!-- Reptilian slit eyes -->
+      <g filter="url(#${glowId})">
+        <ellipse cx="44" cy="38" rx="6" ry="3" fill="${infected ? '#ff0000' : '#39ff14'}" transform="rotate(-10 44 38)" />
+        <ellipse cx="76" cy="38" rx="6" ry="3" fill="${infected ? '#ff0000' : '#39ff14'}" transform="rotate(10 76 38)" />
+      </g>
+      <!-- Slit pupils -->
+      <line x1="44" y1="35" x2="44" y2="41" stroke="#111" stroke-width="1.5" />
+      <line x1="76" y1="35" x2="76" y2="41" stroke="#111" stroke-width="1.5" />
+      
+      <!-- Webbed neck membranes -->
+      <path d="M 46 48 Q 30 58, 46 68" stroke="url(#${gradientId})" stroke-width="2" fill="none" opacity="0.6" />
+      <path d="M 74 48 Q 90 58, 74 68" stroke="url(#${gradientId})" stroke-width="2" fill="none" opacity="0.6" />
+      
+      <!-- Chest armor plates -->
+      <g stroke="rgba(255,255,255,0.25)" stroke-width="1.2" fill="none">
+        <path d="M 48 76 L 60 82 L 72 76" />
+        <path d="M 50 82 L 60 88 L 70 82" />
+      </g>
+    `;
+  } else if (p.body === 'gargoyle') {
+    const eyeColor = infected ? '#ff0000' : elementColor;
+    svg += `
+      <!-- Massive curled stone horns -->
+      <path d="M 40 30 C 22 16, 12 3, 26 0 C 34 0, 34 14, 40 26 Q 42 20, 40 30 Z" fill="url(#${gradientId})" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" filter="url(#${shadowId})" />
+      <path d="M 80 30 C 98 16, 108 3, 94 0 C 86 0, 86 14, 80 26 Q 78 20, 80 30 Z" fill="url(#${gradientId})" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" filter="url(#${shadowId})" />
+      
+      <!-- Muscular stone chest ridges / abs -->
+      <path d="M 46 55 Q 60 62, 74 55 M 48 68 Q 60 76, 72 68 M 51 80 Q 60 86, 69 80" stroke="rgba(255,255,255,0.2)" stroke-width="2.2" fill="none" />
+      <path d="M 60 55 L 60 90" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+      
+      <!-- Custom head-on demon face -->
+      <path d="M 36 43 Q 48 48, 60 48 Q 72 48, 84 43" stroke="#212529" stroke-width="3" fill="none" stroke-linecap="round" />
+      
+      <!-- Slanted glowing demon eyes -->
+      <g filter="url(#${glowId})">
+        <polygon points="40,43 52,48 46,52" fill="${eyeColor}" />
+        <polygon points="80,43 68,48 74,52" fill="${eyeColor}" />
+      </g>
+      
+      <!-- Snout -->
+      <polygon points="60,48 56,58 64,58" fill="#1e1e24" />
+      
+      <!-- Scary open stone mouth with white fangs -->
+      <path d="M 44 65 Q 60 76, 76 65 Q 60 62, 44 65 Z" fill="#100a12" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+      <polygon points="48,64 51,70 54,64" fill="#ffffff" />
+      <polygon points="72,64 69,70 66,64" fill="#ffffff" />
+      <polygon points="53,69 56,65 59,69" fill="#ffffff" />
+      <polygon points="67,69 64,65 61,69" fill="#ffffff" />
+      
+      <!-- Stony cracked skin texture lines -->
+      <path d="M 44 48 L 48 52 M 76 48 L 72 52 M 45 78 L 48 84 L 44 88 M 75 78 L 72 84 L 76 88" stroke="rgba(0,0,0,0.35)" stroke-width="1.2" fill="none" />
+    `;
+  } else if (p.body === 'angel') {
+    svg += `
+      <!-- Robe collar / details -->
+      <path d="M 48 55 Q 60 68, 72 55" stroke="#ffd700" stroke-width="2.5" fill="none" opacity="0.9" />
+      <path d="M 60 55 L 60 95" stroke="#ffd700" stroke-width="1.2" stroke-dasharray="3, 3" fill="none" opacity="0.8" />
+    `;
+  } else if (p.body === 'cobra') {
+    svg += `
+      <!-- Cobra menacing flared hood markings (threatening eye-spots) -->
+      <ellipse cx="32" cy="38" rx="6" ry="10" fill="rgba(0,0,0,0.4)" stroke="${elementColor}" stroke-width="1.5" transform="rotate(-15 32 38)" filter="url(#${glowId})" />
+      <ellipse cx="88" cy="38" rx="6" ry="10" fill="rgba(0,0,0,0.4)" stroke="${elementColor}" stroke-width="1.5" transform="rotate(15 88 38)" filter="url(#${glowId})" />
+      
+      <!-- Cobra belly scales / ridges -->
+      <g stroke="rgba(255,255,255,0.25)" stroke-width="2.5" fill="none">
+        <path d="M 50 42 Q 60 45, 70 42" />
+        <path d="M 52 50 Q 60 53, 68 50" />
+        <path d="M 54 58 Q 60 61, 66 58" />
+        <path d="M 55 66 Q 60 69, 65 66" />
+        <path d="M 56 74 Q 60 76, 64 74" />
+      </g>
+      
+      <!-- Slanted glowing eyes -->
+      <g filter="url(#${glowId})">
+        <polygon points="46,34 54,37 49,41" fill="${infected ? '#ff0000' : '#ffa800'}" />
+        <polygon points="74,34 66,37 71,41" fill="${infected ? '#ff0000' : '#ffa800'}" />
+      </g>
+      
+      <!-- Angry brows -->
+      <path d="M 42 32 L 53 35 M 78 32 L 67 35" stroke="#111" stroke-width="2" stroke-linecap="round" />
+      
+      <!-- Fangs -->
+      <polygon points="52,45 54,54 57,45" fill="#ffffff" />
+      <polygon points="68,45 66,54 63,45" fill="#ffffff" />
+      
+      <!-- Flickering tongue -->
+      <g stroke="${infected ? '#ff0000' : '#ff3b30'}" stroke-width="2.2" fill="none" class="anim-tail" style="transform-origin: 60px 48px">
+        <path d="M 60 48 L 60 58 M 60 58 L 56 63 M 60 58 L 64 63" />
+      </g>
+    `;
+  }
 
   // Draw overlay details (magma veins, cracks, crystals, foliage)
   if (p.cracks && !infected) {
@@ -1307,9 +2572,12 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
   if (p.body === 'insect') faceOffset = -16;
   else if (p.body === 'tree') faceOffset = -12;
   else if (p.body === 'spider') faceOffset = -10;
+  else if (p.body === 'jellyfish') faceOffset = -12;
 
   svg += `<g class="beast-face" ${faceOffset !== 0 ? `transform="translate(0, ${faceOffset})"` : ''}>`;
-  if (infected || beastId === 'shadow_fiend' || beastId === 'shadow_fiend_evolved') {
+  if (p.body === 'shark' || p.body === 'cobra' || p.body === 'eagle' || p.body === 'pterodactyl' || p.body === 'gargoyle') {
+    // Skip default face rendering for these custom designs because they render their own specialized mutant/alien head-on faces
+  } else if (infected || beastId === 'shadow_fiend' || beastId === 'shadow_fiend_evolved' || beastId === 'void_parasite' || beastId === 'void_parasite_evolved') {
     svg += `
       <!-- Toxic glowing red eyes -->
       <circle cx="48" cy="58" r="6.5" fill="#ff0000" filter="url(#${glowId})" />

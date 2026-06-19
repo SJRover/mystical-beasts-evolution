@@ -31,6 +31,39 @@ class AudioEngine {
     this.melodyIntervalId = null;
     this.activePadOscillators = [];
     this.preferredOscType = 'triangle';
+
+    // Low Gravity playlist states
+    this.lgPlaylist = [
+      'Low Gravity Solar System Music 4.mp3',
+      'Low Gravity Solar System Music 5.mp3',
+      'Low Gravity Solar System Music 1.mp3',
+      'Low Gravity Solar System Music 2.mp3',
+      'Low Gravity Solar System Music 3.mp3'
+    ];
+    this.lgCurrentTrackIdx = 0;
+    this.lgActiveAudio = null;
+    this.lgActiveSource = null;
+    this.lgActiveGain = null;
+    this.lgPrevAudio = null;
+    this.lgPrevSource = null;
+    this.lgPrevGain = null;
+    this.lgTimeoutId = null;
+
+    // Prime playlist states
+    this.primePlaylist = [
+      'Prime Solar System Music 1.mp3',
+      'Prime Solar System Music 2.mp3',
+      'Prime Solar System Music 3.mp3',
+      'Prime Solar System Music 4.mp3'
+    ];
+    this.primeCurrentTrackIdx = 0;
+    this.primeActiveAudio = null;
+    this.primeActiveSource = null;
+    this.primeActiveGain = null;
+    this.primePrevAudio = null;
+    this.primePrevSource = null;
+    this.primePrevGain = null;
+    this.primeTimeoutId = null;
   }
 
   init() {
@@ -73,6 +106,20 @@ class AudioEngine {
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.linearRampToValueAtTime(this.volume, this.ctx.currentTime + 0.1);
     }
+    const isLocalFile = window.location.protocol === 'file:';
+    const volumeMultiplier = isLocalFile ? 0.35 : 1.0;
+    if (this.lgActiveAudio) {
+      this.lgActiveAudio.volume = this.musicEnabled ? this.volume * volumeMultiplier : 0;
+    }
+    if (this.lgPrevAudio) {
+      this.lgPrevAudio.volume = this.musicEnabled ? this.volume * volumeMultiplier : 0;
+    }
+    if (this.primeActiveAudio) {
+      this.primeActiveAudio.volume = this.musicEnabled ? this.volume * volumeMultiplier : 0;
+    }
+    if (this.primePrevAudio) {
+      this.primePrevAudio.volume = this.musicEnabled ? this.volume * volumeMultiplier : 0;
+    }
   }
 
   toggleMusic(enabled) {
@@ -80,8 +127,59 @@ class AudioEngine {
     if (this.ctx && this.musicGain) {
       this.musicGain.gain.linearRampToValueAtTime(enabled ? 0.35 : 0, this.ctx.currentTime + 0.5);
     }
-    if (enabled && !this.musicPlaying) {
-      this.startMusic();
+    const isLocalFile = window.location.protocol === 'file:';
+    const volumeMultiplier = isLocalFile ? 0.35 : 1.0;
+    const currentSystem = (window.state && window.state.currentSolarSystem) || 'prime';
+    if (currentSystem === 'low_gravity') {
+      if (enabled) {
+        if (this.lgActiveAudio) {
+          this.lgActiveAudio.volume = this.volume * volumeMultiplier;
+          if (this.lgActiveGain && this.ctx) {
+            try { this.lgActiveGain.gain.setValueAtTime(0.35, this.ctx.currentTime); } catch(e) {}
+          }
+          this.lgActiveAudio.play().catch(e => console.error(e));
+        } else {
+          this.startLgPlaylist();
+        }
+      } else {
+        if (this.lgActiveAudio) {
+          try { this.lgActiveAudio.volume = 0; } catch(e) {}
+        }
+        if (this.lgPrevAudio) {
+          try { this.lgPrevAudio.volume = 0; } catch(e) {}
+        }
+        if (this.lgActiveGain && this.ctx) {
+          try { this.lgActiveGain.gain.setValueAtTime(0, this.ctx.currentTime); } catch(e) {}
+        }
+        if (this.lgPrevGain && this.ctx) {
+          try { this.lgPrevGain.gain.setValueAtTime(0, this.ctx.currentTime); } catch(e) {}
+        }
+      }
+    } else {
+      if (enabled) {
+        if (this.primeActiveAudio) {
+          this.primeActiveAudio.volume = this.volume * volumeMultiplier;
+          if (this.primeActiveGain && this.ctx) {
+            try { this.primeActiveGain.gain.setValueAtTime(0.35, this.ctx.currentTime); } catch(e) {}
+          }
+          this.primeActiveAudio.play().catch(e => console.error(e));
+        } else {
+          this.startPrimePlaylist();
+        }
+      } else {
+        if (this.primeActiveAudio) {
+          try { this.primeActiveAudio.volume = 0; } catch(e) {}
+        }
+        if (this.primePrevAudio) {
+          try { this.primePrevAudio.volume = 0; } catch(e) {}
+        }
+        if (this.primeActiveGain && this.ctx) {
+          try { this.primeActiveGain.gain.setValueAtTime(0, this.ctx.currentTime); } catch(e) {}
+        }
+        if (this.primePrevGain && this.ctx) {
+          try { this.primePrevGain.gain.setValueAtTime(0, this.ctx.currentTime); } catch(e) {}
+        }
+      }
     }
   }
 
@@ -103,28 +201,39 @@ class AudioEngine {
     
     this.musicPlaying = true;
     
-    // Play initial chord
-    this.playNextAmbientChord();
-    
-    // Change ambient pad chord every 8 seconds
-    this.chordIntervalId = setInterval(() => {
-      this.playNextAmbientChord();
-    }, 8000);
-
-    // Play generative melody plucks procedurally
-    this.playGenerativeMelody();
+    const currentSystem = (window.state && window.state.currentSolarSystem) || 'prime';
+    if (currentSystem === 'low_gravity') {
+      this.startLgPlaylist();
+    } else {
+      this.startPrimePlaylist();
+    }
   }
 
   stopMusic() {
     this.musicPlaying = false;
+    this.stopPrimePlaylist();
+    this.stopLgPlaylist();
+  }
+
+  startGenerativeMusic() {
     if (this.chordIntervalId) clearInterval(this.chordIntervalId);
     if (this.melodyIntervalId) clearTimeout(this.melodyIntervalId);
     
-    // Stop all active pad oscillators
+    this.playNextAmbientChord();
+    this.chordIntervalId = setInterval(() => {
+      this.playNextAmbientChord();
+    }, 8000);
+    this.playGenerativeMelody();
+  }
+
+  stopGenerativeMusic() {
+    if (this.chordIntervalId) clearInterval(this.chordIntervalId);
+    if (this.melodyIntervalId) clearTimeout(this.melodyIntervalId);
+    this.chordIntervalId = null;
+    this.melodyIntervalId = null;
+    
     this.activePadOscillators.forEach(osc => {
-      try {
-        osc.stop();
-      } catch (e) {}
+      try { osc.stop(); } catch (e) {}
     });
     this.activePadOscillators = [];
   }
@@ -505,7 +614,6 @@ class AudioEngine {
 
     osc.connect(gainNode);
     gainNode.connect(this.sfxGain);
-    gainNode.connect(this.delayNode); // Add spatial delay
 
     osc.start(now);
     osc.stop(now + 0.3);
@@ -571,7 +679,6 @@ class AudioEngine {
         
         osc.connect(gainNode);
         gainNode.connect(this.sfxGain);
-        gainNode.connect(this.delayNode);
         
         osc.start(now + idx * 0.08);
         osc.stop(now + idx * 0.08 + 0.4);
@@ -599,7 +706,6 @@ class AudioEngine {
         
         osc.connect(gainNode);
         gainNode.connect(this.sfxGain);
-        gainNode.connect(this.delayNode);
         
         osc.start(now + idx * 0.06);
         osc.stop(now + idx * 0.06 + 0.7);
@@ -627,7 +733,6 @@ class AudioEngine {
         
         osc.connect(gainNode);
         gainNode.connect(filter);
-        gainNode.connect(this.delayNode);
         
         osc.start(now + idx * 0.05);
         osc.stop(now + idx * 0.05 + 1.5);
@@ -646,7 +751,6 @@ class AudioEngine {
         gainNode.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.5 + 0.8);
         osc.connect(gainNode);
         gainNode.connect(this.sfxGain);
-        gainNode.connect(this.delayNode);
         osc.start(now + idx * 0.05 + 0.5);
         osc.stop(now + idx * 0.05 + 0.5 + 0.9);
       });
@@ -687,7 +791,6 @@ class AudioEngine {
       
       osc.connect(gainNode);
       gainNode.connect(this.sfxGain);
-      gainNode.connect(this.delayNode);
       
       osc.start(now + delay);
       osc.stop(now + delay + 0.5);
@@ -695,6 +798,306 @@ class AudioEngine {
     
     subOsc.start(now);
     subOsc.stop(now + 2.0);
+  }
+
+  startLgPlaylist() {
+    if (!this.musicEnabled) return;
+    this.lgCurrentTrackIdx = 0;
+    this.playLgTrack(this.lgCurrentTrackIdx);
+  }
+
+  stopLgPlaylist() {
+    if (this.lgTimeoutId) clearTimeout(this.lgTimeoutId);
+    this.lgTimeoutId = null;
+    
+    const fadeOutTrack = (audioElement, gainNode) => {
+      if (!audioElement) return;
+      let vol = audioElement.volume;
+      const fadeInterval = setInterval(() => {
+        vol -= 0.05;
+        if (vol <= 0) {
+          clearInterval(fadeInterval);
+          try {
+            audioElement.pause();
+            audioElement.remove();
+          } catch(e) {}
+        } else {
+          try { audioElement.volume = Math.max(0, vol); } catch(e) {}
+          if (gainNode && this.ctx) {
+            try { gainNode.gain.setValueAtTime(vol * 0.35, this.ctx.currentTime); } catch(e) {}
+          }
+        }
+      }, 100);
+    };
+    
+    if (this.lgActiveAudio) {
+      fadeOutTrack(this.lgActiveAudio, this.lgActiveGain);
+      this.lgActiveAudio = null;
+      this.lgActiveSource = null;
+      this.lgActiveGain = null;
+    }
+    
+    if (this.lgPrevAudio) {
+      fadeOutTrack(this.lgPrevAudio, this.lgPrevGain);
+      this.lgPrevAudio = null;
+      this.lgPrevSource = null;
+      this.lgPrevGain = null;
+    }
+  }
+
+  playLgTrack(index) {
+    if (!this.musicEnabled) return;
+    this.init();
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    
+    // Crossfade old active track
+    if (this.lgActiveAudio) {
+      const prevAudio = this.lgActiveAudio;
+      const prevGain = this.lgActiveGain;
+      const prevSource = this.lgActiveSource;
+      
+      let vol = prevAudio.volume;
+      const fadeInterval = setInterval(() => {
+        vol -= 0.05;
+        if (vol <= 0) {
+          clearInterval(fadeInterval);
+          try {
+            prevAudio.pause();
+            prevAudio.remove();
+          } catch(e) {}
+        } else {
+          try { prevAudio.volume = Math.max(0, vol); } catch(e) {}
+          if (prevGain && this.ctx) {
+            try {
+              prevGain.gain.setValueAtTime(vol * 0.35, this.ctx.currentTime);
+            } catch(e) {}
+          }
+        }
+      }, 100);
+    }
+    
+    const trackPath = this.lgPlaylist[index];
+    const audioNode = new Audio(trackPath);
+    audioNode.loop = false;
+    
+    const isLocalFile = window.location.protocol === 'file:';
+    if (isLocalFile) {
+      audioNode.volume = this.musicEnabled ? this.volume * 0.35 : 0;
+    } else {
+      audioNode.volume = 1.0;
+    }
+    
+    this.lgActiveAudio = audioNode;
+    this.lgActiveSource = null;
+    this.lgActiveGain = null;
+    
+    // Web Audio API routing
+    if (this.ctx && !isLocalFile) {
+      try {
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(this.musicEnabled ? 0.35 : 0, this.ctx.currentTime);
+        gainNode.connect(this.musicGain);
+        
+        const source = this.ctx.createMediaElementSource(audioNode);
+        source.connect(gainNode);
+        
+        this.lgActiveGain = gainNode;
+        this.lgActiveSource = source;
+      } catch (err) {
+        console.warn("Web Audio API createMediaElementSource failed (using HTML5 volume fallback):", err);
+      }
+    }
+    
+    audioNode.play().catch(e => console.error("Low Gravity music play failed:", e));
+    
+    let transitionStarted = false;
+    audioNode.addEventListener('timeupdate', () => {
+      if (audioNode.duration && audioNode.currentTime >= audioNode.duration - 4) {
+        if (!transitionStarted) {
+          transitionStarted = true;
+          this.lgCurrentTrackIdx = (this.lgCurrentTrackIdx + 1) % this.lgPlaylist.length;
+          this.playLgTrack(this.lgCurrentTrackIdx);
+        }
+      }
+    });
+    
+    audioNode.addEventListener('ended', () => {
+      if (!transitionStarted) {
+        transitionStarted = true;
+        this.lgCurrentTrackIdx = (this.lgCurrentTrackIdx + 1) % this.lgPlaylist.length;
+        this.playLgTrack(this.lgCurrentTrackIdx);
+      }
+    });
+    
+    if (this.lgTimeoutId) {
+      clearTimeout(this.lgTimeoutId);
+      this.lgTimeoutId = null;
+    }
+  }
+
+  transitionSolarSystemMusic(systemId) {
+    if (!this.ctx) this.init();
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    
+    if (systemId === 'low_gravity') {
+      this.stopPrimePlaylist();
+      this.startLgPlaylist();
+    } else {
+      this.stopLgPlaylist();
+      this.startPrimePlaylist();
+    }
+  }
+
+  startPrimePlaylist() {
+    if (!this.musicEnabled) return;
+    this.primeCurrentTrackIdx = 0;
+    this.playPrimeTrack(this.primeCurrentTrackIdx);
+  }
+
+  stopPrimePlaylist() {
+    if (this.primeTimeoutId) clearTimeout(this.primeTimeoutId);
+    this.primeTimeoutId = null;
+    
+    const fadeOutTrack = (audioElement, gainNode) => {
+      if (!audioElement) return;
+      let vol = audioElement.volume;
+      const fadeInterval = setInterval(() => {
+        vol -= 0.05;
+        if (vol <= 0) {
+          clearInterval(fadeInterval);
+          try {
+            audioElement.pause();
+            audioElement.remove();
+          } catch(e) {}
+        } else {
+          try { audioElement.volume = Math.max(0, vol); } catch(e) {}
+          if (gainNode && this.ctx) {
+            try { gainNode.gain.setValueAtTime(vol * 0.35, this.ctx.currentTime); } catch(e) {}
+          }
+        }
+      }, 100);
+    };
+    
+    if (this.primeActiveAudio) {
+      fadeOutTrack(this.primeActiveAudio, this.primeActiveGain);
+      this.primeActiveAudio = null;
+      this.primeActiveSource = null;
+      this.primeActiveGain = null;
+    }
+    
+    if (this.primePrevAudio) {
+      fadeOutTrack(this.primePrevAudio, this.primePrevGain);
+      this.primePrevAudio = null;
+      this.primePrevSource = null;
+      this.primePrevGain = null;
+    }
+  }
+
+  playPrimeTrack(index) {
+    if (!this.musicEnabled) return;
+    this.init();
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    
+    // Crossfade old active track
+    if (this.primeActiveAudio) {
+      const prevAudio = this.primeActiveAudio;
+      const prevGain = this.primeActiveGain;
+      const prevSource = this.primeActiveSource;
+      
+      let vol = prevAudio.volume;
+      const fadeInterval = setInterval(() => {
+        vol -= 0.05;
+        if (vol <= 0) {
+          clearInterval(fadeInterval);
+          try {
+            prevAudio.pause();
+            prevAudio.remove();
+          } catch(e) {}
+        } else {
+          try { prevAudio.volume = Math.max(0, vol); } catch(e) {}
+          if (prevGain && this.ctx) {
+            try {
+              prevGain.gain.setValueAtTime(vol * 0.35, this.ctx.currentTime);
+            } catch(e) {}
+          }
+        }
+      }, 100);
+    }
+    
+    const trackPath = this.primePlaylist[index];
+    const audioNode = new Audio(trackPath);
+    audioNode.loop = false;
+    
+    const isLocalFile = window.location.protocol === 'file:';
+    if (isLocalFile) {
+      audioNode.volume = this.musicEnabled ? this.volume * 0.35 : 0;
+    } else {
+      audioNode.volume = 1.0;
+    }
+    
+    this.primeActiveAudio = audioNode;
+    this.primeActiveSource = null;
+    this.primeActiveGain = null;
+    
+    // Web Audio API routing
+    if (this.ctx && !isLocalFile) {
+      try {
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.setValueAtTime(this.musicEnabled ? 0.35 : 0, this.ctx.currentTime);
+        gainNode.connect(this.musicGain);
+        
+        const source = this.ctx.createMediaElementSource(audioNode);
+        source.connect(gainNode);
+        
+        this.primeActiveGain = gainNode;
+        this.primeActiveSource = source;
+      } catch (err) {
+        console.warn("Web Audio API createMediaElementSource failed (using HTML5 volume fallback):", err);
+      }
+    }
+    
+    audioNode.play().catch(e => console.error("Prime music play failed:", e));
+    
+    let transitionStarted = false;
+    audioNode.addEventListener('timeupdate', () => {
+      if (audioNode.duration && audioNode.currentTime >= audioNode.duration - 4) {
+        if (!transitionStarted) {
+          transitionStarted = true;
+          this.primeCurrentTrackIdx = (this.primeCurrentTrackIdx + 1) % this.primePlaylist.length;
+          this.playPrimeTrack(this.primeCurrentTrackIdx);
+        }
+      }
+    });
+    
+    audioNode.addEventListener('ended', () => {
+      if (!transitionStarted) {
+        transitionStarted = true;
+        this.primeCurrentTrackIdx = (this.primeCurrentTrackIdx + 1) % this.primePlaylist.length;
+        this.playPrimeTrack(this.primeCurrentTrackIdx);
+      }
+    });
+    
+    if (this.primeTimeoutId) {
+      clearTimeout(this.primeTimeoutId);
+      this.primeTimeoutId = null;
+    }
+  }
+
+  skipToNextSong() {
+    const currentSystem = (window.state && window.state.currentSolarSystem) || 'prime';
+    if (currentSystem === 'low_gravity') {
+      this.lgCurrentTrackIdx = (this.lgCurrentTrackIdx + 1) % this.lgPlaylist.length;
+      this.playLgTrack(this.lgCurrentTrackIdx);
+    } else {
+      this.primeCurrentTrackIdx = (this.primeCurrentTrackIdx + 1) % this.primePlaylist.length;
+      this.playPrimeTrack(this.primeCurrentTrackIdx);
+    }
   }
 }
 

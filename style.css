@@ -753,7 +753,7 @@ body {
   height: 90px;
   cursor: grab;
   z-index: 5;
-  transition: transform 0.15s ease-out;
+  will-change: transform;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -762,7 +762,6 @@ body {
 .beast-container.dragging {
   cursor: grabbing;
   z-index: 100;
-  transform: scale(1.15) !important;
 }
 
 .beast-container.hovering-compatible {
@@ -771,6 +770,10 @@ body {
   border-radius: 50%;
   animation: pulse-dashed 1.2s linear infinite;
   box-shadow: 0 0 15px rgba(34, 184, 207, 0.4);
+}
+
+.beast-svg {
+  pointer-events: none;
 }
 
 /* Evolved Visual shadow aura */
@@ -1442,6 +1445,7 @@ input:checked + .slider:before {
   animation: slide-down-fade 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   pointer-events: auto;
   max-width: 320px;
+  cursor: pointer;
 }
 
 .toast-alert.fade-out {
@@ -1760,6 +1764,40 @@ input:checked + .slider:before {
   animation: spin-gear 9s linear infinite reverse;
 }
 
+@keyframes jelly-bell {
+  0%, 100% {
+    transform: scale(1, 1) translateY(0);
+  }
+  30% {
+    transform: scale(1.08, 0.92) translateY(-4px);
+  }
+  65% {
+    transform: scale(0.94, 1.06) translateY(2px);
+  }
+}
+
+@keyframes jelly-tentacles {
+  0%, 100% {
+    transform: scaleY(1) skewX(0deg) translateY(0);
+  }
+  30% {
+    transform: scaleY(0.82) skewX(-5deg) translateY(-2px);
+  }
+  65% {
+    transform: scaleY(1.1) skewX(5deg) translateY(1px);
+  }
+}
+
+.anim-jelly-bell {
+  transform-origin: 60px 45px;
+  animation: jelly-bell 2.8s ease-in-out infinite;
+}
+
+.anim-jelly-tentacles {
+  transform-origin: 60px 60px;
+  animation: jelly-tentacles 2.8s ease-in-out infinite;
+}
+
 /* TRASH BIN STYLING */
 .trash-bin-container {
   background: rgba(255, 255, 255, 0.04);
@@ -2040,3 +2078,583 @@ input:checked + .slider:before {
     background: #05000a;
   }
 }
+
+/* Beast Hub Space Biome */
+#meadow-bg.biome-hub {
+  background: radial-gradient(circle at center, #0e0422 0%, #050111 60%, #000002 100%) !important;
+}
+#meadow-bg.biome-hub .bg-cloud,
+#meadow-bg.biome-hub .meadow-hills,
+#meadow-bg.biome-hub #biome-decoration-layer {
+  display: none !important;
+}
+
+#leave-hub-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(224, 49, 49, 0.6);
+}
+#leave-hub-btn:active {
+  transform: scale(0.95);
+}
+
+/* Daily Spin Modal */
+.daily-spin-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  color: white;
+}
+.daily-spin-modal.active {
+  display: flex;
+}
+.daily-spin-content {
+  background: linear-gradient(135deg, #1b0e36 0%, #0c051a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 25px;
+  width: 90%;
+  max-width: 440px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(138, 43, 226, 0.2);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.daily-spin-title {
+  font-size: 24px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffd700, #ff8000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 5px;
+}
+.daily-spin-subtitle {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-bottom: 20px;
+}
+.wheel-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 15px auto;
+  border-radius: 50%;
+  border: 8px solid #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.wheel-pointer {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 25px solid #ff0055;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  z-index: 10;
+}
+.wheel-spin-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  border: 3px solid #ffffff;
+  color: #1b0e36;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.6);
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.wheel-spin-btn:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.8);
+}
+.wheel-spin-btn:active {
+  transform: translate(-50%, -50%) scale(0.95);
+}
+.wheel-spin-btn.disabled {
+  background: #495057;
+  color: #adb5bd;
+  border-color: #6c757d;
+  box-shadow: none;
+  pointer-events: none;
+}
+.wheel-canvas-container {
+  width: 100%;
+  height: 100%;
+  transition: transform 4s cubic-bezier(0.1, 0.8, 0.1, 1);
+}
+.spin-result-container {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 15px;
+  animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.spin-result-card {
+  width: 130px;
+  height: 130px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+.daily-spin-claim-btn {
+  background: linear-gradient(135deg, #1eff00, #00ced1);
+  color: white;
+  border: none;
+  font-weight: bold;
+  padding: 10px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(30, 255, 0, 0.4);
+  transition: all 0.2s ease;
+}
+.daily-spin-claim-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(30, 255, 0, 0.6);
+}
+.daily-spin-claim-btn:active {
+  transform: scale(0.95);
+}
+.daily-spin-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--color-text-dim);
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.daily-spin-close-btn:hover {
+  color: white;
+}
+
+/* Tutorial Overlay Styles */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 6, 22, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+}
+.tutorial-content {
+  background: linear-gradient(145deg, #1b0e36, #0d061a);
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.25), inset 0 0 15px rgba(255, 215, 0, 0.05);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 420px;
+  padding: 30px;
+  text-align: center;
+  position: relative;
+  animation: modalEnter 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.tutorial-logo {
+  font-size: 48px;
+  color: #ffd700;
+  margin-bottom: 15px;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6));
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+.tutorial-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.tutorial-desc {
+  font-size: 14px;
+  color: #cbbad9;
+  line-height: 1.6;
+  margin-bottom: 25px;
+  min-height: 70px;
+}
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 25px;
+}
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+.tutorial-dot.active {
+  background: #ffd700;
+  transform: scale(1.35);
+  box-shadow: 0 0 8px #ffd700;
+}
+.tutorial-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+}
+.tutorial-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tutorial-btn.primary {
+  background: linear-gradient(135deg, #ffd700, #ffa500);
+  color: #0d061a;
+  border: none;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+.tutorial-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.45);
+}
+.tutorial-btn.secondary {
+  background: transparent;
+  color: #cbbad9;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+}
+.tutorial-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+
+/* --- LOW GRAVITY / ANTI GRAVITY SPACE BIOME STYLES --- */
+#meadow-bg.low-gravity .bg-cloud {
+  display: none !important;
+}
+
+#meadow-bg.low-gravity .hill-layer-1 {
+  background: linear-gradient(to top, #08080a 0%, #15151c 100%);
+  clip-path: polygon(0% 100%, 0% 60%, 8% 52%, 15% 65%, 22% 48%, 31% 70%, 40% 55%, 48% 63%, 58% 42%, 67% 68%, 76% 50%, 84% 62%, 92% 45%, 100% 58%, 100% 100%);
+  opacity: 0.95;
+  transition: all 1.0s ease;
+}
+
+#meadow-bg.low-gravity .hill-layer-2 {
+  background: linear-gradient(to top, #020203 0%, #0c0c0e 100%);
+  clip-path: polygon(0% 100%, 0% 75%, 6% 68%, 12% 80%, 20% 70%, 28% 85%, 37% 72%, 45% 78%, 54% 65%, 62% 82%, 70% 70%, 79% 80%, 88% 68%, 95% 75%, 100% 62%, 100% 100%);
+  transition: all 1.0s ease;
+}
+
+/* Twinkling Space Stars */
+.space-star {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes space-twinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+    box-shadow: 0 0 4px #fff;
+  }
+}
+
+/* Shooting Stars */
+.space-shooting-star {
+  position: absolute;
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+  transform: rotate(-40deg);
+  transform-origin: right center;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+}
+
+@keyframes space-shooting {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-40deg) scaleX(0);
+    opacity: 0;
+  }
+  1% {
+    opacity: 1;
+  }
+  8% {
+    transform: translate3d(-180px, 150px, 0) rotate(-40deg) scaleX(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(-180px, 150px, 0) rotate(-40deg) scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* Drifting Meteorites */
+.space-meteorite {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes space-meteor-drift {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  100% {
+    transform: translate3d(-100px, 50px, 0) rotate(360deg);
+  }
+}
+
+/* Rotating Galaxies */
+.space-galaxy-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes space-galaxy-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Theme-specific nebula galaxy variables */
+#meadow-bg.low-gravity.biome-0 {
+  --space-glow: #e2fcd4;
+  --space-core: #5cd65c;
+  --space-arms: #1db160;
+  background: linear-gradient(to bottom, #05140b 0%, #0c331a 60%, #05140b 100%);
+}
+#meadow-bg.low-gravity.biome-1 {
+  --space-glow: #ffebcc;
+  --space-core: #ff6633;
+  --space-arms: #992200;
+  background: linear-gradient(to bottom, #140505 0%, #3a0d0d 60%, #140505 100%);
+}
+#meadow-bg.low-gravity.biome-2 {
+  --space-glow: #ffffff;
+  --space-core: #ffeb3b;
+  --space-arms: #ff9800;
+  background: linear-gradient(to bottom, #141205 0%, #3a320d 60%, #141205 100%);
+}
+#meadow-bg.low-gravity.biome-3 {
+  --space-glow: #f3e5f5;
+  --space-core: #ba68c8;
+  --space-arms: #7b1fa2;
+  background: linear-gradient(to bottom, #110514 0%, #320d3a 60%, #110514 100%);
+}
+#meadow-bg.low-gravity.biome-4 {
+  --space-glow: #e0f7fa;
+  --space-core: #4dd0e1;
+  --space-arms: #00838f;
+  background: linear-gradient(to bottom, #051214 0%, #0d323a 60%, #051214 100%);
+}
+#meadow-bg.low-gravity.biome-5 {
+  --space-glow: #fce4ec;
+  --space-core: #f06292;
+  --space-arms: #c2185b;
+  background: linear-gradient(to bottom, #14050a 0%, #3a0d24 60%, #14050a 100%);
+}
+#meadow-bg.low-gravity.biome-6 {
+  --space-glow: #e0f2f1;
+  --space-core: #26a69a;
+  --space-arms: #004d40;
+  background: linear-gradient(to bottom, #051412 0%, #0d3a33 60%, #051412 100%);
+}
+#meadow-bg.low-gravity.biome-7 {
+  --space-glow: #e8eaf6;
+  --space-core: #7986cb;
+  --space-arms: #283593;
+  background: linear-gradient(to bottom, #060814 0%, #101538 60%, #060814 100%);
+}
+#meadow-bg.low-gravity.biome-8 {
+  --space-glow: #f1f8e9;
+  --space-core: #aed581;
+  --space-arms: #558b2f;
+  background: linear-gradient(to bottom, #0a1405 0%, #1f3a0d 60%, #0a1405 100%);
+}
+#meadow-bg.low-gravity.biome-9 {
+  --space-glow: #fffde7;
+  --space-core: #fff176;
+  --space-arms: #fbc02d;
+  background: linear-gradient(to bottom, #141405 0%, #3a3a0d 60%, #141405 100%);
+}
+#meadow-bg.low-gravity.biome-10 {
+  --space-glow: #fff5f5;
+  --space-core: #ff8a80;
+  --space-arms: #d32f2f;
+  background: linear-gradient(to bottom, #140505 0%, #3a0d0d 60%, #140505 100%);
+}
+#meadow-bg.low-gravity.biome-11 {
+  --space-glow: #f3e5f5;
+  --space-core: #ba68c8;
+  --space-arms: #e91e63;
+  background: linear-gradient(to bottom, #110514 0%, #320d3a 60%, #110514 100%);
+}
+
+/* --- SANCTUARY FILTER BAR & POPUP MODALS --- */
+.sanctuary-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 15px 0 20px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sanctuary-filter-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 120px;
+  gap: 5px;
+}
+
+.sanctuary-filter-group label {
+  font-size: 10px;
+  color: #a89bb0;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sanctuary-filter-select {
+  background: rgba(18, 14, 30, 0.7);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  width: 100%;
+}
+
+.sanctuary-filter-select:hover {
+  border-color: #ffd700;
+  background: rgba(18, 14, 30, 0.9);
+}
+
+.sanctuary-filter-select:focus {
+  border-color: #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.35);
+}
+
+.trophy-card {
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.trophy-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+/* Hide Incubator Pedestals inside Beast Hub */
+.biome-hub .incubator-pedestal-container {
+  display: none !important;
+}
+
+/* Onboarding Interactive Tutorial Animations */
+@keyframes tutorial-pulse {
+  0% { box-shadow: 0 0 0 0px rgba(121, 40, 202, 0.75); }
+  100% { box-shadow: 0 0 0 15px rgba(121, 40, 202, 0); }
+}
+
+.tutorial-glow {
+  animation: tutorial-pulse 1.4s infinite !important;
+  border-color: #7928ca !important;
+  z-index: 1002 !important;
+}
+
+.tutorial-banner {
+  position: absolute;
+  top: 95px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 14, 30, 0.95);
+  border: 2px solid #7928ca;
+  box-shadow: 0 0 20px rgba(121, 40, 202, 0.6);
+  border-radius: 14px;
+  padding: 12px 24px;
+  z-index: 10001;
+  pointer-events: none;
+  font-family: 'Outfit', sans-serif;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+  animation: modalEnter 0.35s ease-out;
+}
+
+/* Interactive Tutorial Blocks */
+body.interactive-tutorial-active .header-container,
+body.interactive-tutorial-active .sidebar-panel,
+body.interactive-tutorial-active .shop-tab-bar,
+body.interactive-tutorial-active .sanctuary-container,
+body.interactive-tutorial-active .daily-spin-hud-btn,
+body.interactive-tutorial-active #trash-bin,
+body.interactive-tutorial-active .incubator-pedestal-container {
+  pointer-events: none !important;
+  opacity: 0.5;
+}
+
+body.interactive-tutorial-active:not(.stage-2) .beast-container {
+  pointer-events: none !important;
+}
+
+body.interactive-tutorial-active:not(.stage-1) .crate-container {
+  pointer-events: none !important;
+}
+
+
