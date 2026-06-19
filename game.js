@@ -223,6 +223,12 @@ window.addEventListener('DOMContentLoaded', () => {
   updatePlaygroundRect();
   window.addEventListener('resize', updatePlaygroundRect);
 
+  // Initialize App Store purchases if on mobile native platform
+  document.addEventListener('deviceready', () => {
+    console.log("StoreKit: deviceready event received");
+    initStoreKit();
+  });
+
   // Disable pinch-zoom and double-tap zoom on iOS completely
   document.addEventListener('touchstart', (e) => {
     if (e.touches.length > 1) {
@@ -4006,7 +4012,183 @@ function isBoostActive() {
   return Date.now() < state.doubleEssenceEndTime;
 }
 
+let isStoreInitialized = false;
+let activePurchaseCallback = null;
+
+function initStoreKit() {
+  if (typeof CdvPurchase === 'undefined') {
+    console.log("StoreKit: CdvPurchase global not found. Simulated mode will be used.");
+    return;
+  }
+
+  const { store, ProductType, Platform } = CdvPurchase;
+
+  // Verbose logging in debug/TestFlight
+  store.verbosity = CdvPurchase.LogLevel.DEBUG;
+
+  // Register Consumable Products
+  store.register([
+    {
+      id: 'boost_2x',
+      type: ProductType.CONSUMABLE,
+      platform: Platform.APPLE_APPSTORE
+    },
+    {
+      id: 'crates_premium_3x',
+      type: ProductType.CONSUMABLE,
+      platform: Platform.APPLE_APPSTORE
+    }
+  ]);
+
+  // Transaction Approved -> Verify
+  store.when().approved((transaction) => {
+    console.log(`StoreKit: Transaction approved for ${transaction.products[0].id}, verifying receipt...`);
+    transaction.verify();
+  });
+
+  // Transaction Verified -> Finish & Grant
+  store.when().verified((receipt) => {
+    console.log("StoreKit: Transaction receipt verified successfully.");
+    const transaction = receipt.transactions[0];
+    if (transaction && transaction.products && transaction.products.length > 0) {
+      const productId = transaction.products[0].id;
+      transaction.finish();
+      
+      console.log(`StoreKit: Transaction finished and items granted for ${productId}`);
+      
+      // Hide loader and execute callback
+      hideStoreLoadingSpinner();
+      
+      if (activePurchaseCallback) {
+        activePurchaseCallback();
+        activePurchaseCallback = null;
+      } else {
+        handleSuccessfulPurchase(productId);
+      }
+    } else {
+      hideStoreLoadingSpinner();
+    }
+  });
+
+  // Track finished transactions
+  store.when().finished((transaction) => {
+    console.log(`StoreKit: Transaction fully completed for ${transaction.products[0].id}`);
+    hideStoreLoadingSpinner();
+  });
+
+  // Track global errors
+  store.onError((error) => {
+    console.error(`StoreKit Error (${error.code}): ${error.message}`);
+    hideStoreLoadingSpinner();
+    // Only alert if the error wasn't user cancellation
+    if (error.code !== CdvPurchase.ErrorCode.PAYMENT_CANCELLED) {
+      alert(`App Store Purchase Failed: ${error.message}`);
+    }
+  });
+
+  // Initialize Apple App Store integration
+  store.initialize([Platform.APPLE_APPSTORE])
+    .then(() => {
+      console.log("StoreKit: Apple App Store billing successfully initialized.");
+      isStoreInitialized = true;
+    })
+    .catch((err) => {
+      console.error("StoreKit: Store initialization failed:", err);
+    });
+}
+
+function handleSuccessfulPurchase(productId) {
+  if (productId === 'boost_2x') {
+    buyDoubleEssenceBoost();
+  } else if (productId === 'crates_premium_3x') {
+    buyPremiumCrates();
+  } else {
+    console.warn(`StoreKit: Unrecognized product ID rewarded: ${productId}`);
+  }
+}
+
+function showStoreLoadingSpinner() {
+  if (document.getElementById('store-loading-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'store-loading-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 10005;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.15);
+      border-top-color: #007aff;
+      border-radius: 50%;
+      animation: storeSpin 1s linear infinite;
+      margin-bottom: 20px;
+    "></div>
+    <div style="font-size: 16px; font-weight: 600; letter-spacing: -0.2px;">Connecting to App Store...</div>
+    <style>
+      @keyframes storeSpin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  `;
+
+  document.body.appendChild(overlay);
+  void overlay.offsetWidth; // Force layout calculation for transition
+  overlay.style.opacity = '1';
+}
+
+function hideStoreLoadingSpinner() {
+  const overlay = document.getElementById('store-loading-overlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+    }, 250);
+  }
+}
+
 function triggerIosPurchase(productId, productName, productPrice, onComplete) {
+  // If native billing is not loaded (running in browser/simulator), fall back to mockup
+  if (typeof CdvPurchase === 'undefined' || !isStoreInitialized) {
+    console.log("StoreKit: Billing not initialized or not running on native iOS device. Falling back to simulation.");
+    runMockIosPurchase(productId, productName, productPrice, onComplete);
+    return;
+  }
+
+  showStoreLoadingSpinner();
+  activePurchaseCallback = onComplete;
+
+  const { store } = CdvPurchase;
+  store.order(productId)
+    .then(() => {
+      console.log(`StoreKit: Order successfully requested for ${productId}`);
+    })
+    .catch((err) => {
+      console.error(`StoreKit: Failed to request order for ${productId}`, err);
+      hideStoreLoadingSpinner();
+      activePurchaseCallback = null;
+      alert(`Could not initiate purchase: ${err.message}`);
+    });
+}
+
+function runMockIosPurchase(productId, productName, productPrice, onComplete) {
   // Create Apple Pay sheet container
   const overlay = document.createElement('div');
   overlay.id = 'apple-pay-overlay';
