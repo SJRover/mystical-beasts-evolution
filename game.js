@@ -2486,7 +2486,7 @@ function executeMerge(beastA, beastB) {
   }
   
   // Voidwalker / Abyssal Deity Prime check (T12+ merges)
-  if (!isLegendarySuccess && template.tier >= 12 && template.tier < 15) {
+  if (!isLegendarySuccess && template.tier >= 12 && template.tier < 14) {
     const voidwalkerChance = isEvolved ? 0.10 : 0.015;
     if (Math.random() < voidwalkerChance) {
       resultType = isLg ? 'abyssal_deity_prime' : 'voidwalker';
@@ -2501,7 +2501,7 @@ function executeMerge(beastA, beastB) {
   }
 
   // Aurelion / Cosmic Phoenix Prime check (Any merge)
-  if (!isLegendarySuccess && template.tier < 15) {
+  if (!isLegendarySuccess && template.tier < 14) {
     const aurelionChance = isEvolved ? 0.01 : 0.001;
     if (Math.random() < aurelionChance) {
       resultType = isLg ? 'cosmic_phoenix_prime' : 'aurelion';
