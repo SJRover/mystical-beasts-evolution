@@ -2258,13 +2258,23 @@ function executeMerge(beastA, beastB) {
   const originalTemplateA = template;
   if (beastA.type !== beastB.type) {
     const currentSys = state.currentSolarSystem || 'prime';
-    const commonBeast = Object.values(BEAST_TEMPLATES).find(t => 
-      t.tier === template.tier && 
-      t.rarity === 'COMMON' && 
-      (t.system || 'prime') === currentSys
-    );
-    if (commonBeast) {
-      template = commonBeast;
+    if (template.tier >= 16) {
+      // For T16+, select the template with the higher rarity to ensure linear progression to the next tier
+      const RARITY_ORDER = ['COMMON', 'RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
+      const rA = RARITY_ORDER.indexOf(template.rarity);
+      const rB = RARITY_ORDER.indexOf(targetTemplate.rarity);
+      if (rB > rA) {
+        template = targetTemplate;
+      }
+    } else {
+      const commonBeast = Object.values(BEAST_TEMPLATES).find(t => 
+        t.tier === template.tier && 
+        t.rarity === 'COMMON' && 
+        (t.system || 'prime') === currentSys
+      );
+      if (commonBeast) {
+        template = commonBeast;
+      }
     }
   }
 
