@@ -2344,6 +2344,30 @@ function executeMerge(beastA, beastB) {
 
   // 1b. If BOTH are Tier 15, handle Godly merge gamble
   if (isBothT15) {
+    const isGodlyA = originalTemplateA.rarity === 'GODLY';
+    const isGodlyB = targetTemplate.rarity === 'GODLY';
+    
+    if (isGodlyA || isGodlyB) {
+      // Direct Evolve for T15 Godlies: bypass gamble and evolve directly to Tier 16
+      let resultType;
+      if (template.evolutions && template.evolutions.length > 0) {
+        resultType = rollMutation(template.evolutions);
+      } else {
+        resultType = state.currentSolarSystem === 'low_gravity' ? 'nova_jellyfish' : 'arachnomorph';
+      }
+      
+      spawnToastNotification(
+        '🌌 GODLY ASCENSION!',
+        `Merging Godly elements succeeded! Evolved directly into <b>${BEAST_TEMPLATES[resultType].name}</b>!`,
+        getBeastSVG(resultType, isEvolved, isInfected)
+      );
+      if (audio) audio.playUnlock('ULTRA_RARE');
+      
+      spawnBeastOnField(resultType, mergeX, mergeY, isEvolved, isInfected);
+      checkDiscovery(resultType);
+      return;
+    }
+    
     const isSuccess = Math.random() < 0.10; // small chance (10%)
     
     if (isSuccess) {

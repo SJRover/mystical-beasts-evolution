@@ -1678,7 +1678,7 @@ const BEAST_TEMPLATES = {
     lore: 'The ultimate omega form of the Gravity Lord, locking gravity scales.',
     cost: 15000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    evolutions: [{ to: 'astral_monarch', weight: 100 }],
     svgParams: { body: "gargoyle", eyes: "angry", color: ["#120024","#ff00ff"], horns: 2, void_core: true, wings: "shadow", crown: true, steam: true }
   },
   abyssal_deity_omega: {
@@ -1691,7 +1691,7 @@ const BEAST_TEMPLATES = {
     lore: 'The ultimate omega form of the Abyssal Deity, ruling dark energy sheets.',
     cost: 35000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    evolutions: [{ to: 'astral_monarch', weight: 100 }],
     svgParams: { body: "angel", eyes: "cosmic", color: ["#0d001a","#240046"], void_core: true, orbits: 4, wings: "shadow", crown: true, crystals: true }
   },
   cosmic_phoenix_omega: {
@@ -1704,7 +1704,7 @@ const BEAST_TEMPLATES = {
     lore: 'The ultimate omega form of the Cosmic Phoenix, burning with infinite light.',
     cost: 70000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    evolutions: [{ to: 'astral_monarch', weight: 100 }],
     svgParams: { body: 'bird', eyes: 'excited', color: ['#ff00a0', '#ff00ff'], wings: 'starry', halo: 'triple_gold', stars: true, crown: true }
   },
   aurora_jellyfish: {
@@ -1730,7 +1730,7 @@ const BEAST_TEMPLATES = {
     lore: 'A giant jellyfish whose body pulses with active stellar fusion explosions.',
     cost: 15000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'spectral_wing', weight: 100 }],
+    evolutions: [{ to: 'nova_ray', weight: 100 }],
     svgParams: { body: 'jellyfish', eyes: 'excited', color: ['#ff4500', '#ffd700'], bubbles: true, sparks: true }
   },
   nova_ray: {
@@ -1743,7 +1743,7 @@ const BEAST_TEMPLATES = {
     lore: 'A cosmic ray wing that captures the blast waves of dying stars.',
     cost: 75000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'spectral_pterosaur', weight: 100 }],
+    evolutions: [{ to: 'spectral_wing', weight: 100 }],
     svgParams: { body: "ray", eyes: "cosmic", color: ["#ff85a2","#f72585"], wings: "starry", orbits: 2, tail: "whip" }
   },
   spectral_wing: {
@@ -1756,7 +1756,7 @@ const BEAST_TEMPLATES = {
     lore: 'An ethereal ray-like glider that drifts across dimensions.',
     cost: 450000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'cosmic_jellyfish', weight: 100 }],
+    evolutions: [{ to: 'spectral_pterosaur', weight: 100 }],
     svgParams: { body: "glider", eyes: "sleepy", color: ["#a2d2ff","#e0f2fe"], wings: "cloudy" }
   },
   spectral_pterosaur: {
@@ -1795,7 +1795,7 @@ const BEAST_TEMPLATES = {
     lore: 'Weaves cosmic dust webs with its endless glowing tentacles.',
     cost: 20000000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'void_jellyfish', weight: 100 }],
+    evolutions: [{ to: 'cosmic_wing', weight: 100 }],
     svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#8a2be2', '#ff00ff'], stars: true, sparks: true }
   },
   cosmic_wing: {
@@ -1821,7 +1821,7 @@ const BEAST_TEMPLATES = {
     lore: 'A massive jellyfish floating in the dark void layers, generating starlight filters.',
     cost: 1500000000000000000000000,
     system: 'low_gravity',
-    evolutions: [{ to: 'singularity_monarch', weight: 100 }],
+    evolutions: [{ to: 'astral_monarch', weight: 100 }],
     svgParams: { body: 'jellyfish', eyes: 'cosmic', color: ['#0d0d0d', '#3a0ca3'], void_core: true, sparks: true }
   },
   astral_monarch: {
