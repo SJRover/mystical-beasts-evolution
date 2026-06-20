@@ -9,7 +9,7 @@ if (!fs.existsSync(destDir)) {
 
 const files = fs.readdirSync(__dirname).filter(file => {
   const ext = path.extname(file).toLowerCase();
-  return ['.html', '.css', '.js', '.png', '.mp3'].includes(ext) && file !== 'build.js';
+  return ['.html', '.css', '.js', '.png', '.mp3'].includes(ext) && file !== 'build.js' && file !== 'generate_native_icon.js';
 });
 
 files.forEach(file => {
