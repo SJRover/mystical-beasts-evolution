@@ -224,10 +224,34 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', updatePlaygroundRect);
 
   // Initialize App Store purchases if on mobile native platform
-  document.addEventListener('deviceready', () => {
-    console.log("StoreKit: deviceready event received");
-    initStoreKit();
-  });
+  const tryInitStore = () => {
+    if (typeof CdvPurchase !== 'undefined') {
+      console.log("StoreKit: CdvPurchase found, initializing StoreKit...");
+      initStoreKit();
+      return true;
+    }
+    return false;
+  };
+
+  if (!tryInitStore()) {
+    console.log("StoreKit: CdvPurchase not ready yet, registering listeners and polling...");
+    document.addEventListener('deviceready', () => {
+      console.log("StoreKit: deviceready event received");
+      tryInitStore();
+    });
+    
+    // Polling fallback to resolve any Capacitor race conditions
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (tryInitStore() || attempts >= 30) {
+        clearInterval(interval);
+        if (attempts >= 30 && typeof CdvPurchase === 'undefined') {
+          console.log("StoreKit: CdvPurchase not found after 3 seconds. Simulated mode will be used.");
+        }
+      }
+    }, 100);
+  }
 
   // Disable pinch-zoom and double-tap zoom on iOS completely
   document.addEventListener('touchstart', (e) => {
@@ -4046,10 +4070,17 @@ function isBoostActive() {
   return Date.now() < state.doubleEssenceEndTime;
 }
 
+let isStoreKitInitiated = false;
 let isStoreInitialized = false;
 let activePurchaseCallback = null;
 
 function initStoreKit() {
+  if (isStoreKitInitiated) {
+    console.log("StoreKit: initStoreKit already called, ignoring duplicate call.");
+    return;
+  }
+  isStoreKitInitiated = true;
+
   if (typeof CdvPurchase === 'undefined') {
     console.log("StoreKit: CdvPurchase global not found. Simulated mode will be used.");
     return;
