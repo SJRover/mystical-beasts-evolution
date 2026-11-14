@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>New beast art: prototype</title>
+
+<style>
+  body { background: #17202b; color: #fff; font-family: sans-serif; margin: 0; padding: 16px; overflow: auto; height: auto; }
+  h2 { font-size: 15px; margin: 6px 0 10px; color: #9fb4cc; font-weight: 600; }
+  .row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .cell { width: 128px; text-align: center; font-size: 11px; color: #c9d6e3; }
+  .art { width: 120px; height: 120px; background: #223041; border-radius: 12px; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; }
+  .art img, .art svg { width: 112px; height: 112px; }
+</style>
+</head>
+<body>
+<h2>Now</h2><div class="row" id="old"></div>
+<h2>New</h2><div class="row" id="new"></div>
+<h2>New, evolved</h2><div class="row" id="evo"></div>
+<script src="../beasts.js"></script>
+<script src="art2.js"></script>
+<script>
+  const IDS = ['sparky', 'dewdrop', 'leviathan', 'chronos', 'aurelion', 'phoenix', 'aeris', 'titan', 'geon'];
+  const cell = (html, t) => `<div class="cell"><div class="art">${html}</div>T${t.tier} ${t.name}</div>`;
+  (async () => {
+    for (const id of IDS) {
+      const t = BEAST_TEMPLATES[id];
+      if (!t) continue;
+      document.getElementById('old').insertAdjacentHTML('beforeend', cell(getBeastSVG(id), t));
+      const png = await ART2.rasterize(ART2.newBeastSVG(id), 240);
+      document.getElementById('new').insertAdjacentHTML('beforeend', cell(`<img src="${png}">`, t));
+      const pngE = await ART2.rasterize(ART2.newBeastSVG(id, true), 240);
+      document.getElementById('evo').insertAdjacentHTML('beforeend', cell(`<img src="${pngE}">`, t));
+    }
+  })();
+</script>
+</body>
+</html>

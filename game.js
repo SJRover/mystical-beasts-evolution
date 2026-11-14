@@ -976,11 +976,8 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
   container.style.width = `${finalSize}px`;
   container.style.height = `${finalSize}px`;
 
-  container.innerHTML = getBeastSVG(beastId, evolved, infected);
-  if (template.system === 'low_gravity') {
-    const svgEl = container.querySelector('.beast-svg');
-    if (svgEl) svgEl.classList.add('anim-float');
-  }
+  // 1.3: the beast's finished picture, its rarity glow and its shadow (field.js, art.js).
+  FIELD.dress(container, beastId, evolved, infected);
 
   // Add tag
   const tag = document.createElement('div');
@@ -1051,9 +1048,9 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
     orbTimer: Math.random() * 5000
   };
 
-  // Flip unmirroring & positioning
-  const w = playgroundRect.width || 800;
-  const h = playgroundRect.height || 600;
+  // Flip unmirroring & positioning (1.3: in the world's own pixels, whatever the camera's zoom)
+  const w = WORLD.worldSize().w;
+  const h = WORLD.worldSize().h;
   const pxX = (x / 100) * w;
   const pxY = (y / 100) * h;
   container.style.transform = `translate3d(${pxX}px, ${pxY}px, 0) scaleX(${beast.direction < 0 ? -1 : 1})`;
@@ -1070,8 +1067,9 @@ function spawnCrateOnField() {
   const playground = document.getElementById('beast-playground');
   
   const instanceId = 'crate-' + Math.random().toString(36).substr(2, 9);
-  const landX = 10 + Math.random() * 75;
-  const landY = 40 + Math.random() * 32;
+  const crateAt = WORLD.viewPct(10 + Math.random() * 70, 30 + Math.random() * 35);
+  const landX = crateAt.x;
+  const landY = crateAt.y;
 
   const container = document.createElement('div');
   container.className = 'crate-container';
@@ -1378,9 +1376,9 @@ function gameLoop() {
     updatePlaygroundRect();
   }
 
-  // Use cached dimensions to completely eliminate layout thrashing
-  const width = playgroundRect.width || 800;
-  const height = playgroundRect.height || 600;
+  // 1.3: the world's own size (the camera's zoom does not change how far beasts walk)
+  const width = WORLD.worldSize().w;
+  const height = WORLD.worldSize().h;
 
   // 1. Move and update active beasts on field
   for (let i = state.beastsOnField.length - 1; i >= 0; i--) {
@@ -1388,49 +1386,50 @@ function gameLoop() {
     
     // Wander direction changes
     if (now > b.lastWalkChange) {
+      // 1.3: a new heading to steer towards (field.js turns them smoothly and faces them the right way).
       const angle = Math.random() * Math.PI * 2;
-      b.vx = Math.cos(angle) * b.speed;
-      b.vy = Math.sin(angle) * b.speed;
-      b.direction = b.vx > 0 ? 1 : -1;
-      const tagEl = b.dom.querySelector('.beast-tag');
-      if (tagEl) {
-        tagEl.style.transform = b.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
-      }
+      b.tvx = Math.cos(angle) * b.speed;
+      b.tvy = Math.sin(angle) * b.speed;
       
       b.lastWalkChange = now + 1500 + Math.random() * 3000;
     }
 
     // Move in percentage space using cached dimensions
-    const pctVx = (b.vx / width) * 100 * 60 * dt;
-    const pctVy = (b.vy / height) * 100 * 60 * dt;
+    // 1.3: speeding up and slowing down over time, and bursts of speed (averages 1).
+    const spdMul = FIELD.speed(b, dt);
+    const pctVx = (b.vx / width) * 100 * 60 * dt * spdMul;
+    const pctVy = (b.vy / height) * 100 * 60 * dt * spdMul;
 
     b.x += pctVx;
     b.y += pctVy;
 
-    // Restricted boundaries to keep beasts inside screen and clear of top HUD / bottom spawner
-    const paddingXMin = 5;
-    const paddingXMax = 82;
-    const paddingYMin = 14;
-    const paddingYMax = 55;
+    // 1.3: the whole world to roam, each beast kept inside it by its own size
+    const beastSize = b._size || parseFloat(b.dom.style.width) || 80;
+    const paddingXMin = 1;
+    const paddingXMax = 99 - (beastSize / width) * 100;
+    const paddingYMin = 6; // below the sky along the top of the world
+    const paddingYMax = 98 - (beastSize / height) * 100;
 
     if (b.x < paddingXMin) { 
-      b.x = paddingXMin; b.vx *= -1; b.direction = 1; 
+      b.x = paddingXMin; b.vx = Math.abs(b.vx); if (b.tvx !== undefined) b.tvx = Math.abs(b.tvx); b.direction = 1; 
       const tagEl = b.dom.querySelector('.beast-tag');
       if (tagEl) tagEl.style.transform = 'scaleX(1)';
     }
     if (b.x > paddingXMax) { 
-      b.x = paddingXMax; b.vx *= -1; b.direction = -1; 
+      b.x = paddingXMax; b.vx = -Math.abs(b.vx); if (b.tvx !== undefined) b.tvx = -Math.abs(b.tvx); b.direction = -1; 
       const tagEl = b.dom.querySelector('.beast-tag');
       if (tagEl) tagEl.style.transform = 'scaleX(-1)';
     }
-    if (b.y < paddingYMin) { b.y = paddingYMin; b.vy *= -1; }
-    if (b.y > paddingYMax) { b.y = paddingYMax; b.vy *= -1; }
+    if (b.y < paddingYMin) { b.y = paddingYMin; b.vy = Math.abs(b.vy); if (b.tvy !== undefined) b.tvy = Math.abs(b.tvy); }
+    if (b.y > paddingYMax) { b.y = paddingYMax; b.vy = -Math.abs(b.vy); if (b.tvy !== undefined) b.tvy = -Math.abs(b.tvy); }
 
     if (draggedBeast !== b) {
       const pxX = (b.x / 100) * width;
       const pxY = (b.y / 100) * height;
       b.dom.style.transform = `translate3d(${pxX}px, ${pxY}px, 0) scaleX(${b.direction < 0 ? -1 : 1})`;
     }
+    // 1.3: body language and actions (hops, swirls, bursts) with their particles.
+    FIELD.animate(b, dt);
 
     // Drop crystals (Infected beasts and shadow enemies drop nothing!)
     if (!b.infected && !isBossBeast(b.type)) {
@@ -1463,7 +1462,7 @@ function gameLoop() {
           }
         });
         
-        if (closestFriendly && minDist < 6.0) {
+        if (closestFriendly && minDist < 6.0 / (window.WORLD_SCALE || 1)) {
           const victimIdx = state.beastsOnField.findIndex(other => other.id === closestFriendly.id);
           if (victimIdx !== -1) {
             const victimName = BEAST_TEMPLATES[closestFriendly.type].name;
@@ -1532,7 +1531,7 @@ function gameLoop() {
             }
           }
         });
-        if (closestBeast && minDist < 10.0) {
+        if (closestBeast && minDist < 10.0 / (window.WORLD_SCALE || 1)) {
           infectBeast(closestBeast);
           b.spreadTimer = (state.prestigeLevel >= 5) ? 5.0 : 10.0;
         } else {
@@ -1555,6 +1554,10 @@ function gameLoop() {
       }
     }
   }
+
+  // 1.3: beasts bump off one another instead of walking through (not the one being dragged, nor
+  // shadow enemies, which must reach their prey).
+  FIELD.collide(state.beastsOnField, width, height);
 
   // 2. Autocollector timers
   if (state.upgrades.autoCollector > 0) {
@@ -1587,7 +1590,10 @@ function infectBeast(beast) {
   if (!template) return;
 
   // Re-draw SVG (this wipes out all child elements, so we must recreate tag and labels)
-  beast.dom.innerHTML = getBeastSVG(beast.type, beast.evolved, true);
+  beast.dom.innerHTML = '';
+  beast._sprite = null;
+  beast._shadow = null;
+  FIELD.dress(beast.dom, beast.type, beast.evolved, true);
   
   // Re-create the level/rarity tag
   const tag = document.createElement('div');
@@ -2110,12 +2116,14 @@ function dragMove(e) {
     }
   }
 
-  // Constrained Y coordinates (10%-80%) to prevent dragging behind HUD/spawner menu
-  draggedBeast.x = Math.max(1, Math.min(pctX, 96));
-  draggedBeast.y = Math.max(10, Math.min(pctY, 80));
+  // 1.3: kept inside the world; placed in the world's own pixels
+  const ws = WORLD.worldSize();
+  const dragSize = draggedBeast._size || parseFloat(dragElement.style.width) || 80;
+  draggedBeast.x = Math.max(0.5, Math.min(pctX, 99 - (dragSize / ws.w) * 100));
+  draggedBeast.y = Math.max(5, Math.min(pctY, 98 - (dragSize / ws.h) * 100));
 
-  const pxX = (draggedBeast.x / 100) * rect.width;
-  const pxY = (draggedBeast.y / 100) * rect.height;
+  const pxX = (draggedBeast.x / 100) * ws.w;
+  const pxY = (draggedBeast.y / 100) * ws.h;
   dragElement.style.transform = `translate3d(${pxX}px, ${pxY}px, 0) scaleX(${draggedBeast.direction < 0 ? -1.15 : 1.15}) scaleY(1.15)`;
 }
 
@@ -2252,7 +2260,7 @@ function dragEnd(e) {
       const dy = b.y - draggedBeast.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < 7.5) {
+      if (distance < 7.5 / (window.WORLD_SCALE || 1)) {
         mergeTarget = b;
         break;
       }
@@ -3096,9 +3104,10 @@ function buyBeastFromShop(beastId, cost) {
     state.essence -= cost;
     state.shopPurchases[beastId] = (state.shopPurchases[beastId] || 0) + 1;
     
-    const x = 30 + Math.random() * 40;
-    const y = 35 + Math.random() * 15;
-    
+    const buyAt = WORLD.viewPct(25 + Math.random() * 40, 30 + Math.random() * 25);
+    const x = buyAt.x;
+    const y = buyAt.y;
+
     spawnBeastOnField(beastId, x, y, false, false);
     if (audio) audio.playCrateOpen();
 
@@ -4492,8 +4501,9 @@ function spawnPremiumCrateOnField() {
   const playground = document.getElementById('beast-playground');
   
   const instanceId = 'premium-crate-' + Math.random().toString(36).substr(2, 9);
-  const landX = 10 + Math.random() * 75;
-  const landY = 40 + Math.random() * 32;
+  const premiumAt = WORLD.viewPct(10 + Math.random() * 70, 30 + Math.random() * 35);
+  const landX = premiumAt.x;
+  const landY = premiumAt.y;
 
   const container = document.createElement('div');
   container.className = 'crate-container';
@@ -4989,8 +4999,9 @@ function spawnBeastInHub(beastId, evolved = false) {
     showWarning("Showcase Full", "Showcase is full! Release some beasts in the Trash Can first.");
     return;
   }
-  const spawnX = 30 + Math.random() * 40;
-  const spawnY = 30 + Math.random() * 40;
+  const hubAt = WORLD.viewPct(25 + Math.random() * 40, 30 + Math.random() * 30);
+  const spawnX = hubAt.x;
+  const spawnY = hubAt.y;
   
   spawnBeastOnField(beastId, spawnX, spawnY, evolved, false);
   saveGame();

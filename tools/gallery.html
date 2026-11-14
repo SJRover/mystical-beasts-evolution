@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Beast gallery (current art)</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { background: #1b2430; color: #fff; font-family: sans-serif; margin: 0; padding: 12px; overflow: auto; height: auto; }
+  .grid { display: grid; grid-template-columns: repeat(10, 110px); gap: 6px; }
+  .cell { background: #24303d; border-radius: 8px; padding: 4px; text-align: center; font-size: 10px; }
+  .cell .art { width: 100px; height: 100px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="grid" id="g"></div>
+<script src="../beasts.js"></script>
+<script>
+  const g = document.getElementById('g');
+  const evolved = new URLSearchParams(location.search).has('evolved');
+  for (const [id, t] of Object.entries(BEAST_TEMPLATES)) {
+    if (/_evolved$/.test(id)) continue;
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.innerHTML = `<div class="art">${getBeastSVG(id, evolved)}</div>T${t.tier} ${t.name}<br>${t.svgParams?.body ?? ''} · ${t.rarity}`;
+    g.appendChild(c);
+  }
+</script>
+</body>
+</html>

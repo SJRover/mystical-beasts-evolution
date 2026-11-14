@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Beast gallery (new art)</title>
+<style>
+  body { background: #16202b; color: #fff; font-family: sans-serif; margin: 0; padding: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(10, 118px); gap: 6px; }
+  .cell { background: #22303f; border-radius: 10px; padding: 4px; text-align: center; font-size: 10px; color: #c9d6e3; position: relative; }
+  .art { width: 110px; height: 110px; margin: 0 auto; position: relative; }
+  .art img { position: absolute; }
+  .art .glow { width: 170%; height: 170%; left: -35%; top: -35%; }
+  .art .body { width: 100%; height: 100%; left: 0; top: 0; }
+</style>
+</head>
+<body>
+<div class="grid" id="g"></div>
+<script src="../beasts.js"></script>
+<script src="../art.js"></script>
+<script>
+  const q = new URLSearchParams(location.search);
+  const evolved = q.has('evolved'), infected = q.has('infected');
+  const sys = q.get('sys') || 'prime';
+  const g = document.getElementById('g');
+  (async () => {
+    for (const [id, t] of Object.entries(BEAST_TEMPLATES)) {
+      if (/_evolved$/.test(id)) continue;
+      if ((t.system === 'low_gravity') !== (sys === 'low')) continue;
+      const c = document.createElement('div');
+      c.className = 'cell';
+      const [glow, body] = await Promise.all([ART.picture('aura', id, evolved, infected, 200), ART.picture('beast', id, evolved, infected, 220)]);
+      c.innerHTML = `<div class="art">${glow ? `<img class="glow" src="${glow}">` : ''}<img class="body" src="${body}"></div>T${t.tier} ${t.name}<br>${t.svgParams?.body ?? ''} · ${t.rarity}`;
+      g.appendChild(c);
+    }
+  })();
+</script>
+</body>
+</html>

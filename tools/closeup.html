@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Beast close-ups</title>
+<style>
+  body { background: #1d3a2a; color: #fff; font-family: sans-serif; margin: 0; padding: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .cell { width: 200px; text-align: center; font-size: 12px; }
+  .art { width: 180px; height: 180px; margin: 0 auto; position: relative; }
+  .art img { position: absolute; }
+  .art .glow { width: 170%; height: 170%; left: -35%; top: -35%; }
+  .art .body { width: 100%; height: 100%; left: 0; top: 0; }
+</style>
+</head>
+<body>
+<div class="row" id="g"></div>
+<script src="../beasts.js"></script>
+<script src="../art.js"></script>
+<script>
+  const q = new URLSearchParams(location.search);
+  const S = Number(q.get('size') || 180);
+  document.head.insertAdjacentHTML('beforeend', `<style>.cell{width:${S + 20}px}.art{width:${S}px;height:${S}px}</style>`);
+  const ids = (q.get('ids') || 'sparky,ember,cinder,zephyr,pyreling,terrapin,ignis,torrent,sylph,magmadon,hydradon,aven').split(',');
+  (async () => {
+    for (const id of ids) {
+      const t = BEAST_TEMPLATES[id];
+      if (!t) continue;
+      const ev = q.has('evolved'), inf = q.has('infected');
+      const [glow, body] = await Promise.all([ART.picture('aura', id, ev, inf, 300), ART.picture('beast', id, ev, inf, 360)]);
+      document.getElementById('g').insertAdjacentHTML('beforeend', `<div class="cell"><div class="art">${glow ? `<img class="glow" src="${glow}">` : ''}<img class="body" src="${body}"></div>${t.name} (${t.svgParams.body})</div>`);
+    }
+  })();
+</script>
+</body>
+</html>

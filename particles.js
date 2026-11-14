@@ -129,6 +129,43 @@ class ParticleSystem {
     });
   }
 
+  // 1.3: dust where a beast lands from a hop.
+  spawnDust(x, y, size = 100) {
+    const n = 7;
+    for (let i = 0; i < n; i++) {
+      const side = i % 2 ? 1 : -1;
+      this.particles.push({ x: x + side * Math.random() * size * 0.2, y, vx: side * (0.6 + Math.random() * 1.4), vy: -0.3 - Math.random() * 0.6, size: 3 + Math.random() * 4 * (size / 100), grow: 0.12, color: 'rgba(235, 225, 205, 1)', alpha: 0.6, decay: 0.022, type: 'dust' });
+    }
+  }
+
+  // 1.3: a little star left behind a rare beast as it moves.
+  spawnTrail(x, y, color) {
+    if (this.particles.length > 420) return;
+    this.particles.push({ x, y, vx: (Math.random() - 0.5) * 0.4, vy: -0.25 - Math.random() * 0.35, size: 2 + Math.random() * 2.6, color, alpha: 0.9, decay: 0.018 + Math.random() * 0.012, spin: Math.random() * Math.PI, type: 'trail' });
+  }
+
+  // 1.3: a ring and a scatter of sparks at the start of a burst of speed.
+  spawnBurstRing(x, y, color) {
+    this.particles.push({ x, y, size: 6, maxSize: 46, color, alpha: 0.85, growth: 2.6, type: 'shockwave' });
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      this.particles.push({ x, y, vx: Math.cos(a) * 2.6, vy: Math.sin(a) * 2.6, size: 2 + Math.random() * 1.5, color, alpha: 0.9, decay: 0.035, spin: a, type: 'trail' });
+    }
+  }
+
+  // 1.3: sparks spiralling out round a beast that spins or swirls.
+  spawnSwirl(x, y, r, color) {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      this.particles.push({ cx: x, cy: y, a, r: r * 0.55, dr: 0.9 + Math.random() * 0.6, da: 0.12, x, y, size: 2 + Math.random() * 2, color: i % 3 ? color : '#ffffff', alpha: 0.95, decay: 0.022, type: 'swirl' });
+    }
+  }
+
+  // 1.3: bubbles rising from a jellyfish.
+  spawnBubbles(x, y, n = 4) {
+    for (let i = 0; i < n; i++) this.particles.push({ x: x + (Math.random() - 0.5) * 30, y, vx: (Math.random() - 0.5) * 0.3, vy: -0.8 - Math.random() * 0.8, size: 2.5 + Math.random() * 3, color: 'rgba(200, 240, 255, 1)', alpha: 0.8, decay: 0.012, type: 'bubble' });
+  }
+
   // Frame update
   update() {
     // Update normal particles
@@ -149,6 +186,20 @@ class ParticleSystem {
         if (p.size >= p.maxSize || p.alpha <= 0) {
           this.particles.splice(i, 1);
         }
+      } else if (p.type === 'dust' || p.type === 'trail' || p.type === 'bubble') {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.type === 'dust') { p.size += p.grow; p.vx *= 0.94; }
+        if (p.type === 'trail') p.spin += 0.08;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) this.particles.splice(i, 1);
+      } else if (p.type === 'swirl') {
+        p.a += p.da;
+        p.r += p.dr;
+        p.x = p.cx + Math.cos(p.a) * p.r;
+        p.y = p.cy + Math.sin(p.a) * p.r * 0.6;
+        p.alpha -= p.decay;
+        if (p.alpha <= 0) this.particles.splice(i, 1);
       }
     }
 
@@ -203,6 +254,30 @@ class ParticleSystem {
       } else if (p.type === 'shockwave') {
         this.ctx.strokeStyle = p.color;
         this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        this.ctx.stroke();
+      } else if (p.type === 'dust') {
+        this.ctx.fillStyle = p.color;
+        this.ctx.beginPath();
+        this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        this.ctx.fill();
+      } else if (p.type === 'trail' || p.type === 'swirl') {
+        // A four-pointed star.
+        const s = p.size * 1.6;
+        this.ctx.translate(p.x, p.y);
+        this.ctx.rotate(p.spin || 0);
+        this.ctx.fillStyle = p.color;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, -s);
+        this.ctx.quadraticCurveTo(s * 0.18, -s * 0.18, s, 0);
+        this.ctx.quadraticCurveTo(s * 0.18, s * 0.18, 0, s);
+        this.ctx.quadraticCurveTo(-s * 0.18, s * 0.18, -s, 0);
+        this.ctx.quadraticCurveTo(-s * 0.18, -s * 0.18, 0, -s);
+        this.ctx.fill();
+      } else if (p.type === 'bubble') {
+        this.ctx.strokeStyle = p.color;
+        this.ctx.lineWidth = 1.4;
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         this.ctx.stroke();

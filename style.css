@@ -2657,4 +2657,25 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
   pointer-events: none !important;
 }
 
+/* ---------------------------------------------------------------- 1.3: beasts on the field
+   A finished picture (art.js) moved and animated by transform only (field.js), its rarity glow
+   behind it pulsing (and turning, for Legendary and up), and a shadow on the ground. */
+.beast-v2 .beast-aura { position: absolute; left: -22%; top: -22%; width: 144%; height: 144%; pointer-events: none; z-index: 0; }
+.beast-v2 .beast-aura img { width: 100%; height: 100%; display: block; animation: aura-pulse 2.6s ease-in-out infinite; }
+.beast-v2 .beast-aura.spin { animation: aura-spin 16s linear infinite; }
+.beast-v2 .beast-shadow { position: absolute; left: 16%; right: 16%; bottom: 0; height: 12%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0)); pointer-events: none; z-index: 0; }
+.beast-v2 .beast-sprite { position: absolute; inset: 0; transform-origin: 50% 92%; z-index: 1; pointer-events: none; }
+.beast-v2 .beast-img { width: 100%; height: 100%; display: block; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+.beast-v2 .beast-tag, .beast-v2 .death-timer-label { z-index: 2; }
+@keyframes aura-pulse { 0%, 100% { transform: scale(0.92); opacity: 0.8; } 50% { transform: scale(1.06); opacity: 1; } }
+@keyframes aura-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/* 1.3: the world (background and field together), moved and zoomed by the camera (world.js). */
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 2; will-change: transform; touch-action: none; }
+#world #meadow-bg, #world #beast-playground { width: 100%; height: 100%; }
+#particles-canvas { z-index: 6; }
+#meadow-viewport { touch-action: none; overflow: hidden; }
+
+/* 1.3: the painted biome (biomes.js) replaces the old clouds, hills and decorations. */
+#meadow-bg.bg-v2 .bg-cloud, #meadow-bg.bg-v2 .meadow-hills, #meadow-bg.bg-v2 #biome-decoration-layer { display: none; }
+#meadow-bg .biome-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
