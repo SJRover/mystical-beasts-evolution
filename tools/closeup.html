@@ -27,8 +27,8 @@
       const t = BEAST_TEMPLATES[id];
       if (!t) continue;
       const ev = q.has('evolved'), inf = q.has('infected');
-      const [glow, body] = await Promise.all([ART.picture('aura', id, ev, inf, 300), ART.picture('beast', id, ev, inf, 360)]);
-      document.getElementById('g').insertAdjacentHTML('beforeend', `<div class="cell"><div class="art">${glow ? `<img class="glow" src="${glow}">` : ''}<img class="body" src="${body}"></div>${t.name} (${t.svgParams.body})</div>`);
+      const [glow, body] = await Promise.all([ART.picture('aura', id, ev, inf, 300), ART.picture('beast', id, ev, inf, 450, true, true)]);
+      document.getElementById('g').insertAdjacentHTML('beforeend', `<div class="cell"><div class="art">${glow ? `<img class="glow" src="${glow}">` : ''}<img class="body" style="width:125%;height:125%;left:-12.5%;top:-12.5%" src="${body}"></div>${t.name} (${t.rarity})</div>`);
     }
   })();
 </script>

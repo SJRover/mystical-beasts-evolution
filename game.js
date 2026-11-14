@@ -954,7 +954,10 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
   container.style.left = '0px';
   container.style.top = '0px';
 
-  // Dynamic scaling based on tier, rarity, and evolution
+  // 1.3: size reads by tier (10.5% a tier to Tier 12, gentler after); rarity only nudges it now
+  // that the glow shows rarity. The old formula is kept below for reference but not used.
+  const tierCurve = 56 * Math.pow(1.105, Math.min(template.tier, 12) - 1) * Math.pow(1.05, Math.max(0, template.tier - 12));
+  const rarityNudge = { COMMON: 1, RARE: 1.03, SUPER_RARE: 1.06, ULTRA_RARE: 1.09, LEGENDARY: 1.12, GODLY: 1.15, DARK_MATTER: 1.18 }[template.rarity] || 1;
   let baseSize = 75; // base Sparky size
   let tierBonus = (template.tier - 1) * 6; // +6px per tier (up to +72px for T13)
   
@@ -971,7 +974,8 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
   if (template.tier > 15) {
     tierScale = 1.0 + (template.tier - 15) * 0.08; // T16: 1.08x, T17: 1.16x, T18: 1.24x, T19: 1.32x, T20: 1.40x
   }
-  const finalSize = Math.round((baseSize + tierBonus) * rarityScale * evolvedScale * tierScale);
+  const oldSize = Math.round((baseSize + tierBonus) * rarityScale * evolvedScale * tierScale);
+  const finalSize = Math.round(tierCurve * rarityNudge * (evolved ? 1.1 : 1)) || oldSize;
 
   container.style.width = `${finalSize}px`;
   container.style.height = `${finalSize}px`;
@@ -1084,15 +1088,7 @@ function spawnCrateOnField() {
   container.setAttribute('data-land-x', landX);
   container.setAttribute('data-land-y', landY);
 
-  container.innerHTML = `
-    <svg class="crate-sprite" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <rect x="10" y="10" width="80" height="80" rx="8" fill="#8d6e63" stroke="#5d4037" stroke-width="6"/>
-      <line x1="10" y1="10" x2="90" y2="90" stroke="#5d4037" stroke-width="8" />
-      <line x1="90" y1="10" x2="10" y2="90" stroke="#5d4037" stroke-width="8" />
-      <rect x="22" y="22" width="56" height="56" rx="4" fill="none" stroke="#5d4037" stroke-width="4"/>
-      <circle cx="50" cy="50" r="12" fill="#d7ccc8" stroke="#8d6e63" stroke-width="3"/>
-    </svg>
-  `;
+  container.innerHTML = ART.crate(false); // 1.3
 
   playground.appendChild(container);
 
@@ -1659,12 +1655,13 @@ function dropEssenceCrystalOnGround(beastId, pctX, pctY, evolved = false) {
   crystal.setAttribute('data-pct-x', landX);
   crystal.setAttribute('data-pct-y', landY);
 
-  crystal.innerHTML = `
-    <svg viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5" fill="${evolved ? '#ffd700' : '#ffd43b'}" stroke="#fff" stroke-width="1.0" />
-      <circle cx="12" cy="12" r="4" fill="#ffffff" opacity="0.8" />
-    </svg>
-  `;
+  // 1.3: an essence coin (art.js), a picture rather than live vector art.
+  crystal.style.width = '28px';
+  crystal.style.height = '28px';
+  crystal.innerHTML = `<img src="${ART.coin(evolved)}" alt="" draggable="false" style="width:100%;height:100%;display:block;pointer-events:none">`;
+  // 1.3: a coin left lying for a while flies to the essence counter by itself (Sam, 14 Nov: they
+  // piled up on the field), quietly, worth just what it was.
+  setTimeout(() => autoCollectCrystal(crystalId), 8000);
 
   playground.appendChild(crystal);
 
@@ -1708,6 +1705,23 @@ function collectCrystal(crystalId) {
       spawnFloatingText(`+${formatNumber(val)}`, hudCenter.x, hudCenter.y);
       updateHUD();
     });
+  } else {
+    state.essence += value;
+    updateHUD();
+  }
+}
+
+// 1.3: one coin, quietly, flying to the counter (no sound: it happens on its own).
+function autoCollectCrystal(crystalId) {
+  const crystal = document.getElementById(crystalId);
+  if (!crystal) return;
+  let value = parseFloat(crystal.getAttribute('data-value'));
+  if (isBoostActive()) value *= 2;
+  const abs = getAbsolutePosition(parseFloat(crystal.getAttribute('data-pct-x')), parseFloat(crystal.getAttribute('data-pct-y')));
+  crystal.remove();
+  const hudPos = document.querySelector('.essence-icon').getBoundingClientRect();
+  if (particles) {
+    particles.spawnOrb(abs.x, abs.y, hudPos.left + hudPos.width / 2, hudPos.top + hudPos.height / 2, value, (val) => { state.essence += val; updateHUD(); });
   } else {
     state.essence += value;
     updateHUD();
@@ -4517,16 +4531,7 @@ function spawnPremiumCrateOnField() {
   container.setAttribute('data-land-x', landX);
   container.setAttribute('data-land-y', landY);
 
-  container.innerHTML = `
-    <svg class="crate-sprite" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 8px #ff00c8); transform: scale(1.4);">
-      <rect x="10" y="10" width="80" height="80" rx="10" fill="#ff00c8" stroke="#b300ff" stroke-width="6"/>
-      <line x1="10" y1="10" x2="90" y2="90" stroke="#b300ff" stroke-width="8" />
-      <line x1="90" y1="10" x2="10" y2="90" stroke="#b300ff" stroke-width="8" />
-      <rect x="22" y="22" width="56" height="56" rx="6" fill="none" stroke="#ffd700" stroke-width="3"/>
-      <circle cx="50" cy="50" r="14" fill="#ffd700" stroke="#ff00c8" stroke-width="3"/>
-      <polygon points="50,42 53,49 60,50 55,55 56,62 50,58 44,62 45,55 40,50 47,49" fill="#ff00c8"/>
-    </svg>
-  `;
+  container.innerHTML = ART.crate(true).replace('class="crate-sprite crate-v2"', 'class="crate-sprite crate-v2" style="transform: scale(1.25);"'); // 1.3
 
   playground.appendChild(container);
 

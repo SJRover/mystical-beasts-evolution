@@ -11,11 +11,11 @@
  * cover the same ground as before. Beasts, crates and purchases appear where the camera is looking.
  */
 const WORLD = (() => {
-  const SCALE = 2.2;
+  const SCALE = 1.8;
   window.WORLD_SCALE = SCALE;
   const MAX_ZOOM = 1.6;
   let el = null, vp = null, vw = 390, vh = 844;
-  let z = 0.62, tx = 0, ty = 0;
+  let z = 0.74, tx = 0, ty = 0;
   const minZoom = () => 1 / SCALE;
 
   function init() {
@@ -61,7 +61,7 @@ const WORLD = (() => {
 
   /** Back to the middle of the world at the usual zoom. */
   function centre() {
-    z = 0.62;
+    z = 0.74;
     tx = vw / 2 - (vw * SCALE * z) / 2;
     ty = vh / 2 - (vh * SCALE * z) / 2;
     apply();
@@ -138,6 +138,80 @@ const WORLD = (() => {
     window.addEventListener('mouseup', () => { pan = null; });
     vp.addEventListener('contextmenu', (e) => { if (e.target.closest('#world')) e.preventDefault(); });
   }
+
+  // ---------------------------------------------------------------- while dragging a beast
+  // An arrow at the top of the screen points to the nearest beast it can merge with (or says there
+  // is none), and holding it near an edge of the screen moves the map that way, the beast staying
+  // under the finger. Matches are the beasts the game itself lights up (.hovering-compatible).
+  let nav = null;
+  function navEl() {
+    if (nav) return nav;
+    nav = document.createElement('div');
+    nav.id = 'merge-nav';
+    nav.innerHTML = '<div class="mn-arrow"></div><div class="mn-text"></div>';
+    document.body.appendChild(nav);
+    return nav;
+  }
+  function placeHeld() {
+    // dragMove's own sums, for when the map moves under a finger that is still.
+    const b = draggedBeast, rect = playgroundRect, ws = worldSize();
+    const pctX = ((mouseX - rect.left - dragStartX) / rect.width) * 100;
+    const pctY = ((mouseY - rect.top - dragStartY) / rect.height) * 100;
+    const s = b._size || parseFloat(dragElement.style.width) || 80;
+    b.x = Math.max(0.5, Math.min(pctX, 99 - (s / ws.w) * 100));
+    b.y = Math.max(5, Math.min(pctY, 98 - (s / ws.h) * 100));
+    dragElement.style.transform = `translate3d(${(b.x / 100) * ws.w}px, ${(b.y / 100) * ws.h}px, 0) scaleX(${b.direction < 0 ? -1.15 : 1.15}) scaleY(1.15)`;
+  }
+  let lastT = 0;
+  function assist(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000 || 0);
+    lastT = now;
+    let holding = false;
+    try { holding = typeof draggedBeast !== 'undefined' && draggedBeast && dragStartedMoving && !pinch; } catch (e) { holding = false; }
+    const el = navEl();
+    if (!holding) { el.classList.remove('on'); requestAnimationFrame(assist); return; }
+    // Nearest match.
+    const b = draggedBeast, ws = worldSize();
+    const bx = (b.x / 100) * ws.w, by = (b.y / 100) * ws.h;
+    let best = null, bd = Infinity;
+    for (const o of state.beastsOnField) {
+      if (o === b || !o.dom.classList.contains('hovering-compatible')) continue;
+      const d = Math.hypot((o.x / 100) * ws.w - bx, (o.y / 100) * ws.h - by);
+      if (d < bd) { bd = d; best = o; }
+    }
+    el.classList.add('on');
+    const arrow = el.firstChild, text = el.lastChild;
+    if (best) {
+      const sx = playgroundRect.left + ((best.x / 100) * ws.w + (best._size || 80) / 2) * z;
+      const sy = playgroundRect.top + ((best.y / 100) * ws.h + (best._size || 80) / 2) * z;
+      const ang = Math.atan2(sy - mouseY, sx - mouseX);
+      arrow.style.transform = `rotate(${ang}rad)`;
+      arrow.style.display = '';
+      const onScreen = sx > 0 && sx < vw && sy > 0 && sy < vh;
+      const name = (BEAST_TEMPLATES[best.type] || {}).name || 'Match';
+      text.textContent = onScreen ? `${name} is here` : `${name}: ${Math.round(bd / 40)} steps`;
+      el.classList.toggle('near', onScreen);
+    } else {
+      arrow.style.display = 'none';
+      text.textContent = 'No match on the field';
+      el.classList.remove('near');
+    }
+    // Near an edge: move the map that way.
+    const E = 56;
+    let px = 0, py = 0;
+    if (mouseX < E) px = (E - mouseX) / E; else if (mouseX > vw - E) px = -(mouseX - (vw - E)) / E;
+    if (mouseY < E + 40) py = (E + 40 - mouseY) / (E + 40); else if (mouseY > vh - E) py = -(mouseY - (vh - E)) / E;
+    if (px || py) {
+      const sp = 520 * dt;
+      const ox = tx, oy = ty;
+      tx += px * sp;
+      ty += py * sp;
+      apply();
+      if (tx !== ox || ty !== oy) placeHeld();
+    }
+    requestAnimationFrame(assist);
+  }
+  requestAnimationFrame(assist);
 
   return { init, viewPct, worldSize, zoom, centre, zoomAt, SCALE, isPinching: () => !!pinch };
 })();

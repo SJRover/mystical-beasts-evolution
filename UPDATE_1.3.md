@@ -41,6 +41,25 @@ background clouds were blurred and animated. With filters and animations off it 
 Measured after: 51 fps with 22 beasts in the bigger world (19 fps before, with 24, on the old
 field). Beasts stay below the sky band (top 6% of the world).
 
+## Second round (Sam, 14 Nov)
+
+- World 1.8 screens (was 2.2), starting zoom 0.74. Sizes now read by tier: 56 px at Tier 1, +10.5% a
+  tier to Tier 12, +5% after (Tier 14 about 207 px); rarity only nudges size; evolved +10%.
+- Rarity is a glow, no rings anywhere: the rarity colour glows off each beast's own outline (baked
+  into its picture with canvas shadowBlur, padded 25%), plus a radiating glow behind with rays from
+  Super Rare up, slowly turning. Evolved is gold, infected purple, shadows red. Orbit ring lines and
+  the evolved double ring are gone (the moons stay).
+- While dragging: a pill at the top points to the nearest beast it can merge with ("Sparky: 10 steps"
+  or "is here", green when on screen; "No match on the field" otherwise), and holding a beast near a
+  screen edge moves the map that way with the beast staying under the finger (world.js `assist`).
+- Coins: a gold coin with an essence gem (cyan for evolved drops), and each coin flies to the counter
+  by itself after 8 s if not tapped (`autoCollectCrystal`, silent, same value).
+- Crates: banded chests with a rune seal; premium in magenta and gold. Incubators: stone pedestal,
+  glass dome, gold label. Menus, HUD, dock, pop-ups: solid navy panels with gold trim and chunky gold
+  buttons; every backdrop blur removed. 58 fps with 22 beasts, no drop with the menu open.
+- Map props redrawn standing up: bushes (three domes), mushrooms (domed caps), trees (tapered trunk,
+  four-lobed crown), rocks (rounded standing stones; they read as flat leaves before).
+
 ## Still to do
 
 1. Backgrounds: first pass done; refine per biome after Sam sees them.

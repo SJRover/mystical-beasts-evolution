@@ -21,12 +21,12 @@ const ART = (() => {
   const ELEMENT_ACCENT = { LIGHT: '#ffe066', FIRE: '#ff7a1a', WATER: '#3fd8ff', EARTH: '#7ad957', WIND: '#b8f5e0', COSMIC: '#b46bff', VOID: '#8a3cff', DEITY: '#fff1b8' };
   const RARITY = {
     COMMON: null,
-    RARE: { c: '#46ff6e', c2: '#b7ffc4', rays: 0, rings: 1, sparkles: 2 },
-    SUPER_RARE: { c: '#3d9bff', c2: '#bfe0ff', rays: 0, rings: 1, sparkles: 4 },
-    ULTRA_RARE: { c: '#c35cff', c2: '#ecc8ff', rays: 0, rings: 2, sparkles: 6 },
-    LEGENDARY: { c: '#ff9a1f', c2: '#ffe2a3', rays: 12, rings: 2, sparkles: 8 },
-    GODLY: { c: '#3ff6ff', c2: '#e6feff', rays: 16, rings: 3, sparkles: 10 },
-    DARK_MATTER: { c: '#ff2fe9', c2: '#ffc4fa', rays: 18, rings: 3, sparkles: 10, dark: true },
+    RARE: { c: '#46ff6e', c2: '#c9ffd4', rays: 0, glow: 0.55, sparkles: 0 },
+    SUPER_RARE: { c: '#3d9bff', c2: '#cfe6ff', rays: 6, glow: 0.65, sparkles: 0 },
+    ULTRA_RARE: { c: '#c35cff', c2: '#efd2ff', rays: 8, glow: 0.75, sparkles: 0 },
+    LEGENDARY: { c: '#ff9a1f', c2: '#ffe7b0', rays: 12, glow: 0.85, sparkles: 4 },
+    GODLY: { c: '#3ff6ff', c2: '#eafeff', rays: 16, glow: 0.95, sparkles: 6 },
+    DARK_MATTER: { c: '#ff2fe9', c2: '#ffd0fb', rays: 18, glow: 1, sparkles: 6, dark: true },
   };
 
   function palette(t, opts) {
@@ -621,9 +621,6 @@ const ART = (() => {
     if (!n) return '';
     const cx = 60, cy = 96, rx = 52, ry = 11;
     let s = `<g transform="rotate(-7 ${cx} ${cy})">`;
-    s += half === 'back'
-      ? `<path d="M${cx - rx} ${cy} A${rx} ${ry} 0 0 1 ${cx + rx} ${cy}" fill="none" stroke="${P.hi}" stroke-width="1.8" opacity="0.55"/>`
-      : `<path d="M${cx - rx} ${cy} A${rx} ${ry} 0 0 0 ${cx + rx} ${cy}" fill="none" stroke="${P.hi}" stroke-width="2.2" opacity="0.8"/>`;
     const moons = ['#ffd36b', '#7cf7e8', '#ff8fd1', '#b8a2ff'];
     for (let i = 0; i < n; i++) {
       const a = 0.5 + i * ((Math.PI * 2) / n);
@@ -665,9 +662,8 @@ const ART = (() => {
     const parts = body(t, P, uid);
     const A = parts.A;
     const ex = extras(t, A, P, uid);
-    let s = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">` + defs(P, uid, t);
-    if (o.evolved) s += `<circle cx="60" cy="62" r="54" fill="none" stroke="#ffd700" stroke-width="2.4" opacity="0.95"/><circle cx="60" cy="62" r="57.5" fill="none" stroke="#fff3a8" stroke-width="1" opacity="0.7"/>`;
-    if (o.infected) s += `<circle cx="60" cy="64" r="50" fill="#9b4dff" opacity="0.14"/>`;
+    const vb = opts.pad ? '-15 -15 150 150' : '0 0 120 120';
+    let s = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">` + defs(P, uid, t);
     if (!opts.noGround) s += `<ellipse cx="60" cy="109" rx="30" ry="6" fill="url(#ground-${uid})"/>`;
     s += orbits(t, P, 'back');
     s += ex.back;
@@ -697,56 +693,79 @@ const ART = (() => {
     const p = t.svgParams || {};
     const shadow = !!(p.shadow_fiend || p.shadow_fiend_evolved || p.void_parasite || p.void_parasite_evolved);
     let R = RARITY[t.rarity];
-    if (opts.infected) R = { c: '#a63dff', c2: '#d9ff9e', rays: 0, rings: 1, sparkles: 3 };
-    else if (shadow) R = { c: '#ff2a2a', c2: '#ffb3b3', rays: 0, rings: 1, sparkles: 0, smoke: true };
-    else if (!R && opts.evolved) R = { c: '#ffd700', c2: '#fff3a8', rays: 0, rings: 1, sparkles: 3 };
+    if (opts.infected) R = { c: '#a63dff', c2: '#e2ffb0', rays: 0, glow: 0.7, sparkles: 0 };
+    else if (shadow) R = { c: '#ff2a2a', c2: '#ffb3b3', rays: 0, glow: 0.8, sparkles: 0, smoke: true };
+    else if (!R && opts.evolved) R = { c: '#ffd700', c2: '#fff3b0', rays: 6, glow: 0.7, sparkles: 2 };
     if (!R) return '';
     const u = 'a' + (uidN++).toString(36);
     let s = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs>` +
-      `<radialGradient id="g-${u}"><stop offset="0%" stop-color="${R.c2}" stop-opacity="0.95"/><stop offset="28%" stop-color="${R.c}" stop-opacity="0.75"/><stop offset="62%" stop-color="${R.c}" stop-opacity="0.25"/><stop offset="100%" stop-color="${R.c}" stop-opacity="0"/></radialGradient>` +
-      `<linearGradient id="r-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${R.c2}" stop-opacity="0"/><stop offset="0.6" stop-color="${R.c}" stop-opacity="0.55"/><stop offset="1" stop-color="${R.c2}" stop-opacity="0.9"/></linearGradient>` +
+      `<radialGradient id="g-${u}"><stop offset="0%" stop-color="${R.c2}" stop-opacity="${R.glow}"/><stop offset="30%" stop-color="${R.c}" stop-opacity="${R.glow * 0.8}"/><stop offset="62%" stop-color="${R.c}" stop-opacity="${R.glow * 0.28}"/><stop offset="100%" stop-color="${R.c}" stop-opacity="0"/></radialGradient>` +
+      `<radialGradient id="r-${u}" cx="100" cy="100" r="98" gradientUnits="userSpaceOnUse"><stop offset="0.2" stop-color="${R.c2}" stop-opacity="${0.75 * R.glow}"/><stop offset="0.6" stop-color="${R.c}" stop-opacity="${0.35 * R.glow}"/><stop offset="1" stop-color="${R.c}" stop-opacity="0"/></radialGradient>` +
       `</defs>`;
-    if (R.rays) {
-      for (let i = 0; i < R.rays; i++) {
-        const a = (i / R.rays) * 360, w = i % 2 ? 7 : 11, len = i % 2 ? 82 : 96;
-        s += `<path d="M${100 - w / 2} ${100 - len} L${100 + w / 2} ${100 - len} L100 100 Z" fill="url(#r-${u})" transform="rotate(${a} 100 100)" opacity="0.8"/>`;
-      }
+    if (R.dark) s += [0, 120, 240].map((a) => `<path d="M100 100 C132 78 152 100 142 132 C134 112 118 104 100 100 Z" fill="#2b0040" opacity="0.5" transform="rotate(${a} 100 100)"/>`).join('');
+    s += `<circle cx="100" cy="100" r="98" fill="url(#g-${u})"/>`;
+    for (let i = 0; i < R.rays; i++) {
+      const a = (i / R.rays) * 360, w = i % 2 ? 9 : 15, len = i % 2 ? 84 : 98;
+      s += `<path d="M${100 - w / 2} ${100 - len} Q100 ${100 - len - 6} ${100 + w / 2} ${100 - len} L101.5 100 L98.5 100 Z" fill="url(#r-${u})" transform="rotate(${a} 100 100)"/>`;
     }
-    if (R.dark) s += [0, 120, 240].map((a) => `<path d="M100 100 C130 80 150 100 140 130 C132 112 118 104 100 100 Z" fill="#2b0040" opacity="0.55" transform="rotate(${a} 100 100)"/>`).join('');
-    s += `<circle cx="100" cy="100" r="96" fill="url(#g-${u})"/>`;
-    for (let i = 0; i < R.rings; i++) s += `<circle cx="100" cy="100" r="${70 - i * 9}" fill="none" stroke="${i ? R.c2 : R.c}" stroke-width="${2.6 - i * 0.6}" opacity="${0.85 - i * 0.2}" ${i === 2 ? 'stroke-dasharray="6 5"' : ''}/>`;
-    for (let i = 0; i < R.sparkles; i++) { const a = (i / R.sparkles) * Math.PI * 2 + 0.4, r = 78 - (i % 3) * 8; s += star(100 + Math.cos(a) * r, 100 + Math.sin(a) * r, 5.5 - (i % 3) * 1.2, i % 2 ? '#ffffff' : R.c2); }
-    if (R.smoke) s += [0, 72, 144, 216, 288].map((a) => `<circle cx="100" cy="30" r="14" fill="#2a0008" opacity="0.4" transform="rotate(${a} 100 100)"/>`).join('');
+    for (let i = 0; i < R.sparkles; i++) { const a = (i / R.sparkles) * Math.PI * 2 + 0.5, r = 74 - (i % 2) * 10; s += star(100 + Math.cos(a) * r, 100 + Math.sin(a) * r, 5 - (i % 2) * 1.4, i % 2 ? '#ffffff' : R.c2, 0.9); }
+    if (R.smoke) s += [0, 72, 144, 216, 288].map((a) => `<circle cx="100" cy="34" r="16" fill="#2a0008" opacity="0.35" transform="rotate(${a} 100 100)"/>`).join('');
     return s + `</svg>`;
+  }
+
+  /** The colour a beast's own outline glows in (its rarity, gold when evolved, and so on), or null. */
+  function glowColour(id, evolved, infected) {
+    const t = BEAST_TEMPLATES[id];
+    if (!t) return null;
+    const p = t.svgParams || {};
+    if (p.shadow_fiend || p.shadow_fiend_evolved || p.void_parasite || p.void_parasite_evolved) return '#ff2a2a';
+    if (infected) return '#a63dff';
+    if (RARITY[t.rarity]) return RARITY[t.rarity].c;
+    if (evolved) return '#ffd700';
+    return null;
   }
 
   /** Inline art for menus: the glow and the beast in one SVG (static, no filters). */
   function inline(id, evolved, infected) {
     const a = aura(id, { evolved, infected });
     const b = beast(id, { evolved, infected });
-    if (!a) return b.replace('<svg ', '<svg class="beast-svg" ');
+    const col = glowColour(id, evolved, infected);
+    if (!a && !col) return b.replace('<svg ', '<svg class="beast-svg" ');
     const inner = b.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-    const glow = a.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-    return `<svg viewBox="0 0 120 120" class="beast-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><g transform="translate(-8 -6) scale(0.68)" opacity="0.9">${glow}</g>${inner}</svg>`;
+    const glow = a ? a.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '') : '';
+    const f = 'gf' + (uidN++).toString(36);
+    return `<svg viewBox="0 0 120 120" class="beast-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><defs><filter id="${f}" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="3.2" flood-color="${col || '#ffffff'}" flood-opacity="${col ? 0.95 : 0}"/></filter></defs>${glow ? `<g transform="translate(-6 -4) scale(0.66)" opacity="0.95">${glow}</g>` : ''}<g filter="url(#${f})">${inner}</g></svg>`;
   }
 
   // ---------------------------------------------------------------- pictures for the field
   const cache = new Map();
   const pending = new Map();
   /** A picture (data URL) of the beast or its aura at `px` pixels square, made once. */
-  function picture(kind, id, evolved, infected, px, noGround = false) {
+  function picture(kind, id, evolved, infected, px, noGround = false, glow = false) {
     const bucket = Math.min(640, Math.max(96, Math.ceil(px / 64) * 64));
-    const key = `${kind}|${id}|${evolved ? 1 : 0}|${infected ? 1 : 0}|${bucket}|${noGround ? 1 : 0}`;
+    const key = `${kind}|${id}|${evolved ? 1 : 0}|${infected ? 1 : 0}|${bucket}|${noGround ? 1 : 0}|${glow ? 1 : 0}`;
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (pending.has(key)) return pending.get(key);
-    const svg = kind === 'aura' ? aura(id, { evolved, infected }) : beast(id, { evolved, infected, noGround });
+    const svg = kind === 'aura' ? aura(id, { evolved, infected }) : beast(id, { evolved, infected, noGround, pad: glow });
+    const gc = kind === 'beast' && glow ? glowColour(id, evolved, infected) : null;
     if (!svg) return Promise.resolve('');
     const job = new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const c = document.createElement('canvas');
         c.width = c.height = bucket;
-        c.getContext('2d').drawImage(img, 0, 0, bucket, bucket);
+        const ctx = c.getContext('2d');
+        if (gc) {
+          // The rarity's colour glowing off the beast's own outline, then the beast crisp on top.
+          ctx.shadowColor = gc;
+          ctx.shadowBlur = bucket * 0.075;
+          ctx.drawImage(img, 0, 0, bucket, bucket);
+          ctx.shadowBlur = bucket * 0.035;
+          ctx.drawImage(img, 0, 0, bucket, bucket);
+          ctx.shadowBlur = 0;
+          ctx.shadowColor = 'rgba(0,0,0,0)';
+        }
+        ctx.drawImage(img, 0, 0, bucket, bucket);
         const url = c.toDataURL('image/png');
         cache.set(key, url);
         pending.delete(key);
@@ -758,9 +777,9 @@ const ART = (() => {
     pending.set(key, job);
     return job;
   }
-  function cached(kind, id, evolved, infected, px, noGround = false) {
+  function cached(kind, id, evolved, infected, px, noGround = false, glow = false) {
     const bucket = Math.min(640, Math.max(96, Math.ceil(px / 64) * 64));
-    return cache.get(`${kind}|${id}|${evolved ? 1 : 0}|${infected ? 1 : 0}|${bucket}|${noGround ? 1 : 0}`) || null;
+    return cache.get(`${kind}|${id}|${evolved ? 1 : 0}|${infected ? 1 : 0}|${bucket}|${noGround ? 1 : 0}|${glow ? 1 : 0}`) || null;
   }
 
   /** How a body type moves on the field (field.js reads it). */
@@ -771,7 +790,54 @@ const ART = (() => {
     return parts.A.motion || 'walk';
   }
 
-  return { beast, aura, inline, picture, cached, motion, shade, mix, RARITY };
+  // ---------------------------------------------------------------- coins and crates
+  const svgUrl = (s) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+  const coinCache = {};
+  /** An essence coin: gold with an essence gem set in it; evolved beasts drop a brighter one. */
+  function coin(evolved) {
+    const k = evolved ? 'e' : 'n';
+    if (coinCache[k]) return coinCache[k];
+    const gem = evolved ? ['#e8fbff', '#3ff6ff', '#0b6f80'] : ['#fff8d0', '#ffcf3d', '#a66a00'];
+    const s = `<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><defs>` +
+      `<radialGradient id="cr" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff6b8"/><stop offset="0.45" stop-color="#ffc928"/><stop offset="1" stop-color="#c47f00"/></radialGradient>` +
+      `<radialGradient id="cf" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#ffe680"/><stop offset="1" stop-color="#e09a00"/></radialGradient>` +
+      `<linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${gem[0]}"/><stop offset="0.5" stop-color="${gem[1]}"/><stop offset="1" stop-color="${gem[2]}"/></linearGradient>` +
+      `<radialGradient id="ch"><stop offset="0" stop-color="${evolved ? '#3ff6ff' : '#ffd43b'}" stop-opacity="0.55"/><stop offset="1" stop-color="${evolved ? '#3ff6ff' : '#ffd43b'}" stop-opacity="0"/></radialGradient></defs>` +
+      `<circle cx="20" cy="20" r="19.5" fill="url(#ch)"/>` +
+      `<ellipse cx="20" cy="36.5" rx="10" ry="2.2" fill="#000" opacity="0.25"/>` +
+      `<circle cx="20" cy="19" r="14" fill="url(#cr)" stroke="#7a4a00" stroke-width="2"/>` +
+      `<circle cx="20" cy="19" r="10.2" fill="url(#cf)" stroke="#b47300" stroke-width="1.2"/>` +
+      `<path d="M20 11.5 L26 15.5 L26 22.5 L20 26.5 L14 22.5 L14 15.5 Z" fill="url(#cg)" stroke="${gem[2]}" stroke-width="1.2" stroke-linejoin="round"/>` +
+      `<path d="M20 11.5 L26 15.5 L20 19 L14 15.5 Z" fill="#ffffff" opacity="0.45"/>` +
+      `<ellipse cx="14.5" cy="12.5" rx="3.6" ry="2" transform="rotate(-35 14.5 12.5)" fill="#ffffff" opacity="0.75"/>` +
+      (evolved ? `<path d="M33 6 Q33.6 8.4 36 9 Q33.6 9.6 33 12 Q32.4 9.6 30 9 Q32.4 8.4 33 6 Z" fill="#ffffff"/><path d="M7 27 Q7.4 28.6 9 29 Q7.4 29.4 7 31 Q6.6 29.4 5 29 Q6.6 28.6 7 27 Z" fill="#e8fbff"/>` : '') +
+      `</svg>`;
+    return (coinCache[k] = svgUrl(s));
+  }
+
+  /** A crate: a banded wooden chest with a glowing rune seal, or the premium one in magenta and gold. */
+  function crate(premium) {
+    const wood = premium ? ['#ff5ad8', '#b0179a', '#5a0a52'] : ['#c98b55', '#8a5530', '#4a2a14'];
+    const band = premium ? ['#ffe27a', '#b98a00'] : ['#9aa4b4', '#4a5260'];
+    const rune = premium ? '#fff3a8' : '#7cf7e8';
+    return `<svg class="crate-sprite crate-v2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>` +
+      `<linearGradient id="cw${premium ? 'p' : ''}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${wood[0]}"/><stop offset="1" stop-color="${wood[1]}"/></linearGradient>` +
+      `<radialGradient id="cs${premium ? 'p' : ''}"><stop offset="0" stop-color="${rune}" stop-opacity="0.9"/><stop offset="1" stop-color="${rune}" stop-opacity="0"/></radialGradient></defs>` +
+      `<ellipse cx="50" cy="93" rx="38" ry="5" fill="#000" opacity="0.28"/>` +
+      `<rect x="12" y="38" width="76" height="52" rx="7" fill="url(#cw${premium ? 'p' : ''})" stroke="${wood[2]}" stroke-width="4"/>` +
+      `<path d="M14 46 L86 46 M14 62 L86 62 M14 76 L86 76" stroke="${wood[2]}" stroke-width="1.6" opacity="0.45"/>` +
+      `<path d="M10 40 C10 18 90 18 90 40 L90 46 L10 46 Z" fill="url(#cw${premium ? 'p' : ''})" stroke="${wood[2]}" stroke-width="4" stroke-linejoin="round"/>` +
+      `<path d="M18 34 C22 24 78 24 82 34" stroke="#ffffff" stroke-width="2.4" fill="none" opacity="0.35" stroke-linecap="round"/>` +
+      `<rect x="22" y="22" width="9" height="68" rx="2" fill="${band[0]}" stroke="${band[1]}" stroke-width="2.4"/><rect x="69" y="22" width="9" height="68" rx="2" fill="${band[0]}" stroke="${band[1]}" stroke-width="2.4"/>` +
+      `<circle cx="26.5" cy="56" r="1.6" fill="${band[1]}"/><circle cx="26.5" cy="80" r="1.6" fill="${band[1]}"/><circle cx="73.5" cy="56" r="1.6" fill="${band[1]}"/><circle cx="73.5" cy="80" r="1.6" fill="${band[1]}"/>` +
+      `<circle cx="50" cy="48" r="17" fill="url(#cs${premium ? 'p' : ''})"/>` +
+      `<rect x="40" y="38" width="20" height="20" rx="5" fill="${band[0]}" stroke="${band[1]}" stroke-width="2.6"/>` +
+      `<path d="M50 42 L55 48 L50 54 L45 48 Z" fill="${rune}" stroke="${premium ? '#b98a00' : '#0f5c55'}" stroke-width="1.4"/>` +
+      (premium ? `<circle cx="18" cy="30" r="3" fill="#7cf7e8" stroke="#0f5c55" stroke-width="1.2"/><circle cx="82" cy="30" r="3" fill="#7cf7e8" stroke="#0f5c55" stroke-width="1.2"/><path d="M86 12 Q87 15 90 16 Q87 17 86 20 Q85 17 82 16 Q85 15 86 12 Z" fill="#fff3a8"/>` : '') +
+      `</svg>`;
+  }
+
+  return { beast, aura, inline, picture, cached, motion, glowColour, coin, crate, shade, mix, RARITY };
 })();
 
 // The menus, toasts and modals all draw beasts through getBeastSVG: from here on, the new art.

@@ -49,7 +49,7 @@ const FIELD = (() => {
     auraImg.draggable = false;
     auraWrap.appendChild(auraImg);
     const r = infected ? 'INFECTED' : t.rarity;
-    if (['LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(r)) auraWrap.classList.add('spin');
+    if (['SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(r) || (evolved && !infected)) auraWrap.classList.add('spin');
     const sprite = document.createElement('div');
     sprite.className = 'beast-sprite';
     const img = new Image();
@@ -61,13 +61,14 @@ const FIELD = (() => {
     container.prepend(shadow);
     container.prepend(auraWrap);
 
-    const px = size * DPR();
-    const now = ART.cached('beast', id, evolved, infected, px, true);
+    // The picture has a quarter's room round the beast for its glow (the sprite is drawn 125% big).
+    const px = size * 1.25 * DPR();
+    const now = ART.cached('beast', id, evolved, infected, px, true, true);
     if (now) img.src = now;
     else {
-      // The vector drawing at once (no filters, cheap), the finished picture as soon as it is made.
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(ART.beast(id, { evolved, infected, noGround: true }));
-      ART.picture('beast', id, evolved, infected, px, true).then((url) => { if (url) img.src = url; });
+      // The vector drawing at once (no filters, cheap), the finished glowing picture as soon as it is made.
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(ART.beast(id, { evolved, infected, noGround: true, pad: true }));
+      ART.picture('beast', id, evolved, infected, px, true, true).then((url) => { if (url) img.src = url; });
     }
     const auraNow = ART.cached('aura', id, evolved, infected, px * 1.2);
     if (auraNow) auraImg.src = auraNow;
@@ -274,7 +275,7 @@ const FIELD = (() => {
   function warm(ids) {
     for (const id of ids) {
       if (!BEAST_TEMPLATES[id]) continue;
-      ART.picture('beast', id, false, false, 220 * DPR(), true);
+      ART.picture('beast', id, false, false, 220 * 1.25 * DPR(), true, true);
       ART.picture('aura', id, false, false, 260 * DPR());
     }
   }
