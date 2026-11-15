@@ -2833,7 +2833,7 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .wheel-spin-btn { border-radius: 50% !important; }
 .daily-spin-content { position: relative; }
 /* The prize takes over the spin window: big, centred, rays and glow behind it in its rarity's colour. */
-.spin-result-container.fx-reveal { position: absolute !important; inset: 0; z-index: 40; margin: 0 !important; border-radius: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--fx-c) 28%, #141834) 0%, rgba(14, 16, 36, 0.97) 62%); }
+.spin-result-container.fx-reveal { position: absolute !important; inset: 0; z-index: 40; margin: 0 !important; border-radius: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--fx-c) 28%, #141834) 0%, #0e1024 62%); }
 .spin-result-container.fx-reveal > div:first-child { font-family: var(--font-game) !important; font-size: 30px !important; letter-spacing: 0.04em; margin-bottom: 18px !important; animation: fx-pop-card 0.5s cubic-bezier(.2,1.6,.4,1); }
 .spin-result-container.fx-reveal .spin-result-card { position: relative; width: 150px !important; height: 150px !important; overflow: visible !important; background: radial-gradient(circle, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.25)) !important; border-radius: 28px !important; box-shadow: 0 0 0 3px var(--fx-c), 0 0 34px var(--fx-c) !important; margin-bottom: 16px; animation: fx-pop-card 0.6s cubic-bezier(.2,1.6,.4,1); }
 .spin-result-container.fx-reveal .spin-result-card > svg { position: relative; z-index: 1; width: 100%; height: 100%; }
@@ -2856,3 +2856,6 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
   .pedestal-lock-overlay { top: -40px !important; }
   .incubator-label { white-space: nowrap; font-size: 9px !important; padding: 1px 7px !important; margin-top: 4px; line-height: 1.4; }
 }
+.spin-result-container .fx-plate { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 210px; padding: 10px 22px 11px; margin-bottom: 16px; background: linear-gradient(180deg, #1f2448, #12152e); border: 2.5px solid var(--fx-c); border-radius: 16px; box-shadow: 0 0 16px color-mix(in srgb, var(--fx-c) 55%, transparent), 0 4px 0 rgba(0, 0, 0, 0.4); }
+.spin-result-container .fx-plate #spin-result-name { margin: 0 !important; color: #ffffff !important; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
+.spin-result-container .fx-plate #spin-result-meta { margin: 0 !important; color: var(--fx-c2) !important; font-size: 12.5px !important; letter-spacing: 0.06em; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }

@@ -214,6 +214,13 @@ const FX = (() => {
     void rays.offsetWidth; rays.classList.add('on');
     const r = card.getBoundingClientRect();
     burst(r.left + r.width / 2, r.top + r.height / 2, rarity, 1.4);
+    // The name and tier on a solid plate bordered in the rarity's colour (Sam, 15 Nov: hard to read).
+    const name = document.getElementById('spin-result-name'), meta = document.getElementById('spin-result-meta');
+    if (name && meta && !name.parentNode.classList.contains('fx-plate')) {
+      const plate = el('div', 'fx-plate', null);
+      name.parentNode.insertBefore(plate, name);
+      plate.append(name, meta);
+    }
     const title = box.firstElementChild;
     if (title) { title.textContent = `${label(rarity)}!`; title.style.color = c; title.style.textShadow = `0 0 12px ${c}`; }
   }
