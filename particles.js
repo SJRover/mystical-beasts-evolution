@@ -129,6 +129,18 @@ class ParticleSystem {
     });
   }
 
+  // 1.3: a burst in a rarity's colours: rings, stars flung out, glitter that drifts; `power` scales it.
+  spawnRarityBurst(x, y, c, c2, power = 1) {
+    const rings = power > 1.6 ? 3 : power > 0.9 ? 2 : 1;
+    for (let i = 0; i < rings; i++) this.particles.push({ x, y, size: 6 + i * 10, maxSize: 60 + power * 45 + i * 25, color: i % 2 ? c2 : c, alpha: 0.9, growth: 3 + power * 1.6, type: 'shockwave' });
+    const n = Math.round(12 + power * 16);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, sp = (1.5 + Math.random() * 3.5) * (0.8 + power * 0.35);
+      this.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, size: 2 + Math.random() * 2.8, color: i % 3 ? c : (i % 2 ? c2 : '#ffffff'), alpha: 1, decay: 0.014 + Math.random() * 0.012, spin: a, type: 'trail' });
+    }
+    for (let i = 0; i < Math.round(power * 8); i++) this.particles.push({ x: x + (Math.random() - 0.5) * 60 * power, y: y + (Math.random() - 0.5) * 40 * power, vx: (Math.random() - 0.5) * 0.4, vy: -0.4 - Math.random() * 0.6, size: 1.6 + Math.random() * 2, color: '#ffffff', alpha: 0.9, decay: 0.01, spin: 0, type: 'trail' });
+  }
+
   // 1.3: dust where a beast lands from a hop.
   spawnDust(x, y, size = 100) {
     const n = 7;

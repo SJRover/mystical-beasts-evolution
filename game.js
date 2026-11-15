@@ -121,7 +121,7 @@ const UPGRADE_CONFIGS = {
   },
   crateAutoOpener: {
     name: 'Crate Auto-Opener',
-    desc: 'Crates open automatically after sitting on the field (20s down to 5s).',
+    desc: 'Crates open by themselves sooner: 30s by default, 20s down to 5s with this upgrade.',
     baseCost: 15000000,
     costMultiplier: 12.0,
     maxLevel: 3,
@@ -1075,7 +1075,23 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
 }
 
 // Spawns a physical Crate on the field
+// 1.3: crates on the field (unopened), and whether the meadow has room for one more to hatch.
+const MAX_FIELD_CRATES = 5;
+function cratesOnField() {
+  return document.querySelectorAll('#beast-playground .crate-container').length;
+}
+function fieldHasRoom() {
+  const maxCap = UPGRADE_CONFIGS.meadowCapacity.getValue(state.upgrades.meadowCapacity);
+  return state.beastsOnField.length + cratesOnField() < maxCap;
+}
+
 function spawnCrateOnField() {
+  // 1.3: never more than MAX_FIELD_CRATES on the field, whatever asks; any extra waits in the queue.
+  if (cratesOnField() >= MAX_FIELD_CRATES) {
+    if (crateQueue < 5) crateQueue++;
+    updateCrateQueueBadge();
+    return;
+  }
   const playground = document.getElementById('beast-playground');
   
   const instanceId = 'crate-' + Math.random().toString(36).substr(2, 9);
@@ -1289,6 +1305,8 @@ function openCrate(crateId, x, y) {
   }
 
   spawnBeastOnField(chosenTemplate.id, x, y, isEvolvedHatch, isInfected);
+  // 1.3: a burst in the colour of the hatched beast's rarity.
+  if (typeof FX !== 'undefined') FX.burst(abs.x, abs.y, isInfected ? 'ULTRA_RARE' : chosenTemplate.rarity, 1);
 
   if (isEvolvedHatch) {
     if (audio) audio.playUnlock('ULTRA_RARE');
@@ -1815,11 +1833,14 @@ function tickGameSeconds() {
 
   // Crate timers
   const maxCap = UPGRADE_CONFIGS.meadowCapacity.getValue(state.upgrades.meadowCapacity);
-  
-  if (state.beastsOnField.length < maxCap && !state.inBeastHub) {
+
+  // 1.3: an unopened crate is a beast waiting to hatch, so it counts towards the meadow's space,
+  // and at most MAX_FIELD_CRATES lie on the field at once; the rest wait in the delivery queue
+  // (Sam, 15 Nov: crates piled up across the field).
+  if (fieldHasRoom() && !state.inBeastHub) {
     crateTimer--;
     if (crateTimer <= 0) {
-      if (state.autoCrateDrops) {
+      if (state.autoCrateDrops && cratesOnField() < MAX_FIELD_CRATES) {
         spawnCrateOnField();
       } else {
         if (crateQueue < 5) {
@@ -1836,7 +1857,7 @@ function tickGameSeconds() {
 
   // Auto drop queued crates if space becomes available and autoCrateDrops is ON
   if (state.autoCrateDrops && !state.inBeastHub) {
-    while (crateQueue > 0 && state.beastsOnField.length < maxCap) {
+    while (crateQueue > 0 && fieldHasRoom() && cratesOnField() < MAX_FIELD_CRATES) {
       crateQueue--;
       spawnCrateOnField();
       updateCrateQueueBadge();
@@ -1859,10 +1880,15 @@ function tickGameSeconds() {
 
 // Auto open crates check
 function checkAutoOpenCrates() {
-  if (!state.upgrades.crateAutoOpener || state.upgrades.crateAutoOpener === 0) return;
+  // 1.3: every crate opens by itself after 30 s before any upgrade (Sam, 15 Nov); the Auto-Opener
+  // upgrade brings it down from 20 s to 5 s. Not while the meadow is full, nor in the tutorial.
   if (state.autoOpenCrates === false) return;
-  const crates = document.querySelectorAll('.crate-container');
-  const openDelay = UPGRADE_CONFIGS.crateAutoOpener.getValue(state.upgrades.crateAutoOpener);
+  if (!state.isTutorialCompleted) return;
+  const maxCap = UPGRADE_CONFIGS.meadowCapacity.getValue(state.upgrades.meadowCapacity);
+  if (state.beastsOnField.length >= maxCap) return;
+  const lvl = state.upgrades.crateAutoOpener || 0;
+  const crates = document.querySelectorAll('#beast-playground .crate-container:not([id^="premium-crate-"])');
+  const openDelay = lvl > 0 ? UPGRADE_CONFIGS.crateAutoOpener.getValue(lvl) : 30;
 
   crates.forEach(crate => {
     const spawnedAt = parseFloat(crate.getAttribute('data-spawned-at'));
@@ -3779,7 +3805,7 @@ function setupSettingsListeners() {
       saveGame();
       if (state.autoCrateDrops && !state.inBeastHub) {
         const maxCap = UPGRADE_CONFIGS.meadowCapacity.getValue(state.upgrades.meadowCapacity);
-        while (crateQueue > 0 && state.beastsOnField.length < maxCap) {
+        while (crateQueue > 0 && fieldHasRoom() && cratesOnField() < MAX_FIELD_CRATES) {
           crateQueue--;
           spawnCrateOnField();
         }
@@ -4328,6 +4354,8 @@ function buyPremiumCrates() {
   saveGame();
   updatePremiumCratesDisplay();
   if (audio) audio.playUnlock('LEGENDARY');
+  // 1.3: the celebration (fx.js) says it; the toast only where there is no celebration.
+  if (typeof FX !== 'undefined') { FX.premiumPurchase(3); return; }
   
   const boxIcon = `
     <svg viewBox="0 0 24 24" style="width:100%;height:100%;fill:#ff00c8">
@@ -4422,12 +4450,9 @@ function openPremiumCrate(crateId, x, y) {
 
   const dom = document.getElementById(crateId);
   if (!dom) return;
-
+  const r = dom.getBoundingClientRect();
+  const sx = r.left + r.width / 2, sy = r.top + r.height / 2;
   dom.remove();
-
-  const abs = getAbsolutePosition(x, y);
-  if (particles) particles.spawnMerge(abs.x, abs.y, '#ff00c8');
-  if (audio) audio.playCrateOpen();
 
   const currentSys = state.currentSolarSystem || 'prime';
   const targetRarities = ['RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
@@ -4438,27 +4463,24 @@ function openPremiumCrate(crateId, x, y) {
 
   const defaultBeast = currentSys === 'prime' ? 'torrent' : 'tempest_eagle';
   const chosenBeastId = possibilities.length > 0 ? possibilities[Math.floor(Math.random() * possibilities.length)].id : defaultBeast;
-
-  spawnBeastOnField(chosenBeastId, x, y, false, false);
-
   const chosenTemplate = BEAST_TEMPLATES[chosenBeastId];
-  if (audio) {
-    if (['GODLY', 'DARK_MATTER'].includes(chosenTemplate.rarity)) {
-      audio.playUnlock('GODLY');
-    } else if (['ULTRA_RARE', 'LEGENDARY'].includes(chosenTemplate.rarity)) {
-      audio.playUnlock('ULTRA_RARE');
-    } else {
-      audio.playUnlock(chosenTemplate.rarity);
-    }
+
+  // 1.3: the opening scene (fx.js), then the beast lands where the crate was.
+  const land = () => {
+    spawnBeastOnField(chosenBeastId, x, y, false, false);
+    spawnToastNotification(
+      '🎁 PREMIUM HATCH!',
+      `Hatched a guaranteed Rare+ <b>${chosenTemplate.name}</b> from a Premium Crate!`,
+      getBeastSVG(chosenBeastId, false, false)
+    );
+    checkDiscovery(chosenBeastId);
+    saveGame();
+  };
+  if (typeof FX !== 'undefined') {
+    FX.premiumOpen(sx, sy, chosenBeastId).then(land, land);
+  } else {
+    land();
   }
-
-  spawnToastNotification(
-    '🎁 PREMIUM HATCH!', 
-    `Hatched a guaranteed Rare+ <b>${chosenTemplate.name}</b> from a Premium Crate!`, 
-    getBeastSVG(chosenBeastId, false, false)
-  );
-
-  checkDiscovery(chosenBeastId);
 }
 
 function setupSpawnerListeners() {
@@ -4468,9 +4490,12 @@ function setupSpawnerListeners() {
       return;
     }
 
-    const maxCap = UPGRADE_CONFIGS.meadowCapacity.getValue(state.upgrades.meadowCapacity);
-    if (state.beastsOnField.length >= maxCap) {
+    if (!fieldHasRoom()) {
       showWarning("Meadow Full", "Meadow is full! Clear some space first.");
+      return;
+    }
+    if (cratesOnField() >= MAX_FIELD_CRATES) {
+      showWarning("Crates Waiting", `Open the ${MAX_FIELD_CRATES} crates on the field first!`);
       return;
     }
 
@@ -5162,78 +5187,7 @@ const dailySpinSegments = [
 function drawDailySpinWheel() {
   const canvas = document.getElementById('wheel-canvas');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  const cx = w / 2;
-  const cy = h / 2;
-  const r = cx - 12;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Outer ring
-  ctx.beginPath();
-  ctx.arc(cx, cy, r + 4, 0, 2 * Math.PI);
-  ctx.fillStyle = '#111';
-  ctx.fill();
-  ctx.strokeStyle = '#ffd700';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  // Draw proportional slices
-  dailySpinSegments.forEach(seg => {
-    const startRad = (seg.startDeg * Math.PI) / 180;
-    const endRad = (seg.endDeg * Math.PI) / 180;
-
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, startRad, endRad);
-    ctx.closePath();
-    ctx.fillStyle = seg.color;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Draw text inside slice only if chance >= 5%
-    if (seg.chance >= 5) {
-      ctx.save();
-      ctx.translate(cx, cy);
-      const midRad = (startRad + endRad) / 2;
-      ctx.rotate(midRad);
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = seg.text;
-      ctx.font = 'bold 9px "Outfit", sans-serif';
-      ctx.fillText(seg.name, r - 15, 0);
-      ctx.restore();
-    }
-  });
-
-  // Draw gold dots decoration
-  for (let i = 0; i < 24; i++) {
-    const dotAngle = (i * 2 * Math.PI) / 24;
-    const dx = cx + (r + 4) * Math.cos(dotAngle);
-    const dy = cy + (r + 4) * Math.sin(dotAngle);
-    ctx.beginPath();
-    ctx.arc(dx, dy, 2, 0, 2 * Math.PI);
-    ctx.fillStyle = i % 2 === 0 ? '#ffd700' : '#fff';
-    ctx.fill();
-  }
-
-  // Center pin
-  ctx.beginPath();
-  ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-  ctx.fillStyle = '#ffd700';
-  ctx.fill();
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, 14, 0, 2 * Math.PI);
-  ctx.fillStyle = '#1b0e36';
-  ctx.fill();
+  FX.drawWheel(canvas, dailySpinSegments); // 1.3: a jewelled gold wheel (fx.js)
 }
 
 const TIER_WEIGHTS = {
@@ -5333,6 +5287,7 @@ function triggerDailySpin() {
   canvasContainer.style.transform = `rotate(${targetAngle}deg)`;
   
   playSpinTicks(0);
+  if (typeof FX !== 'undefined') FX.spinLights(true);
   
   setTimeout(() => {
     if (audio) {
@@ -5356,6 +5311,7 @@ function triggerDailySpin() {
     const metaEl = document.getElementById('spin-result-meta');
     metaEl.innerText = metaText;
     metaEl.style.color = rarityColor;
+    if (typeof FX !== 'undefined') { FX.spinLights(false); FX.spinReveal(template.rarity); }
     
     const today = new Date().getFullYear() + '-' + (new Date().getMonth() + 1) + '-' + new Date().getDate();
     state.lastDailySpinDate = today;
@@ -5402,10 +5358,8 @@ function setupDailySpin() {
     claimBtn.addEventListener('click', () => {
       if (!dailySpinWinningBeast) return;
       
-      const x = 30 + Math.random() * 40;
-      const y = 35 + Math.random() * 15;
-      
-      spawnBeastOnField(dailySpinWinningBeast, x, y, false, false);
+      const at = WORLD.viewPct(30 + Math.random() * 40, 35 + Math.random() * 20); // 1.3: in view
+      spawnBeastOnField(dailySpinWinningBeast, at.x, at.y, false, false);
       
       if (!state.unlockedBeasts.includes(dailySpinWinningBeast)) {
         state.unlockedBeasts.push(dailySpinWinningBeast);

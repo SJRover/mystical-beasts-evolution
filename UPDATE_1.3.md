@@ -110,6 +110,25 @@ field). Beasts stay below the sky band (top 6% of the world).
   10%/90% as designed), daily spin, Beastopedia details, Sanctuary, crate auto-opener, the T15
   Godly gamble. No errors.
 
+## Fifth round (15 Nov): crates, premium moments, spin, incubators
+
+- Crates: an unopened crate counts towards the meadow's space (`fieldHasRoom`), at most
+  `MAX_FIELD_CRATES` (5) on the field (enforced in `spawnCrateOnField` itself; extras queue as
+  before, up to 5), and every crate opens by itself after 30 s before any upgrade (the Auto-Opener
+  still takes it from 20 s to 5 s); never while the meadow is full or during the tutorial, and never
+  a paid premium crate. 1.2.2 let crates pile up without limit while beasts were under the cap.
+  Measured: one crate every 15 s, each open 30 s later, about 2 on the field at a time.
+- fx.js: every crate opening bursts in the hatched beast's rarity colour (rings, stars, glitter;
+  a ring of light from Super Rare, a screen flash from Legendary). Buying premium crates: three
+  chests drop in over rays and fly to the tray. Opening one: it moves to the middle and shakes harder
+  and harder while glowing in the colour of what is inside, bursts with rays and a flash, and the
+  beast pops up with "LEGENDARY!" (or its rarity), name and tier, then lands on the field.
+- Daily spin: a jewelled gold wheel (rim, rivets, a gem per rarity, shaded segments, gloss, hub),
+  bulbs on the rim that chase while it spins, and the prize taking over the window with rays and a
+  glow in its rarity's colour. Claimed beasts land in view.
+- Incubators: one row above the beast-count pill and the dock (Alpha left, Gamma middle, Beta
+  right), one-line labels (the gold labels wrapped into the dock; Gamma sat on the pill).
+
 ## App Store Connect steps for the purchases (Sam)
 
 1. Agreements, Tax and Banking: the Paid Applications agreement must be active.
