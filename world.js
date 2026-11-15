@@ -63,6 +63,7 @@ const WORLD = (() => {
   function apply() {
     clamp();
     moving();
+    if (typeof BIOMES !== 'undefined') BIOMES.zoomChanged(z);
     el.style.transform = `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${z.toFixed(4)})`;
     if (typeof updatePlaygroundRect === 'function') updatePlaygroundRect();
   }
@@ -112,6 +113,7 @@ const WORLD = (() => {
   const gap = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
 
   function listen() {
+    for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
     vp.addEventListener('touchstart', (e) => {
       if (e.touches.length >= 2) {
         cancelBeastDrag();

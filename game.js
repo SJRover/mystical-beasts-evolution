@@ -247,7 +247,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (tryInitStore() || attempts >= 30) {
         clearInterval(interval);
         if (attempts >= 30 && typeof CdvPurchase === 'undefined') {
-          console.log("StoreKit: CdvPurchase not found after 3 seconds. Simulated mode will be used.");
+          console.log("StoreKit: CdvPurchase not found after 3 seconds (not the iOS app): purchases are unavailable.");
         }
       }
     }, 100);
@@ -1677,8 +1677,9 @@ function dropEssenceCrystalOnGround(beastId, pctX, pctY, evolved = false) {
   crystal.setAttribute('data-pct-y', landY);
 
   // 1.3: an essence coin (art.js), a picture rather than live vector art.
-  crystal.style.width = '28px';
-  crystal.style.height = '28px';
+  // (Sam, 15 Nov: the coins were a bit small and hard to see.)
+  crystal.style.width = '44px';
+  crystal.style.height = '44px';
   crystal.innerHTML = `<img src="${ART.coin(evolved)}" alt="" draggable="false" style="width:100%;height:100%;display:block;pointer-events:none">`;
   // 1.3: a coin left lying for a while flies to the essence counter by itself (Sam, 14 Nov: they
   // piled up on the field), quietly, worth just what it was.
@@ -2928,6 +2929,14 @@ function tickIncubatorFrames(slotNum, dt) {
 }
 
 // Retrieves the cured/evolved beast from the pedestal
+// 1.3: a released beast appears just above its incubator, wherever the camera is in the bigger world.
+function incubatorReleaseSpot(slotNum) {
+  const ped = document.getElementById(['incubator-pedestal', 'incubator-pedestal-2', 'incubator-pedestal-3'][slotNum]);
+  if (!ped) return WORLD.viewPct(50, 60);
+  const r = ped.getBoundingClientRect();
+  return WORLD.viewPct(((r.left + r.width / 2) / window.innerWidth) * 100 - 6, ((r.top - 70) / window.innerHeight) * 100);
+}
+
 function retrieveBeastFromIncubatorSlot(slotNum) {
   const inc = state.incubators[slotNum];
   if (!inc || !inc.active || !inc.complete) return;
@@ -2952,8 +2961,8 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
       });
       resultType = highTierKeys.length > 0 ? highTierKeys[Math.floor(Math.random() * highTierKeys.length)] : (currentSys === 'prime' ? 'ifrit' : 'gravity_lord');
       
-      const x = 75;
-      spawnBeastOnField(resultType, x, 70, false, false);
+      const spot = incubatorReleaseSpot(slotNum);
+      spawnBeastOnField(resultType, spot.x, spot.y, false, false);
       if (audio) audio.playCrateOpen();
       
       spawnToastNotification(
@@ -2965,8 +2974,8 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
     } else {
       resultType = currentSys === 'low_gravity' ? 'void_parasite_evolved' : 'shadow_fiend_evolved';
       
-      const x = 75;
-      spawnBeastOnField(resultType, x, 70, false, false);
+      const spot = incubatorReleaseSpot(slotNum);
+      spawnBeastOnField(resultType, spot.x, spot.y, false, false);
       if (audio) audio.playCrateOpen();
       
       spawnToastNotification(
@@ -2981,8 +2990,8 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
     const isInfectedResult = false; // cured cured cured!
 
     // Spawn back on field
-    const x = slotNum === 0 ? 20 : 75;
-    spawnBeastOnField(inc.beastType, x, 70, isEvolvedResult, isInfectedResult);
+    const spot = incubatorReleaseSpot(slotNum);
+    spawnBeastOnField(inc.beastType, spot.x, spot.y, isEvolvedResult, isInfectedResult);
 
     if (audio) audio.playCrateOpen();
 
@@ -3783,14 +3792,14 @@ function setupSettingsListeners() {
   const buyBoostBtn = document.getElementById('buy-boost-btn');
   if (buyBoostBtn) {
     buyBoostBtn.addEventListener('click', () => {
-      triggerIosPurchase('boost_2x', '1-Hour 2x Essence Boost', '£1.99', buyDoubleEssenceBoost);
+      triggerIosPurchase('boost_2x');
     });
   }
 
   const buyCratesBtn = document.getElementById('buy-crates-btn');
   if (buyCratesBtn) {
     buyCratesBtn.addEventListener('click', () => {
-      triggerIosPurchase('crates_premium_3x', '3x Premium Crates', '£2.99', buyPremiumCrates);
+      triggerIosPurchase('crates_premium_3x');
     });
   }
 
@@ -4114,106 +4123,106 @@ function isBoostActive() {
   return Date.now() < state.doubleEssenceEndTime;
 }
 
+// ---------------------------------------------------------------- App Store purchases (1.3)
+// Real purchases only. 1.2.2 fell back to a made-up Apple Pay / Face ID sheet that gave the items
+// away whenever the App Store was not ready (including before the products existed in App Store
+// Connect), and its real path read the receipt in a shape cordova-plugin-purchase 13 does not
+// give, so a paid purchase would have thrown before delivering or finishing. Now: the products are
+// consumables; StoreKit charges the player and approves the transaction on the device; the item is
+// delivered once per transaction id (kept on the device, so a transaction Apple sends again after
+// a restart is not delivered twice) and the transaction is then finished. There is no server, so
+// there is no server-side receipt check; StoreKit's own approval is what is trusted.
+const IAP_PRODUCTS = {
+  boost_2x: { grant: () => buyDoubleEssenceBoost(), fallbackPrice: '£1.99' },
+  crates_premium_3x: { grant: () => buyPremiumCrates(), fallbackPrice: '£2.99' }
+};
 let isStoreKitInitiated = false;
 let isStoreInitialized = false;
-let activePurchaseCallback = null;
+let storeSpinnerTimer = 0;
+const IAP_GRANTED_KEY = 'mystic_beasts_iap_granted';
+
+function iapGranted() {
+  try { return new Set(JSON.parse(localStorage.getItem(IAP_GRANTED_KEY) || '[]')); } catch (e) { return new Set(); }
+}
+function iapRememberGranted(transactionId) {
+  const done = iapGranted();
+  done.add(transactionId);
+  localStorage.setItem(IAP_GRANTED_KEY, JSON.stringify([...done].slice(-300)));
+}
+function isNativeApp() {
+  return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+}
 
 function initStoreKit() {
-  if (isStoreKitInitiated) {
-    console.log("StoreKit: initStoreKit already called, ignoring duplicate call.");
-    return;
-  }
+  if (isStoreKitInitiated) return;
   isStoreKitInitiated = true;
+  if (typeof CdvPurchase === 'undefined') return;
 
-  if (typeof CdvPurchase === 'undefined') {
-    console.log("StoreKit: CdvPurchase global not found. Simulated mode will be used.");
-    return;
-  }
+  const { store, ProductType, Platform, LogLevel } = CdvPurchase;
+  store.verbosity = LogLevel.WARNING;
+  store.register(Object.keys(IAP_PRODUCTS).map((id) => ({ id, type: ProductType.CONSUMABLE, platform: Platform.APPLE_APPSTORE })));
 
-  const { store, ProductType, Platform } = CdvPurchase;
-
-  // Verbose logging in debug/TestFlight
-  store.verbosity = CdvPurchase.LogLevel.DEBUG;
-
-  // Register Consumable Products
-  store.register([
-    {
-      id: 'boost_2x',
-      type: ProductType.CONSUMABLE,
-      platform: Platform.APPLE_APPSTORE
-    },
-    {
-      id: 'crates_premium_3x',
-      type: ProductType.CONSUMABLE,
-      platform: Platform.APPLE_APPSTORE
-    }
-  ]);
-
-  // Transaction Approved -> Verify
-  store.when().approved((transaction) => {
-    console.log(`StoreKit: Transaction approved for ${transaction.products[0].id}, verifying receipt...`);
-    transaction.verify();
-  });
-
-  // Transaction Verified -> Finish & Grant
-  store.when().verified((receipt) => {
-    console.log("StoreKit: Transaction receipt verified successfully.");
-    const transaction = receipt.transactions[0];
-    if (transaction && transaction.products && transaction.products.length > 0) {
-      const productId = transaction.products[0].id;
-      transaction.finish();
-      
-      console.log(`StoreKit: Transaction finished and items granted for ${productId}`);
-      
-      // Hide loader and execute callback
-      hideStoreLoadingSpinner();
-      
-      if (activePurchaseCallback) {
-        activePurchaseCallback();
-        activePurchaseCallback = null;
-      } else {
-        handleSuccessfulPurchase(productId);
+  store.when()
+    .productUpdated(() => updateIapPrices())
+    .approved((transaction) => {
+      const productId = transaction.products && transaction.products[0] && transaction.products[0].id;
+      const transactionId = transaction.transactionId;
+      if (productId && IAP_PRODUCTS[productId] && transactionId && !iapGranted().has(transactionId)) {
+        IAP_PRODUCTS[productId].grant();
+        iapRememberGranted(transactionId);
       }
-    } else {
+      transaction.finish();
       hideStoreLoadingSpinner();
-    }
-  });
+    })
+    .finished(() => hideStoreLoadingSpinner());
 
-  // Track finished transactions
-  store.when().finished((transaction) => {
-    console.log(`StoreKit: Transaction fully completed for ${transaction.products[0].id}`);
-    hideStoreLoadingSpinner();
-  });
-
-  // Track global errors
   store.onError((error) => {
     console.error(`StoreKit Error (${error.code}): ${error.message}`);
     hideStoreLoadingSpinner();
-    // Only alert if the error wasn't user cancellation
-    if (error.code !== CdvPurchase.ErrorCode.PAYMENT_CANCELLED) {
-      alert(`App Store Purchase Failed: ${error.message}`);
-    }
   });
 
-  // Initialize Apple App Store integration
   store.initialize([Platform.APPLE_APPSTORE])
     .then(() => {
-      console.log("StoreKit: Apple App Store billing successfully initialized.");
       isStoreInitialized = true;
+      updateIapPrices();
     })
-    .catch((err) => {
-      console.error("StoreKit: Store initialization failed:", err);
-    });
+    .catch((err) => console.error('StoreKit: initialisation failed', err));
 }
 
-function handleSuccessfulPurchase(productId) {
-  if (productId === 'boost_2x') {
-    buyDoubleEssenceBoost();
-  } else if (productId === 'crates_premium_3x') {
-    buyPremiumCrates();
-  } else {
-    console.warn(`StoreKit: Unrecognized product ID rewarded: ${productId}`);
+/** The App Store's own price (in the player's currency) on the premium cards, once it is known. */
+function updateIapPrices() {
+  for (const id of Object.keys(IAP_PRODUCTS)) {
+    let price = IAP_PRODUCTS[id].fallbackPrice;
+    try {
+      if (typeof CdvPurchase !== 'undefined') {
+        const p = CdvPurchase.store.get(id, CdvPurchase.Platform.APPLE_APPSTORE);
+        if (p && p.pricing && p.pricing.price) price = p.pricing.price;
+      }
+    } catch (e) { /* keep the fallback */ }
+    const badge = document.getElementById(`iap-price-${id}`);
+    if (badge) badge.textContent = price;
   }
+}
+
+/**
+ * Chances of each rarity from a premium crate, from the same list openPremiumCrate draws from
+ * (every eligible beast equally likely), so the numbers shown are always the real ones. Apple's
+ * guideline 3.1.1 asks for the odds of each kind of item before a loot box is bought.
+ */
+function premiumCrateOdds(system) {
+  const targetRarities = ['RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
+  const pool = Object.values(BEAST_TEMPLATES).filter((b) => (b.system || 'prime') === system && b.tier >= 5 && b.tier <= 20 && targetRarities.includes(b.rarity) && !isBossBeast(b.id));
+  return targetRarities
+    .map((r) => ({ rarity: RARITIES[r].name, pct: pool.length ? (pool.filter((b) => b.rarity === r).length / pool.length) * 100 : 0 }))
+    .filter((o) => o.pct > 0);
+}
+function fillPremiumOdds() {
+  const el = document.getElementById('premium-odds');
+  if (!el) return;
+  const sys = state.currentSolarSystem || 'prime';
+  const odds = premiumCrateOdds(sys);
+  el.innerHTML = `<b>Drop rates per crate (${sys === 'prime' ? 'Prime' : 'Low Gravity'} system):</b> ` +
+    odds.map((o) => `${o.rarity} ${o.pct < 10 ? o.pct.toFixed(1) : Math.round(o.pct)}%`).join(' · ');
 }
 
 function showStoreLoadingSpinner() {
@@ -4273,208 +4282,28 @@ function hideStoreLoadingSpinner() {
   }
 }
 
-function triggerIosPurchase(productId, productName, productPrice, onComplete) {
-  // If native billing is not loaded (running in browser/simulator), fall back to mockup
-  if (typeof CdvPurchase === 'undefined' || !isStoreInitialized) {
-    console.log("StoreKit: Billing not initialized or not running on native iOS device. Falling back to simulation.");
-    runMockIosPurchase(productId, productName, productPrice, onComplete);
+function triggerIosPurchase(productId) {
+  if (!isNativeApp() || typeof CdvPurchase === 'undefined') {
+    showWarning('App Store purchase', 'Premium items are bought through the App Store in the Merge Beasts app on iPhone and iPad.');
     return;
   }
-
+  const { store, Platform, ErrorCode } = CdvPurchase;
+  const product = isStoreInitialized ? store.get(productId, Platform.APPLE_APPSTORE) : null;
+  const offer = product && product.canPurchase !== false ? product.getOffer() : null;
+  if (!offer) {
+    showWarning('Store unavailable', 'The App Store could not be reached. Check your connection and try again in a moment.');
+    return;
+  }
   showStoreLoadingSpinner();
-  activePurchaseCallback = onComplete;
-
-  const { store } = CdvPurchase;
-  store.order(productId)
-    .then(() => {
-      console.log(`StoreKit: Order successfully requested for ${productId}`);
-    })
-    .catch((err) => {
-      console.error(`StoreKit: Failed to request order for ${productId}`, err);
-      hideStoreLoadingSpinner();
-      activePurchaseCallback = null;
-      alert(`Could not initiate purchase: ${err.message}`);
-    });
-}
-
-function runMockIosPurchase(productId, productName, productPrice, onComplete) {
-  // Create Apple Pay sheet container
-  const overlay = document.createElement('div');
-  overlay.id = 'apple-pay-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 10000;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  `;
-
-  const sheet = document.createElement('div');
-  sheet.id = 'apple-pay-sheet';
-  sheet.style.cssText = `
-    width: 100%;
-    max-width: 480px;
-    background: rgba(28, 28, 30, 0.94);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    padding: 24px 20px 40px 20px;
-    transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.15, 0.85, 0.15, 1);
-    color: white;
-    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  `;
-
-  sheet.innerHTML = `
-    <div style="width: 36px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 2.5px; margin-bottom: 24px;"></div>
-    
-    <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 28px;">
-      <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px;"></span>
-      <span style="font-size: 17px; font-weight: 700; letter-spacing: -0.2px;">Pay</span>
-    </div>
-
-    <div style="width: 100%; display: flex; flex-direction: column; gap: 14px; border-bottom: 0.5px solid rgba(255,255,255,0.15); padding-bottom: 18px; margin-bottom: 18px; font-size: 13px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="color: rgba(255,255,255,0.5); text-transform: uppercase; font-size: 10px; font-weight: 700;">Merchant</span>
-        <span style="font-weight: 600; color: white;">Mystic Beasts Evolution</span>
-      </div>
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="color: rgba(255,255,255,0.5); text-transform: uppercase; font-size: 10px; font-weight: 700;">Payment</span>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span style="background: rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 5px; font-weight: 700; font-size: 9px;">Pay</span>
-          <span style="font-weight: 600;">Visa (•••• 8921)</span>
-        </div>
-      </div>
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="color: rgba(255,255,255,0.5); text-transform: uppercase; font-size: 10px; font-weight: 700;">Item</span>
-        <span style="font-weight: 600; color: white;">${productName}</span>
-      </div>
-    </div>
-
-    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-      <span style="font-size: 15px; font-weight: 700; color: white;">TOTAL</span>
-      <span style="font-size: 24px; font-weight: 800; color: white; font-family: monospace;">${productPrice}</span>
-    </div>
-
-    <div id="faceid-trigger-area" style="display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; width: 100%; padding: 15px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px;">
-      <div id="faceid-animation-icon" style="width: 60px; height: 60px; position: relative; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
-        <svg viewBox="0 0 100 100" style="width: 44px; height: 44px; fill: none; stroke: #007aff; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round;">
-          <path d="M25 15C25 15 15 25 15 35M15 65C15 65 25 75 35 75M75 75C75 75 75 65 75 55M75 25C75 25 65 15 55 15M40 32C40 32 37 32 37 35V45C37 45 40 45 40 42M60 32C60 32 63 32 63 35V45C63 45 60 45 60 42M50 40V55M45 55H55M40 65H60M35 60C35 60 38 68 50 68C62 68 65 60 65 60" />
-        </svg>
-        <div id="faceid-scanning-bar" style="position: absolute; left: 10px; top: 15px; width: 40px; height: 2px; background: #007aff; box-shadow: 0 0 8px #007aff; display: none; animation: laserUpDown 1.2s ease-in-out infinite;"></div>
-      </div>
-      <div id="faceid-status-label" style="font-size: 14px; font-weight: 600; color: #007aff; letter-spacing: -0.1px;">Authorize Payment</div>
-    </div>
-
-    <button id="apple-pay-cancel-btn" style="width: 100%; border: none; background: none; color: rgba(255,255,255,0.4); font-size: 14px; font-weight: 600; margin-top: 24px; padding: 10px; cursor: pointer;">Cancel</button>
-  `;
-
-  const styleEl = document.createElement('style');
-  styleEl.innerHTML = `
-    @keyframes laserUpDown {
-      0% { top: 15px; opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { top: 45px; opacity: 0; }
+  clearTimeout(storeSpinnerTimer);
+  // (Ask to Buy and other deferred payments approve later: the spinner does not wait for them.)
+  storeSpinnerTimer = setTimeout(hideStoreLoadingSpinner, 90000);
+  offer.order().then((err) => {
+    if (!err) return;
+    hideStoreLoadingSpinner();
+    if (err.code !== ErrorCode.PAYMENT_CANCELLED) {
+      showWarning('Purchase not completed', err.message || 'The App Store could not complete the purchase.');
     }
-  `;
-  document.head.appendChild(styleEl);
-
-  overlay.appendChild(sheet);
-  document.body.appendChild(overlay);
-
-  void overlay.offsetWidth;
-  overlay.style.opacity = '1';
-  sheet.style.transform = 'translateY(0)';
-
-  const cleanUp = () => {
-    sheet.style.transform = 'translateY(100%)';
-    overlay.style.opacity = '0';
-    setTimeout(() => {
-      overlay.remove();
-      styleEl.remove();
-    }, 350);
-  };
-
-  document.getElementById('apple-pay-cancel-btn').addEventListener('click', cleanUp);
-
-  let authorizing = false;
-  const triggerArea = document.getElementById('faceid-trigger-area');
-  const statusLabel = document.getElementById('faceid-status-label');
-  const animIcon = document.getElementById('faceid-animation-icon');
-  const scanningBar = document.getElementById('faceid-scanning-bar');
-
-  triggerArea.addEventListener('click', () => {
-    if (authorizing) return;
-    authorizing = true;
-
-    if (audio) audio.playClick();
-
-    statusLabel.innerText = "Verifying with Face ID...";
-    scanningBar.style.display = 'block';
-    animIcon.style.transform = 'scale(1.1)';
-    
-    setTimeout(() => {
-      scanningBar.style.display = 'none';
-      animIcon.style.transform = 'scale(1.0)';
-      animIcon.innerHTML = `
-        <svg viewBox="0 0 100 100" style="width: 50px; height: 50px; fill: none; stroke: #34c759; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(52,199,89,0.4));">
-          <circle cx="50" cy="50" r="40" stroke="#34c759" stroke-width="4"/>
-          <path d="M30 50L45 65L70 35" />
-        </svg>
-      `;
-      statusLabel.innerText = "Payment Approved";
-      statusLabel.style.color = "#34c759";
-
-      if (audio) {
-        audio.playUnlock('GODLY');
-      }
-
-      setTimeout(() => {
-        cleanUp();
-        showTestFlightAlert(productName, () => {
-          onComplete();
-        });
-      }, 1000);
-
-    }, 2000);
-  });
-}
-
-function showTestFlightAlert(itemName, onDone) {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay active';
-  overlay.style.zIndex = '10001';
-  
-  overlay.innerHTML = `
-    <div class="modal-content" style="max-width: 300px; border-color: rgba(255,255,255,0.15); background: rgba(30, 30, 30, 0.95); border-radius: 14px; padding: 20px; text-shadow: none;">
-      <div style="font-weight: 700; font-size: 16px; color: white; text-align: center; margin-bottom: 8px; font-family: -apple-system, BlinkMacSystemFont;">TestFlight Sandbox</div>
-      <div style="font-size: 13px; color: rgba(255,255,255,0.85); text-align: center; margin-bottom: 20px; line-height: 1.4; font-family: -apple-system, BlinkMacSystemFont;">
-        You're all set. Your purchase of <b>${itemName}</b> was successful in the TestFlight sandbox environment.
-      </div>
-      <button class="modal-btn" style="width: 100%; border-radius: 10px; background: #007aff; color: white; border: none; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: -apple-system, BlinkMacSystemFont;" id="testflight-ok-btn">OK</button>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  overlay.querySelector('#testflight-ok-btn').addEventListener('click', () => {
-    overlay.remove();
-    if (audio) audio.playClick();
-    onDone();
   });
 }
 
@@ -4965,7 +4794,8 @@ function retrieveBeastFromTrash(e) {
   updateTrashBinUI();
 
   // Spawn the beast back on field. We spawn it near the bottom-center of the playground
-  const beast = spawnBeastOnField(restored.type, 50, 65, restored.evolved, restored.infected, restored.deathTimer);
+  const back = WORLD.viewPct(50, 60); // 1.3: back where the camera is looking
+  const beast = spawnBeastOnField(restored.type, back.x, back.y, restored.evolved, restored.infected, restored.deathTimer);
   if (!beast) return;
 
   if (audio) audio.playUnlock('COMMON');
@@ -5824,3 +5654,7 @@ function setupTutorialListeners() {
   }
 }
 
+// 1.3: the premium crate's drop rates and the App Store prices, whenever the shop is drawn.
+const renderShop13 = renderShop;
+// eslint-disable-next-line no-global-assign
+renderShop = function (...args) { const r = renderShop13.apply(this, args); fillPremiumOdds(); updateIapPrices(); return r; };

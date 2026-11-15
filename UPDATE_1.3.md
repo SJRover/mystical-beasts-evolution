@@ -85,6 +85,43 @@ field). Beasts stay below the sky band (top 6% of the world).
   No errors.
 - Version 1.3 (MARKETING_VERSION) and pushed on branch graphics-1.3 for a TestFlight build.
 
+## Fourth round (15 Nov): purchases, coins, zoom, playtest
+
+- Real App Store purchases only. 1.2.2 fell back to a made-up Apple Pay / Face ID sheet that
+  gave the 2x boost and the premium crates away free whenever the store was not ready (including
+  while the products did not exist in App Store Connect), and its real path read
+  `receipt.transactions` from cordova-plugin-purchase 13's VerifiedReceipt, which has no such
+  field: a paid purchase would have thrown before delivering or finishing. Now (game.js
+  `IAP_PRODUCTS`, `initStoreKit`, `triggerIosPurchase`): consumables `boost_2x` and
+  `crates_premium_3x`; delivered in `approved`, once per transaction id (kept in localStorage
+  `mystic_beasts_iap_granted`), then `finish()`; `offer.order()`; cancel shows nothing, failure and
+  an unreachable store show a message; outside the iOS app a message says to buy in the app. Price
+  badges show the App Store's localized price (`iap-price-<id>`). Tested against a stand-in shaped
+  like the plugin: buy, replayed transaction (not delivered twice), cancel, failure, store down.
+- Premium crate card: real drop rates per rarity (`premiumCrateOdds`, computed from the same pool
+  openPremiumCrate draws from, so always right; Apple guideline 3.1.1), honest description.
+- Coins 44 px (were 28). Map and beasts measured to scale by the same factor at every zoom (map to
+  beast width 5.488 at zoom 0.56, 0.74 and 1.6); a smoothed half-size copy of the map is used when
+  well zoomed out (no shimmer); iOS's own pinch gesture is blocked.
+- Released (incubators) and restored (trash undo) beasts appear on screen beside where they came
+  from; moving to a new biome, system or the hub centres the camera. The 2x timer wraps in the top
+  bar instead of overlapping.
+- Playtested also: premium crate on the field, trash undo, incubators 1-3 (evolve, cure, purify
+  10%/90% as designed), daily spin, Beastopedia details, Sanctuary, crate auto-opener, the T15
+  Godly gamble. No errors.
+
+## App Store Connect steps for the purchases (Sam)
+
+1. Agreements, Tax and Banking: the Paid Applications agreement must be active.
+2. Apps > Merge Beasts > Monetization > In-App Purchases > +, type Consumable, twice:
+   - Product ID `boost_2x`, reference name "1-Hour 2x Essence Boost", price £1.99.
+   - Product ID `crates_premium_3x`, reference name "3x Premium Crates", price £2.99.
+   For each: a display name and description (English UK), and a review screenshot of the Premium
+   Store in the shop.
+3. On the version 1.3 page, In-App Purchases and Subscriptions: add both, then submit them with
+   the build (the first purchases of an app go to review with a new version).
+4. On TestFlight, purchases go through Apple's sandbox and are not charged.
+
 ## Still to do
 
 1. Backgrounds: first pass done; refine per biome after Sam sees them.

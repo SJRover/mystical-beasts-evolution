@@ -246,7 +246,7 @@
           <div class="shop-grid">
             <!-- 2x Boost Card -->
             <div class="shop-card premium-card" style="border: 1.5px solid rgba(255, 168, 0, 0.4); background: rgba(255, 168, 0, 0.02); display: flex; align-items: center; padding: 12px; gap: 12px; border-radius: 16px; position: relative;">
-              <div class="shop-card-badge" style="background:#ffa800; color:black; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:12px; position:absolute; top:-10px; right:12px;">£1.99</div>
+              <div id="iap-price-boost_2x" class="shop-card-badge" style="background:#ffa800; color:black; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:12px; position:absolute; top:-10px; right:12px;">£1.99</div>
               <div class="shop-card-icon" style="background:rgba(255,168,0,0.15); box-shadow: 0 0 10px rgba(255,168,0,0.3); display:flex; align-items:center; justify-content:center; border-radius:12px; font-weight:900; color:#ffa800; font-size:20px; width:44px; height:44px; flex-shrink:0;">2X</div>
               <div class="shop-card-info" style="display:flex; flex-direction:column; gap:2px; flex:1;">
                 <div class="shop-card-name" style="color:#ffa800; font-weight:bold; font-size:13px;">1-Hour 2x Essence Boost</div>
@@ -257,11 +257,12 @@
             
             <!-- Premium Crates Card -->
             <div class="shop-card premium-card" style="border: 1.5px solid rgba(255, 0, 200, 0.4); background: rgba(255, 0, 200, 0.02); display: flex; align-items: center; padding: 12px; gap: 12px; border-radius: 16px; position: relative;">
-              <div class="shop-card-badge" style="background:#ff00c8; color:white; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:12px; position:absolute; top:-10px; right:12px;">£2.99</div>
+              <div id="iap-price-crates_premium_3x" class="shop-card-badge" style="background:#ff00c8; color:white; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:12px; position:absolute; top:-10px; right:12px;">£2.99</div>
               <div class="shop-card-icon" style="background:rgba(255,0,200,0.15); box-shadow: 0 0 10px rgba(255,0,200,0.3); display:flex; align-items:center; justify-content:center; border-radius:12px; font-weight:900; color:#ff00c8; font-size:20px; width:44px; height:44px; flex-shrink:0;">📦</div>
               <div class="shop-card-info" style="display:flex; flex-direction:column; gap:2px; flex:1;">
                 <div class="shop-card-name" style="color:#ff00c8; font-weight:bold; font-size:13px;">3x Premium Crates</div>
-                <div class="shop-card-desc" style="font-size:11px; color:var(--color-text-dim);">Get 3 metabolic pink crates containing a guaranteed Rare+ beast (T5 to T20) with equal chances!</div>
+                <div class="shop-card-desc" style="font-size:11px; color:var(--color-text-dim);">3 premium crates. Each hatches a guaranteed Rare or better beast from Tier 5 to Tier 20 of your current solar system, every eligible beast equally likely.</div>
+                <div id="premium-odds" class="shop-card-desc" style="font-size:10.5px; color:#ffd6f6; line-height:1.35;"></div>
                 <button id="buy-crates-btn" class="shop-card-buy-btn" style="background:linear-gradient(135deg, #ff00c8, #b300ff); color:white; border:none; border-radius:8px; font-weight:bold; padding:6px; font-size:11px; cursor:pointer; margin-top:4px;">Buy</button>
               </div>
             </div>

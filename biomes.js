@@ -294,6 +294,31 @@ const BIOMES = (() => {
   }
 
   const cache = new Map();
+  let shown = null;
+  // Two copies of the biome: full sharpness for normal and close zoom, and a half-size one smoothed
+  // down once, for zoomed out. (Shrinking the sharp copy on the fly made the small flowers, rocks and
+  // mushrooms shimmer and lose their shape when zoomed out, Sam 15 Nov.) Both cover the world
+  // exactly, so props keep their size against the beasts at every zoom.
+  function halfCopy(cv) {
+    const h = document.createElement('canvas');
+    h.width = Math.max(1, Math.round(cv.width / 2));
+    h.height = Math.max(1, Math.round(cv.height / 2));
+    const c = h.getContext('2d');
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = 'high';
+    c.drawImage(cv, 0, 0, h.width, h.height);
+    return h;
+  }
+  /** Which copy suits this zoom: the half one once the full one would be shrunk to under half. */
+  function zoomChanged(z) {
+    if (!shown) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const worldW = (typeof WORLD !== 'undefined' ? WORLD.worldSize().w : shown.full.width);
+    const scaleOnScreen = (worldW * z * dpr) / shown.full.width;
+    const useHalf = scaleOnScreen < 0.5;
+    shown.full.style.visibility = useHalf ? 'hidden' : 'visible';
+    shown.half.style.visibility = useHalf ? 'visible' : 'hidden';
+  }
   /** The canvas for the biome being played, into #meadow-bg (the old CSS layers hidden). */
   function show() {
     const bg = document.getElementById('meadow-bg');
@@ -309,19 +334,34 @@ const BIOMES = (() => {
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     const q = Math.max(1, Math.min(dpr * 1.25, 4096 / Math.max(w, h), Math.sqrt(1.2e7 / (w * h))));
     const key = `${B.name}|${Math.round(w)}x${Math.round(h)}`;
-    let cv = cache.get(key);
-    if (!cv) { cv = paint(B, w, h, q); cache.clear(); cache.set(key, cv); }
+    let pair = cache.get(key);
+    if (!pair) {
+      const full = paint(B, w, h, q);
+      pair = { full, half: halfCopy(full) };
+      cache.clear();
+      cache.set(key, pair);
+    }
     bg.classList.add('bg-v2');
-    bg.querySelectorAll('canvas.biome-canvas').forEach((e) => { if (e !== cv) e.remove(); });
-    if (!cv.parentNode) { cv.className = 'biome-canvas'; bg.prepend(cv); }
+    bg.querySelectorAll('canvas.biome-canvas').forEach((e) => { if (e !== pair.full && e !== pair.half) e.remove(); });
+    for (const cv of [pair.half, pair.full]) if (!cv.parentNode) { cv.className = 'biome-canvas'; bg.prepend(cv); }
+    shown = pair;
+    zoomChanged(WORLD.zoom());
   }
 
-  return { show, paint, PRIME, LOW, HUB };
+  return { show, paint, zoomChanged, PRIME, LOW, HUB };
 })();
 
 // Every time the game sets the biome's backdrop, paint the new one over it.
 if (typeof applyBiomeBg === 'function') {
   const applyBiomeBg0 = applyBiomeBg;
   // eslint-disable-next-line no-global-assign
-  applyBiomeBg = function (level) { applyBiomeBg0(level); try { BIOMES.show(); } catch (e) { console.error('Biome paint failed', e); } };
+  let lastPlace = '';
+  applyBiomeBg = function (level) {
+    applyBiomeBg0(level);
+    try { BIOMES.show(); } catch (e) { console.error('Biome paint failed', e); }
+    // Somewhere new (a prestige, the other solar system, the hub): the camera starts in the middle,
+    // where the game puts the first beasts.
+    const place = `${state.inBeastHub ? 'hub' : state.currentSolarSystem}|${level}`;
+    if (place !== lastPlace) { if (lastPlace && typeof WORLD !== 'undefined') WORLD.centre(); lastPlace = place; }
+  };
 }

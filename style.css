@@ -2776,3 +2776,7 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 #hud-overlay .hud-right .prestige-progress-label { width: 100% !important; display: flex; justify-content: space-between; gap: 4px; white-space: nowrap; overflow: hidden; }
 #hud-overlay .hud-right .prestige-progress-label > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #hud-overlay .hud-left { flex: 0 1 auto; min-width: 0; }
+/* The multiplier and the 2x boost timer share a line when they fit and wrap when they do not. */
+#hud-overlay div:has(> #double-essence-timer) { display: flex !important; flex-wrap: wrap; align-items: center; gap: 3px 6px; }
+#hud-overlay #multiplier-display { white-space: nowrap; width: auto !important; }
+#hud-overlay #double-essence-timer { white-space: nowrap; font-size: 10px; margin: 0 !important; }
