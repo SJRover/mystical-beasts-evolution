@@ -138,12 +138,20 @@ uses, so nothing needs attaching to the 1.3 version page:
 The code treats both as Consumable (each can be bought again). On TestFlight, purchases go
 through Apple's sandbox and are not charged.
 
-## Still to do
+## App icon
 
-1. Backgrounds: first pass done; refine per biome after Sam sees them.
-2. Crates, incubators, crystals and merge effects refreshed; menus restyled (same layout).
-3. Check every body type again close up (Sam flagged beaks, mouths, eye areas, orbit rings, sharks
-   and the snake; fixed, snake redesigned twice).
-4. Menus and pop-ups use backdrop-filter blur over the moving world (37 fps with the welcome-back
-   pop-up open, 51 without): swap for solid translucent panels. Performance pass on a phone-sized view; then version 1.3 (MARKETING_VERSION) and a push.
-   Every push to GitHub starts a Codemagic TestFlight build, so push only finished versions.
+New icon (15 Nov 2026, Sam chose option 4 of six): two Sparkys merging in a burst on the Forest
+Meadow, drawn from the 1.3 art by tools/icon.html and captured by tools/make_icons.mjs, flattened to
+RGB (Apple rejects icons with transparency). It is in assets/icon.png (Codemagic's
+`@capacitor/assets generate --ios` builds the iOS icons from it), icon.png and the iOS
+AppIcon-512@2x.png.
+
+## Release
+
+1.3 is finished and merged into main. Every push starts a Codemagic build that goes to TestFlight.
+Before submitting for review: install the newest 1.3 build from TestFlight, play it, and buy each
+purchase once in the sandbox (not charged), because the real StoreKit path has only been tested
+against a stand-in. Then in App Store Connect: the 1.3 version page, choose that build, What's New,
+Submit for Review.
+
+Open, Sam's decision: server-side receipt validation (needs a paid service; not required by Apple).
