@@ -129,17 +129,14 @@ field). Beasts stay below the sky band (top 6% of the world).
 - Incubators: one row above the beast-count pill and the dock (Alpha left, Gamma middle, Beta
   right), one-line labels (the gold labels wrapped into the dock; Gamma sat on the pill).
 
-## App Store Connect steps for the purchases (Sam)
+## The purchases in App Store Connect
 
-1. Agreements, Tax and Banking: the Paid Applications agreement must be active.
-2. Apps > Merge Beasts > Monetization > In-App Purchases > +, type Consumable, twice:
-   - Product ID `boost_2x`, reference name "1-Hour 2x Essence Boost", price £1.99.
-   - Product ID `crates_premium_3x`, reference name "3x Premium Crates", price £2.99.
-   For each: a display name and description (English UK), and a review screenshot of the Premium
-   Store in the shop.
-3. On the version 1.3 page, In-App Purchases and Subscriptions: add both, then submit them with
-   the build (the first purchases of an app go to review with a new version).
-4. On TestFlight, purchases go through Apple's sandbox and are not charged.
+Both already exist and are Approved (Sam checked, 15 Nov 2026), with exactly the IDs the code
+uses, so nothing needs attaching to the 1.3 version page:
+- `boost_2x`, "1-Hour 2x Essence Boost", Apple ID 6782213692.
+- `crates_premium_3x`, "3x Premium Crates", Apple ID 6782215479.
+The code treats both as Consumable (each can be bought again). On TestFlight, purchases go
+through Apple's sandbox and are not charged.
 
 ## Still to do
 

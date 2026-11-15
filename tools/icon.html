@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>App icon options</title>
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: 1024px; height: 1024px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<script src="../beasts.js"></script>
+<script src="../art.js"></script>
+<script src="../biomes.js"></script>
+<script>
+// App icon options for 1.3, drawn from the game's own new art: `icon.html?opt=1` .. `?opt=6`.
+// tools/make_icons.mjs captures each at 1024 by 1024 for the App Store (no transparency).
+const S = 1024;
+const OPTS = {
+  1: { beasts: [['aurelion', 0, 0.86, 0, 0.03]], bg: { sky: ['#1a0a3a', '#06030f'], rays: ['#ff9a1f', '#ffe08a'], n: 14 } },
+  2: { beasts: [['abyssus', 0, 0.86, 0, 0.03]], bg: { biome: 'Crystal Cavern', dim: 0.55, rays: ['#3ff6ff', '#d8ffff'], n: 16 } },
+  3: { beasts: [['dark_matter_leviathan', 0, 0.86, 0, 0.03]], bg: { biome: 'Dark Matter Core', dim: 0.45, rays: ['#ff2fe9', '#ffc4f8'], n: 18 } },
+  4: { beasts: [['sparky', 0, 0.56, -0.2, 0.1, -8], ['sparky', 0, 0.56, 0.2, 0.1, 8, true]], merge: true, bg: { biome: 'Forest Meadow', dim: 0.42, rays: ['#ffb21a', '#fff1b0'], n: 12, glowA: 0.45, rayA: 0.4 } },
+  5: { beasts: [['solaris', 0, 0.86, 0, 0.03]], bg: { biome: 'Sky Sanctuary', dim: 0.05, rays: ['#3ff6ff', '#ffffff'], n: 16 } },
+  6: { beasts: [['aurelion', 1, 0.86, 0, 0.04]], bg: { biome: 'Forest Meadow', dim: 0.12, rays: ['#ffd700', '#fff6c0'], n: 12 } },
+};
+
+const cv = document.getElementById('c');
+const c = cv.getContext('2d');
+
+function load(svg, px) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('width="100%" height="100%"', `width="${px}" height="${px}"`));
+  });
+}
+
+function rays(cx, cy, len, n, col, col2, alpha) {
+  const g = c.createRadialGradient(cx, cy, 0, cx, cy, len);
+  g.addColorStop(0, col2); g.addColorStop(0.35, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.save();
+  c.globalAlpha = alpha;
+  c.fillStyle = g;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 - Math.PI / 2, w = (i % 2 ? 0.07 : 0.12);
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.arc(cx, cy, len * (i % 2 ? 0.86 : 1), a - w, a + w);
+    c.closePath();
+    c.fill();
+  }
+  c.restore();
+}
+
+function glow(cx, cy, r, col, a) {
+  const g = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.save(); c.globalAlpha = a; c.fillStyle = g; c.fillRect(0, 0, S, S); c.restore();
+}
+
+function sparkle(x, y, r, col) {
+  c.save();
+  c.fillStyle = col;
+  c.shadowColor = col; c.shadowBlur = r * 1.6;
+  c.beginPath();
+  c.moveTo(x, y - r); c.quadraticCurveTo(x, y, x + r, y); c.quadraticCurveTo(x, y, x, y + r);
+  c.quadraticCurveTo(x, y, x - r, y); c.quadraticCurveTo(x, y, x, y - r);
+  c.fill();
+  c.restore();
+}
+
+async function draw(o) {
+  const B = o.bg;
+  // The ground: the game's own biome (painted for a square), or a night sky.
+  if (B.biome) {
+    const def = [...BIOMES.PRIME, ...BIOMES.LOW, BIOMES.HUB].find((b) => b.name === B.biome);
+    const art = BIOMES.paint(def, S * 1.5, S * 1.5, 1);
+    c.save();
+    c.filter = 'blur(5px)';
+    c.drawImage(art, -S * 0.25, -S * 0.1, S * 1.5, S * 1.5);
+    c.restore();
+    c.fillStyle = `rgba(4,6,20,${B.dim})`;
+    c.fillRect(0, 0, S, S);
+  } else {
+    const g = c.createRadialGradient(S / 2, S * 0.45, 0, S / 2, S * 0.5, S * 0.75);
+    g.addColorStop(0, B.sky[0]); g.addColorStop(1, B.sky[1]);
+    c.fillStyle = g; c.fillRect(0, 0, S, S);
+    for (let i = 0; i < 90; i++) {
+      const x = (Math.sin(i * 91.7) * 0.5 + 0.5) * S, y = (Math.sin(i * 47.3 + 1) * 0.5 + 0.5) * S;
+      c.fillStyle = `rgba(255,255,255,${0.25 + (i % 5) * 0.12})`;
+      c.beginPath(); c.arc(x, y, 1 + (i % 3), 0, Math.PI * 2); c.fill();
+    }
+  }
+  // The rarity's colour radiating from behind the beast.
+  const cy = S * 0.5;
+  glow(S / 2, cy, S * 0.55, B.rays[0], B.glowA ?? 0.75);
+  rays(S / 2, cy, S * 0.78, B.n, B.rays[0], B.rays[1], B.rayA ?? 0.55);
+  glow(S / 2, cy, S * 0.32, B.rays[1], B.glowA ?? 0.55);
+  // The beast(s): the new art, glowing in its rarity colour, big enough to read on a home screen.
+  for (const [id, ev, size, dx, dy, rot, flip] of o.beasts) {
+    const px = Math.round(S * size * 1.25);
+    const img = await load(ART.beast(id, { evolved: !!ev, noGround: true, pad: true }), px);
+    const x = S / 2 + dx * S, y = cy + dy * S;
+    c.save();
+    c.translate(x, y);
+    if (rot) c.rotate((rot * Math.PI) / 180);
+    if (flip) c.scale(-1, 1);
+    // A soft shadow under it, then its glow, then the beast crisp on top.
+    c.save(); c.globalAlpha = 0.35; c.fillStyle = '#000'; c.beginPath(); c.ellipse(0, px * 0.33, px * 0.22, px * 0.045, 0, 0, Math.PI * 2); c.filter = 'blur(10px)'; c.fill(); c.restore();
+    const col = ART.glowColour(id, !!ev, false) || B.rays[0];
+    c.shadowColor = col; c.shadowBlur = px * 0.06;
+    c.drawImage(img, -px / 2, -px / 2, px, px);
+    c.shadowBlur = px * 0.025; c.shadowColor = '#ffffff';
+    c.drawImage(img, -px / 2, -px / 2, px, px);
+    c.shadowBlur = 0; c.shadowColor = 'rgba(0,0,0,0)';
+    c.drawImage(img, -px / 2, -px / 2, px, px);
+    c.restore();
+  }
+  if (o.merge) {
+    // The merge itself: a burst where the two meet.
+    glow(S / 2, cy + S * 0.02, S * 0.16, '#ffffff', 0.95);
+    sparkle(S / 2, cy + S * 0.02, S * 0.1, '#ffffff');
+    sparkle(S / 2 - S * 0.1, cy - S * 0.13, S * 0.035, '#fff3a8');
+    sparkle(S / 2 + S * 0.11, cy - S * 0.1, S * 0.028, '#ffffff');
+  }
+  // A few sparkles, kept inside the corners the App Store rounds off.
+  const sp = [[0.2, 0.22, 0.03], [0.82, 0.2, 0.024], [0.84, 0.76, 0.03], [0.17, 0.8, 0.022], [0.7, 0.12, 0.016]];
+  for (const [x, y, r] of sp) sparkle(x * S, y * S, r * S, '#ffffff');
+  // A gentle vignette to frame it.
+  const v = c.createRadialGradient(S / 2, S / 2, S * 0.42, S / 2, S / 2, S * 0.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.38)');
+  c.fillStyle = v; c.fillRect(0, 0, S, S);
+}
+
+const opt = Number(new URLSearchParams(location.search).get('opt') || 1);
+window.ICON_READY = draw(OPTS[opt]).then(() => 'ok');
+</script>
+</body>
+</html>

@@ -30,5 +30,5 @@ This configuration file outlines workspace settings, deployment pathways, and in
 Real StoreKit purchases only, through cordova-plugin-purchase 13 (game.js `IAP_PRODUCTS`,
 `initStoreKit`, `triggerIosPurchase`). The 1.1-1.2.2 simulated Apple Pay / Face ID sheet is gone:
 it gave the items away free whenever the store was not ready. Consumables `boost_2x` (£1.99) and
-`crates_premium_3x` (£2.99) must exist in App Store Connect with exactly these IDs; the steps are
-in UPDATE_1.3.md. Delivery happens once per transaction id, then the transaction is finished.
+`crates_premium_3x` (£2.99) exist in App Store Connect with exactly these IDs and are Approved
+(Apple IDs 6782213692 and 6782215479). Delivery happens once per transaction id, then the transaction is finished.
