@@ -2,13 +2,13 @@ workflows:
   ios-workflow:
     name: iOS Build
     max_build_duration: 120
-    instance_type: mac_mini_m1
+    instance_type: mac_mini_m2
     integrations:
       app_store_connect: Personal
     environment:
       groups:
         - apple_signing
-      node: latest
+      node: lts
       xcode: latest
       cocoapods: default
     triggering:
