@@ -146,6 +146,17 @@ RGB (Apple rejects icons with transparency). It is in assets/icon.png (Codemagic
 `@capacitor/assets generate --ios` builds the iOS icons from it), icon.png and the iOS
 AppIcon-512@2x.png.
 
+## App Store images
+
+Made from the real game by scripts in tools/ (dev server on port 5410, hidden Edge over CDP):
+- Screenshots: `node tools/store_shots.mjs [iphone ipad duo_inner duo_outer]` stages seven scenes
+  (tools/store_scenes.js: field, merge, premium crate, biomes, zoomed out, daily spin, Beastopedia),
+  each with a short caption, at iPhone 1206x2622, iPad 2064x2752 and iPhone Duo 2007x2853 / 1398x2034.
+- Header 3840x1646, search results 3840x2560 and the universal 5244x2950: `node tools/make_store_art.mjs`
+  (tools/store_art.html; the key beasts sit inside Apple's art safe area for each).
+- Then `py tools/flatten.py "App Store 1.3"`: Apple rejects images with an alpha channel.
+Output goes to "App Store 1.3/", which is not in git.
+
 ## Release
 
 1.3 is finished and merged into main. Every push starts a Codemagic build that goes to TestFlight.

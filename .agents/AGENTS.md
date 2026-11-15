@@ -25,6 +25,16 @@ This configuration file outlines workspace settings, deployment pathways, and in
 * **Codemagic Integration Status**: Fully connected. Build runs are triggered via the Codemagic dashboard on the `main` branch. No credentials or provisioning files are required from the user because Codemagic manages certificates automatically.
 * **Git Line Ending Warning Info**: The warning `LF will be replaced by CRLF` is a standard Git warning on Windows. It means Git is converting line endings from Unix style (LF) to Windows style (CRLF) for local files. This is completely safe, does not modify any code logic, and will not replace or delete any game files.
 
+## Commits that do not change the app
+
+Codemagic builds and uploads to TestFlight on every push to any branch. For commits that change
+nothing in the app (tools/, notes, store images), put `[skip ci]` in the commit message so no
+build is started. Codemagic runs on `mac_mini_m2` (M1 machines were retired) with `node: lts`
+(`latest` gave a v27 alpha in November 2026). It uploads only (`submit_to_testflight: false`): the
+external beta review step failed for want of Beta App Information, and internal testing and App Store
+review do not need it. Info.plist declares `ITSAppUsesNonExemptEncryption` false (only Apple's HTTPS),
+so TestFlight builds do not stop at Missing Compliance.
+
 ## In-App Purchases (from 1.3)
 
 Real StoreKit purchases only, through cordova-plugin-purchase 13 (game.js `IAP_PRODUCTS`,

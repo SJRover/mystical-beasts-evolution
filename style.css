@@ -2859,3 +2859,34 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .spin-result-container .fx-plate { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 210px; padding: 10px 22px 11px; margin-bottom: 16px; background: linear-gradient(180deg, #1f2448, #12152e); border: 2.5px solid var(--fx-c); border-radius: 16px; box-shadow: 0 0 16px color-mix(in srgb, var(--fx-c) 55%, transparent), 0 4px 0 rgba(0, 0, 0, 0.4); }
 .spin-result-container .fx-plate #spin-result-name { margin: 0 !important; color: #ffffff !important; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
 .spin-result-container .fx-plate #spin-result-meta { margin: 0 !important; color: var(--fx-c2) !important; font-size: 12.5px !important; letter-spacing: 0.06em; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+
+/* ================================================================ 1.3 incubators: one tidy unit
+   The glass dome seated on a low plinth, everything inside the incubator's own outline (Sam, 15 Nov:
+   the dome stuck out above the base, which showed through it, and the copper rod crossed it). The
+   rod is now a short trim line on the plinth, still copper, purple or red for Alpha, Beta, Gamma. */
+.incubator-pedestal-base { height: 30px !important; margin-top: 80px; flex: none; border-radius: 12px 12px 14px 14px !important; }
+.incubator-pedestal-glass { top: -80px !important; width: 76px !important; height: 82px !important; border-radius: 38px 38px 8px 8px !important; border-bottom-width: 2px !important; }
+.incubator-pedestal-base::before { top: 7px !important; left: 12px !important; right: 12px !important; height: 3px !important; border-radius: 3px; }
+.pedestal-lock-overlay { top: -82px !important; left: -3px !important; right: -3px !important; bottom: -3px !important; border-radius: 40px 40px 14px 14px !important; }
+.incubator-pedestal-container.hovering-compatible::after { top: -6px; left: -7px; right: -7px; bottom: 18px; border-radius: 46px 46px 16px 16px; }
+.incubator-timer-ring { width: 66px !important; height: 66px !important; top: 8px !important; }
+.incubator-countdown-text { top: 31px !important; }
+@media (max-width: 1024px), (max-height: 600px), (orientation: portrait) {
+  .incubator-pedestal-base { height: 22px !important; margin-top: 56px; border-radius: 10px 10px 12px 12px !important; }
+  .incubator-pedestal-glass { top: -56px !important; width: 56px !important; height: 58px !important; border-radius: 28px 28px 6px 6px !important; }
+  .incubator-pedestal-base::before { top: 5px !important; left: 9px !important; right: 9px !important; }
+  .pedestal-lock-overlay { top: -58px !important; border-radius: 30px 30px 12px 12px !important; gap: 4px !important; }
+  .incubator-pedestal-container.hovering-compatible::after { top: -5px; left: -6px; right: -6px; bottom: 14px; border-radius: 34px 34px 14px 14px; }
+  .incubator-timer-ring { width: 48px !important; height: 48px !important; top: 5px !important; }
+  .incubator-countdown-text { top: 21px !important; font-size: 11px !important; }
+}
+
+/* 1.3: the essence count never shrinks out of its panel (Sam, 15 Nov: big numbers ran over the
+   border). The ascent panel gives way instead: its title shortens, its percentage always shows,
+   and the multiplier line is cut short inside the panel rather than spilling out. */
+#hud-overlay .hud-left { flex: 0 0 auto !important; }
+#hud-overlay .hud-right { overflow: hidden; }
+#hud-overlay .hud-right .prestige-progress-label > span:first-child { flex: 1 1 auto; }
+#hud-overlay #prestige-progress-pct { flex: 0 0 auto; overflow: visible; }
+#hud-overlay div:has(> #double-essence-timer) { max-width: 100%; }
+#hud-overlay #multiplier-display { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

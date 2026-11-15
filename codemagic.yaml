@@ -62,4 +62,7 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Upload only: the build is ready for internal testers and for App Store review once Apple
+        # has processed it. Submitting to TestFlight beta review (external testers) needs Beta App
+        # Information filled in at App Store Connect > TestFlight > Test Information first.
+        submit_to_testflight: false
