@@ -100,7 +100,8 @@ async function draw() {
 
   // The crowd: beasts of every tier wandering the meadow around the edges (outside the safe area).
   const crowd = ['sparky', 'ember', 'dewdrop', 'cinder', 'zephyr', 'pyreling', 'aqualet', 'terrapin', 'ignis', 'torrent', 'sylph', 'magmadon', 'hydradon', 'aven', 'frostbite', 'geon', 'nebulon', 'aqualion', 'aeris', 'chronos', 'astral', 'phoenix', 'siren', 'leviathan', 'cosmos', 'genesis', 'titan', 'eclipse', 'supernova', 'wyrm'];
-  const base = Math.min(W, H) * 0.15;
+  const big = Math.min(sh * 0.98, sw * 0.42); // the three heroes must fit side by side in the safe area
+  const base = Math.min(Math.min(W, H) * 0.15, big * 0.45); // and the crowd stays well below them
   const spots = [];
   const cols = Math.round(W / (base * 1.7)), rows = Math.round(H / (base * 1.45));
   for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
@@ -128,7 +129,6 @@ async function draw() {
   glow(cx, cyy, sh * 1.1, '#ff9a1f', 0.65);
   rays(cx, cyy, Math.max(sw, sh) * 0.95, 18, '#ffb21a', '#fff1b0', 0.42);
   glow(cx, cyy, sh * 0.55, '#fff1b0', 0.5);
-  const big = sh * 0.98;
   await beast('abyssus', sx + sw * 0.17, sy + sh * 0.97, big * 0.72, { aura: true });
   await beast('solaris', sx + sw * 0.83, sy + sh * 0.97, big * 0.72, { aura: true, flip: true });
   await beast('aurelion', cx, sy + sh * 1.0, big, { aura: true });
