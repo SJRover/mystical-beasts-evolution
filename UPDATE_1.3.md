@@ -60,6 +60,31 @@ field). Beasts stay below the sky band (top 6% of the world).
 - Map props redrawn standing up: bushes (three domes), mushrooms (domed caps), trees (tapered trunk,
   four-lobed crown), rocks (rounded standing stones; they read as flat leaves before).
 
+## Third round and playtest (15 Nov)
+
+- Map: every prop is planned against what is already there (the path or river and its banks, the
+  edge trees, other props) and drawn back to front, so nothing overlaps. Props are one size
+  everywhere (the old fake perspective made them grow towards the bottom, which looked strange
+  zoomed out). The map is painted at the screen's pixel density; the world is redrawn sharp when a
+  pinch ends (`#world.moving` holds will-change only while moving); beast pictures have room to
+  zoom in.
+- Balance in the bigger world: beasts are about ten times more spread out than on the old field
+  (and collisions stop bodies overlapping), so shadow enemies hunt the nearest beast and infected
+  beasts drift towards the nearest healthy one; the infection range is its original value again.
+  Measured: first spread at 10 s (the spread timer), 3 of 6 infected by 25 s; a fiend eats at 6,
+  13 and 20 s (its 6 s cooldown). Same as the old crowded field.
+- Bug fix (live in 1.2.2): `saveGame` wrote the Beast Hub's beasts over the solar system's field
+  while in the hub (on entering and every 10 s), so leaving the hub replaced the player's field
+  with the hub's beasts. Now the field is kept and the hub's beasts are saved as the hub's.
+- Top bar fits 375-point phones (the ascent panel had a fixed width and ran off the edge).
+- Playtested in the browser at phone size (tools/playtest.js drives the game's own input):
+  finger-drag merges (same tier merges, different tiers and bumping do not), crates, shop, coins
+  (tap and auto-collect), trash bin, incubator start / finish / collect, the drag arrow and edge
+  pan, infection, shadow fiends, all 11 prestiges with each biome painting, the plague arriving at
+  biome 4, the low-gravity system (warp, merges, discovery pop-up), the Beast Hub, save and reload.
+  No errors.
+- Version 1.3 (MARKETING_VERSION) and pushed on branch graphics-1.3 for a TestFlight build.
+
 ## Still to do
 
 1. Backgrounds: first pass done; refine per biome after Sam sees them.

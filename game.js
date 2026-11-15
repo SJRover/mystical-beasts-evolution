@@ -341,6 +341,14 @@ function saveGame() {
     deathTimer: b.deathTimer || 45.0
   }));
 
+  // 1.3 fix: in the Beast Hub the beasts on screen are the hub's. Saving them as the solar system's
+  // field (as 1.2.2 did, on entering the hub and every 10 seconds there) replaced the player's
+  // field with the hub's beasts when they left. In the hub, the field's own beasts are kept as
+  // they were and the hub's are saved as the hub's.
+  const keptBranch = state.currentSolarSystem === 'prime' ? state.primeSystem : state.lowGravitySystem;
+  if (state.inBeastHub) {
+    state.beastHubBeasts = savedBeasts.map(b => ({ type: b.type, x: b.x, y: b.y, evolved: b.evolved, infected: b.infected }));
+  }
   const activeBranch = {
     essence: state.essence,
     prestigeLevel: state.prestigeLevel,
@@ -348,7 +356,7 @@ function saveGame() {
     unlockedIncubators: state.unlockedIncubators,
     upgrades: state.upgrades,
     incubators: state.incubators,
-    beastsOnField: savedBeasts
+    beastsOnField: state.inBeastHub ? ((keptBranch && keptBranch.beastsOnField) || []) : savedBeasts
   };
 
   if (state.currentSolarSystem === 'prime') {
@@ -1383,11 +1391,24 @@ function gameLoop() {
     // Wander direction changes
     if (now > b.lastWalkChange) {
       // 1.3: a new heading to steer towards (field.js turns them smoothly and faces them the right way).
-      const angle = Math.random() * Math.PI * 2;
+      // In the bigger world beasts are about ten times more spread out than on the old field, so
+      // shadow enemies hunt the nearest beast and the infected drift towards the nearest healthy
+      // one: the plague and the shadows threaten as often as they did (Sam, 15 Nov playtest).
+      let angle = Math.random() * Math.PI * 2;
+      const hunter = isBossBeast(b.type), sick = b.infected && !hunter;
+      if (hunter || sick) {
+        let prey = null, best = Infinity;
+        for (const o of state.beastsOnField) {
+          if (o === b || isBossBeast(o.type) || (sick && o.infected)) continue;
+          const d = Math.hypot((o.x - b.x) * width, (o.y - b.y) * height);
+          if (d < best) { best = d; prey = o; }
+        }
+        if (prey) angle = Math.atan2((prey.y - b.y) * height, (prey.x - b.x) * width) + (Math.random() - 0.5) * (hunter ? 0.35 : 0.8);
+      }
       b.tvx = Math.cos(angle) * b.speed;
       b.tvy = Math.sin(angle) * b.speed;
       
-      b.lastWalkChange = now + 1500 + Math.random() * 3000;
+      b.lastWalkChange = now + ((isBossBeast(b.type) || b.infected) ? 600 + Math.random() * 700 : 1500 + Math.random() * 3000);
     }
 
     // Move in percentage space using cached dimensions
@@ -1527,7 +1548,7 @@ function gameLoop() {
             }
           }
         });
-        if (closestBeast && minDist < 10.0 / (window.WORLD_SCALE || 1)) {
+        if (closestBeast && minDist < 10.0) {
           infectBeast(closestBeast);
           b.spreadTimer = (state.prestigeLevel >= 5) ? 5.0 : 10.0;
         } else {

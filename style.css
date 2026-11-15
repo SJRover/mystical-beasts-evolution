@@ -2671,7 +2671,9 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 @keyframes aura-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* 1.3: the world (background and field together), moved and zoomed by the camera (world.js). */
-#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 2; will-change: transform; touch-action: none; }
+#world { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 2; touch-action: none; }
+/* Only while pinching: a layer kept at one scale is fast to move, but drawn again sharp when the fingers lift. */
+#world.moving { will-change: transform; }
 #world #meadow-bg, #world #beast-playground { width: 100%; height: 100%; }
 #particles-canvas { z-index: 6; }
 #meadow-viewport { touch-action: none; overflow: hidden; }
@@ -2766,3 +2768,11 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 
 /* Coins: a gentle bob, no glow filter. */
 .essence-crystal img { filter: none; }
+
+/* 1.3: the top bar fits narrower phones (the ascent panel had a fixed width and ran off the edge). */
+#hud-overlay { gap: 10px; }
+#hud-overlay .hud-right { flex: 1 1 auto; min-width: 0; }
+#hud-overlay .hud-right .prestige-target-container, #hud-overlay .hud-right .progress-bar-bg { width: 100% !important; min-width: 0; }
+#hud-overlay .hud-right .prestige-progress-label { width: 100% !important; display: flex; justify-content: space-between; gap: 4px; white-space: nowrap; overflow: hidden; }
+#hud-overlay .hud-right .prestige-progress-label > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#hud-overlay .hud-left { flex: 0 1 auto; min-width: 0; }

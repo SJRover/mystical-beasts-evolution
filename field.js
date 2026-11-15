@@ -62,7 +62,7 @@ const FIELD = (() => {
     container.prepend(auraWrap);
 
     // The picture has a quarter's room round the beast for its glow (the sprite is drawn 125% big).
-    const px = size * 1.25 * DPR();
+    const px = size * 1.25 * DPR() * 1.35; // room to zoom in before it softens
     const now = ART.cached('beast', id, evolved, infected, px, true, true);
     if (now) img.src = now;
     else {
@@ -78,7 +78,9 @@ const FIELD = (() => {
 
   /** This frame's speed multiplier for a beast, easing towards a new target every few seconds. */
   function speed(b, dt) {
-    if (b.spd === undefined) { b.spd = 1; b.spdT = 1; b.spdNext = Math.random() * 2; }
+    if (!Number.isFinite(b.spd)) b.spd = 1;
+    if (!Number.isFinite(b.spdT)) b.spdT = b.spd;
+    if (!Number.isFinite(b.spdNext)) b.spdNext = Math.random() * 2;
     b.spdNext -= dt;
     if (b.spdNext <= 0) {
       b.spdT = SPEEDS[(Math.random() * SPEEDS.length) | 0];

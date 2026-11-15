@@ -53,8 +53,16 @@ const WORLD = (() => {
     ty = Math.min(0, Math.max(vh - vh * SCALE * z, ty));
   }
 
+  let settle = 0;
+  function moving() {
+    el.classList.add('moving');
+    clearTimeout(settle);
+    settle = setTimeout(() => el.classList.remove('moving'), 220);
+  }
+
   function apply() {
     clamp();
+    moving();
     el.style.transform = `translate3d(${tx.toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${z.toFixed(4)})`;
     if (typeof updatePlaygroundRect === 'function') updatePlaygroundRect();
   }

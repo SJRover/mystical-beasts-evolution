@@ -177,12 +177,21 @@ const BIOMES = (() => {
 
   // A winding band from the top of the ground to the bottom.
   function feature(c, W, H, top, B, R, q) {
-    if (B.feat === 'none') return;
+    if (B.feat === 'none') return null;
     const pts = [];
     let x = W * (0.25 + R() * 0.5);
     for (let y = top + (H - top) * 0.04; y <= H + 40; y += 70 * q) { pts.push([x, y]); x = Math.max(W * 0.12, Math.min(W * 0.88, x + (R() - 0.5) * 160 * q)); }
     const trace = () => { c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2; c.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } c.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]); };
     const w = { path: 26, river: 30, lava: 30, chasm: 18 }[B.feat] * q;
+    // Points along the curve as it is drawn (the same quadratic pieces as trace()).
+    const samples = [];
+    let cx0 = pts[0][0], cy0 = pts[0][1];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      for (let k = 0; k <= 10; k++) { const u = k / 10, a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, d = u * u; samples.push([a * cx0 + b * pts[i][0] + d * mx, a * cy0 + b * pts[i][1] + d * my]); }
+      cx0 = mx; cy0 = my;
+    }
+    samples.push(pts[pts.length - 1]);
     c.lineCap = 'round'; c.lineJoin = 'round';
     if (B.feat === 'path') {
       trace(); c.strokeStyle = shade(B.featC, -0.35); c.lineWidth = w + 8 * q; c.stroke();
@@ -200,6 +209,8 @@ const BIOMES = (() => {
       trace(); c.strokeStyle = rgba(B.feat === 'lava' ? '#ffe066' : '#ffffff', 0.3); c.lineWidth = w * 0.3; c.stroke();
       for (let i = 0; i < pts.length * 3; i++) { const p = pts[(R() * pts.length) | 0]; c.strokeStyle = rgba(B.feat === 'lava' ? '#fff3a8' : '#ffffff', 0.55); c.lineWidth = 1.6 * q; c.beginPath(); c.arc(p[0] + (R() - 0.5) * w * 0.5, p[1] + (R() - 0.5) * 50 * q, 5 * q, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); }
     }
+    // How far its edge reaches either side of the line (banks, glow and all).
+    return { samples, half: w / 2 + ({ path: 6, river: 9, lava: 22, chasm: 14 }[B.feat] || 6) * q };
   }
 
   // ---------------------------------------------------------------- paint
@@ -213,41 +224,68 @@ const BIOMES = (() => {
     const top = CH * 0.085;
     horizon(c, CW, top, B, R);
     ground(c, CW, CH, top, B, R, q);
-    feature(c, CW, CH, top, B, R, q);
+    const feat = feature(c, CW, CH, top, B, R, q);
+    // Every prop is planned first, each only where nothing else is (the path or river and its
+    // banks, the edge trees, other props), then all are drawn back to front so nearer things sit in
+    // front. Footprints are ellipses a little taller than wide: a prop rises above where it stands.
+    // (Props are one size everywhere: the world is seen from above, and when zoomed out a size that
+    // grew towards the bottom read as strange, Sam 15 Nov.)
+    const persp = () => 1;
+    const FOOT = { flower: 0.95, bush: 0.85, rock: 0.62, mushroom: 0.55, mushroomGlow: 0.55, pond: 1.55, lavaVent: 0.8, ember: 0.9, crystal: 0.7, cloudPuff: 0.85, feather: 0.4, starCluster: 0.9, rune: 0.65, bones: 0.8, brazier: 0.45, gear: 0.6, pylon: 0.4, tentacle: 0.45, eyeOrb: 0.45, shard: 0.35, geyser: 0.6, balloon: 0.4, iceSpike: 0.55, coral: 0.5, bubbleCluster: 0.6, shell: 0.4 };
+    const taken = [];
+    const plan = [];
+    const path = feat ? feat.samples : [];
+    const gap = 4 * q;
+    const nearPath = (x, y, r) => { for (const [px, py] of path) { const dx = px - x, dy = py - y; if (Math.abs(dy) > r + feat.half + 40 * q) continue; if (Math.hypot(dx, dy) < feat.half + r + gap) return true; } return false; };
+    const free = (x, y, r) => {
+      if (x < r || x > CW - r || y < top + r * 0.6 || y > CH - r * 0.5) return false;
+      if (path.length && nearPath(x, y, r)) return false;
+      for (const o of taken) { const dx = o.x - x, dy = (o.y - y) * 1.35; if (dx * dx + dy * dy < (o.r + r + gap) * (o.r + r + gap)) return false; }
+      return true;
+    };
+    const take = (x, y, r) => taken.push({ x, y, r });
+    // The edge things first: they claim the borders.
+    const edge = EDGES[B.edge];
+    const edgePlan = [];
+    if (edge) {
+      for (let y = top + 40 * q; y < CH; y += 46 * q) { edgePlan.push([8 * q + R() * 30 * q, y]); edgePlan.push([CW - 8 * q - R() * 30 * q, y]); }
+      for (let x = 40 * q; x < CW - 40 * q; x += 50 * q) edgePlan.push([x + R() * 20 * q, CH - 4 * q - R() * 18 * q]);
+      for (const e of edgePlan) { e.push((34 + R() * 18) * q); }
+      for (let i = edgePlan.length - 1; i >= 0; i--) { const [x, y, s] = edgePlan[i]; if (path.length && nearPath(x, y, s * 0.3)) edgePlan.splice(i, 1); else take(x, y - s * 0.3, s * 0.42); }
+    }
     // Patches: clusters of one kind of detail (a flower meadow, a field of stones, a bed of crystals).
-    const persp = (y) => 0.75 + ((y - top) / (CH - top)) * 0.5;
     const clusterN = Math.round((CW * CH) / (60000 * q * q));
     for (let i = 0; i < clusterN; i++) {
       const cx = CW * (0.1 + R() * 0.8), cy = top + 50 * q + R() * (CH - top - 80 * q);
       const kind = pick(R, B.low);
-      glowAt(c, cx, cy, 70 * q, i % 2 ? B.ground[2] : shade(B.ground[1], -0.25), 0.4);
+      if (!PROPS[kind]) continue;
+      if (!path.length || !nearPath(cx, cy, 30 * q)) glowAt(c, cx, cy, 70 * q, i % 2 ? B.ground[2] : shade(B.ground[1], -0.25), 0.4);
       const m = 5 + ((R() * 6) | 0);
-      for (let k = 0; k < m; k++) {
-        const a = R() * Math.PI * 2, r = R() * 55 * q;
-        const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.6;
-        if (PROPS[kind]) PROPS[kind](c, x, y, (16 + R() * 14) * q * persp(y), R, B);
+      for (let k = 0, tries = 0; k < m && tries < m * 5; tries++) {
+        const a = R() * Math.PI * 2, rr = R() * 62 * q;
+        const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.6;
+        const s = (16 + R() * 14) * q * persp(y), fr = s * (FOOT[kind] || 0.6);
+        if (!free(x, y, fr)) continue;
+        take(x, y, fr); plan.push([kind, x, y, s]); k++;
       }
     }
-    // Low details over the open ground, larger towards the bottom (nearer).
+    // Single details over the rest of the open ground, larger towards the bottom (nearer).
     const lowN = Math.round((CW * CH) / (6500 * q * q));
-    const placed = [];
-    for (let i = 0; i < lowN; i++) {
+    for (let i = 0, tries = 0; i < lowN && tries < lowN * 4; tries++) {
       const x = R() * CW, y = top + 30 * q + R() * (CH - top - 40 * q);
-      if (placed.some(([px, py]) => Math.abs(px - x) < 30 * q && Math.abs(py - y) < 22 * q)) continue;
-      placed.push([x, y]);
       const kind = pick(R, B.low);
-      const s = (16 + R() * 16) * q * persp(y);
-      if (PROPS[kind]) PROPS[kind](c, x, y, s, R, B);
+      if (!PROPS[kind]) continue;
+      const s = (16 + R() * 16) * q * persp(y), fr = s * (FOOT[kind] || 0.6);
+      if (!free(x, y, fr)) continue;
+      take(x, y, fr); plan.push([kind, x, y, s]); i++;
     }
-    // Taller things along the edges (left, right and bottom), back to front.
-    const edge = EDGES[B.edge];
-    if (edge) {
-      const spots = [];
-      for (let y = top + 40 * q; y < CH; y += 46 * q) { spots.push([8 * q + R() * 30 * q, y]); spots.push([CW - 8 * q - R() * 30 * q, y]); }
-      for (let x = 40 * q; x < CW - 40 * q; x += 50 * q) spots.push([x + R() * 20 * q, CH - 4 * q - R() * 18 * q]);
-      spots.sort((a, b) => a[1] - b[1]);
-      for (const [x, y] of spots) edge(c, x, y, (34 + R() * 18) * q, R, B);
-    }
+    // Ponds and other flat things first (they lie on the ground), then everything by depth.
+    const flat = new Set(['pond', 'rune', 'ember', 'starCluster', 'bubbleCluster', 'feather']);
+    plan.sort((A, Bp) => (flat.has(A[0]) === flat.has(Bp[0]) ? A[2] - Bp[2] : flat.has(A[0]) ? -1 : 1));
+    const all = plan.map(([k, x, y, s]) => ({ y, draw: () => PROPS[k](c, x, y, s, R, B), flat: flat.has(k) }));
+    if (edge) for (const [x, y, s] of edgePlan) all.push({ y, draw: () => edge(c, x, y, s, R, B), flat: false });
+    all.sort((A, Bp) => (A.flat === Bp.flat ? A.y - Bp.y : A.flat ? -1 : 1));
+    for (const o of all) o.draw();
     // Darker corners frame the world.
     const v = c.createRadialGradient(CW / 2, CH * 0.55, Math.min(CW, CH) * 0.35, CW / 2, CH * 0.55, Math.max(CW, CH) * 0.75);
     v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.35)');
@@ -267,7 +305,9 @@ const BIOMES = (() => {
       B = list[Math.min(state.prestigeLevel || 0, list.length - 1)];
     }
     const { w, h } = WORLD.worldSize();
-    const q = Math.min(1.5, 4096 / Math.max(w, h), Math.sqrt(9e6 / (w * h)));
+    // Sharp at the closest zoom on the screen's own pixels, within what a phone's canvas allows.
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const q = Math.max(1, Math.min(dpr * 1.25, 4096 / Math.max(w, h), Math.sqrt(1.2e7 / (w * h))));
     const key = `${B.name}|${Math.round(w)}x${Math.round(h)}`;
     let cv = cache.get(key);
     if (!cv) { cv = paint(B, w, h, q); cache.clear(); cache.set(key, cv); }
