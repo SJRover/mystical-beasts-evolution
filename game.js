@@ -223,36 +223,6 @@ window.addEventListener('DOMContentLoaded', () => {
   updatePlaygroundRect();
   window.addEventListener('resize', updatePlaygroundRect);
 
-  // Initialize App Store purchases if on mobile native platform
-  const tryInitStore = () => {
-    if (typeof CdvPurchase !== 'undefined') {
-      console.log("StoreKit: CdvPurchase found, initializing StoreKit...");
-      initStoreKit();
-      return true;
-    }
-    return false;
-  };
-
-  if (!tryInitStore()) {
-    console.log("StoreKit: CdvPurchase not ready yet, registering listeners and polling...");
-    document.addEventListener('deviceready', () => {
-      console.log("StoreKit: deviceready event received");
-      tryInitStore();
-    });
-    
-    // Polling fallback to resolve any Capacitor race conditions
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      if (tryInitStore() || attempts >= 30) {
-        clearInterval(interval);
-        if (attempts >= 30 && typeof CdvPurchase === 'undefined') {
-          console.log("StoreKit: CdvPurchase not found after 3 seconds (not the iOS app): purchases are unavailable.");
-        }
-      }
-    }, 100);
-  }
-
   // Disable pinch-zoom and double-tap zoom on iOS completely
   document.addEventListener('touchstart', (e) => {
     if (e.touches.length > 1) {
@@ -317,7 +287,28 @@ window.addEventListener('DOMContentLoaded', () => {
       audio.startMusic();
     }
   });
+
+  window.__mbBooted = true;
+  // App Store purchases last, once the game is running, and never able to stop it starting.
+  // (15 Nov 2026: the 1.3 TestFlight build froze at launch because the purchase plugin was ready
+  // at this point and a call in its setup threw, which ended this function before the save loaded.)
+  startStoreKitWhenReady();
 });
+
+function startStoreKitWhenReady() {
+  const tryInitStore = () => {
+    if (typeof CdvPurchase === 'undefined') return false;
+    try { initStoreKit(); } catch (e) { console.error('StoreKit: setup failed', e); }
+    return true;
+  };
+  if (tryInitStore()) return;
+  document.addEventListener('deviceready', tryInitStore);
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    if (tryInitStore() || attempts >= 30) clearInterval(interval);
+  }, 100);
+}
 
 // Get dynamic target
 function getPrestigeTarget() {
@@ -4202,7 +4193,8 @@ function initStoreKit() {
     })
     .finished(() => hideStoreLoadingSpinner());
 
-  store.onError((error) => {
+  // The plugin's error listener is store.error() (there is no store.onError in version 13).
+  store.error((error) => {
     console.error(`StoreKit Error (${error.code}): ${error.message}`);
     hideStoreLoadingSpinner();
   });

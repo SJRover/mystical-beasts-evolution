@@ -6,6 +6,28 @@
   <title>Merge Beasts | Idle Merge & Clicker Game</title>
   <meta name="description" content="Merge magical creatures, trigger rare mutations, unlock powerful upgrades, and ascend through prestige levels in this premium 2D cartoon idle clicker.">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // If the game ever fails to start (an error while launching), say so on screen with the error
+    // rather than leaving a frozen field, so it can be reported. A normal start never shows this.
+    (function () {
+      var errs = [];
+      window.addEventListener('error', function (e) {
+        errs.push((e.message || 'Error') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''));
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        errs.push('Promise: ' + ((e.reason && e.reason.message) || e.reason));
+      });
+      setTimeout(function () {
+        if (window.__mbBooted || !document.body) return;
+        var d = document.createElement('div');
+        d.id = 'boot-error';
+        d.style.cssText = 'position:fixed;left:16px;right:16px;bottom:40px;z-index:2147483647;background:#1a1440;color:#fff;border:2px solid #ff6b6b;border-radius:14px;padding:14px 16px;font:14px/1.45 -apple-system,sans-serif;';
+        d.textContent = 'Merge Beasts could not start. Please send a screenshot of this message to the developer. ' +
+          (errs.length ? 'Error: ' + errs.slice(0, 3).join(' | ') : 'No error message was reported.');
+        document.body.appendChild(d);
+      }, 8000);
+    })();
+  </script>
 </head>
 <body>
   <div id="game-container">
