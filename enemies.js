@@ -1,0 +1,826 @@
+/**
+ * Merge Beasts battle mode (1.4): the enemies' look. Every enemy is drawn on the battle canvas
+ * from parts (a body plan, a head, a hat, a weapon, a shield, a cape, wings...) as described in
+ * battle_data.js, posed each frame: walking, a light or heavy attack, being hit, dying, taking
+ * coins. Shadow folk are black with glowing eyes and a coloured rim. Nothing here looks like a
+ * beast: people, monsters, aliens and machines, drawn upright and side-on to the beasts' round shapes.
+ *
+ * ENEMY_ART.draw(ctx, id, pose, px) draws enemy `id` with its feet at (0, 0), `px` pixels tall
+ * for a size-1 enemy. pose: { t, walk (0-1 cycle), atk (0-1 through a swing, or -1), heavy,
+ * hurt (0-1 flash), dying (0-1), capture (bool), seed }.
+ */
+const ENEMY_ART = (() => {
+  const TAU = Math.PI * 2;
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const ease = (k) => k * k * (3 - 2 * k);
+
+  function shade(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    if (f < 0) { r *= 1 + f; g *= 1 + f; b *= 1 + f; } else { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+    return `rgb(${r | 0},${g | 0},${b | 0})`;
+  }
+
+  /** The colours of one enemy: fill, a darker and lighter fill, outline, rim and eyes. */
+  function palette(look) {
+    const sh = !!look.shadow;
+    return {
+      shadow: sh,
+      skin: look.skin, skinD: shade(look.skin, sh ? 0.06 : -0.22), skinL: shade(look.skin, sh ? 0.1 : 0.25),
+      cloth: look.cloth, clothD: shade(look.cloth, sh ? 0.05 : -0.25), clothL: shade(look.cloth, sh ? 0.12 : 0.22),
+      trim: look.trim, trimD: shade(look.trim, -0.3),
+      line: sh ? shade(look.trim, -0.2) : '#1c1426',
+      eye: look.eye,
+      metal: sh ? '#1a1626' : '#c8ccd6', metalD: sh ? '#120f1c' : '#8a90a0', wood: sh ? '#1d1828' : '#8a5a2a',
+    };
+  }
+
+  // ------------------------------------------------------------------ drawing helpers
+  function path(ctx, fill, line, lw, draw) {
+    ctx.beginPath();
+    draw();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (line) { ctx.strokeStyle = line; ctx.lineWidth = lw; ctx.stroke(); }
+  }
+  function ellipse(ctx, x, y, rx, ry, fill, line, lw, rot = 0) {
+    path(ctx, fill, line, lw, () => ctx.ellipse(x, y, Math.max(0.1, rx), Math.max(0.1, ry), rot, 0, TAU));
+  }
+  function rrect(ctx, x, y, w, h, r, fill, line, lw) {
+    path(ctx, fill, line, lw, () => {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    });
+  }
+  function limb(ctx, x1, y1, x2, y2, w, col, line) {
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = line;
+    ctx.lineWidth = w + 2.4;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  /**
+   * A soft glow (no shadowBlur, which is slow on phones): a radial gradient spot, drawn once per
+   * colour into a small picture and stamped from then on (a dozen enemies made fifty gradients a frame).
+   */
+  const glows = new Map();
+  function glowSprite(col) {
+    let c = glows.get(col);
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const g = c.getContext('2d');
+      const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grd.addColorStop(0, col);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, 64, 64);
+      glows.set(col, c);
+    }
+    return c;
+  }
+  function glow(ctx, x, y, r, col, a = 0.8) {
+    if (r <= 0) return;
+    ctx.globalAlpha *= a;
+    ctx.drawImage(glowSprite(col), x - r, y - r, r * 2, r * 2);
+    ctx.globalAlpha /= a;
+  }
+  /** Eyes: glowing for shadow folk and machines, white with a pupil for people. */
+  function eyes(ctx, P, x, y, gap, r, kind, n = 2) {
+    const pts = n === 1 ? [[x, y]] : n === 3 ? [[x - gap, y + r * 0.3], [x, y - r * 0.6], [x + gap, y + r * 0.3]] : [[x - gap / 2, y], [x + gap / 2, y]];
+    for (const [ex, ey] of pts) {
+      if (P.shadow || kind === 'glow') {
+        glow(ctx, ex, ey, r * 3.2, P.eye, 0.55);
+        ellipse(ctx, ex, ey, r * 1.05, r * 0.75, P.eye, null);
+        ellipse(ctx, ex, ey, r * 0.45, r * 0.32, '#ffffff', null);
+      } else if (kind === 'black') {
+        ellipse(ctx, ex, ey, r * 1.25, r * 1.6, '#0c0c14', null, 0, ex < x ? 0.35 : -0.35);
+        ellipse(ctx, ex - r * 0.3, ey - r * 0.5, r * 0.35, r * 0.4, '#ffffff', null);
+      } else {
+        ellipse(ctx, ex, ey, r, r * 1.1, '#ffffff', P.line, 1);
+        ellipse(ctx, ex, ey + r * 0.15, r * 0.55, r * 0.6, P.eye, null);
+        ellipse(ctx, ex - r * 0.2, ey - r * 0.2, r * 0.2, r * 0.2, '#ffffff', null);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ weapons
+  /** A weapon in a hand at (hx, hy), pointing along `ang` (radians, 0 = right, -PI/2 = up). */
+  function weapon(ctx, P, look, kind, hx, hy, ang, s, heavy) {
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(ang);
+    const L = P.line, lw = 1.4;
+    const metal = P.metal, wood = P.wood;
+    const glowCol = P.shadow ? P.trim : look.trim;
+    switch (kind) {
+      case 'sword': case 'cutlass': case 'katana': case 'laser_sword': {
+        const len = kind === 'katana' ? 26 : 22;
+        const blade = kind === 'laser_sword' ? look.trim : metal;
+        if (kind === 'laser_sword') glow(ctx, len * 0.55 * s, 0, 9 * s, look.trim, 0.7);
+        rrect(ctx, 0, -1.8 * s, len * s, 3.6 * s, 1.5 * s, blade, L, lw);
+        rrect(ctx, -2 * s, -4 * s, 2.6 * s, 8 * s, 1, P.trim, L, lw);
+        rrect(ctx, -7 * s, -1.4 * s, 5 * s, 2.8 * s, 1, wood, L, lw);
+        break;
+      }
+      case 'dagger': case 'dual':
+        rrect(ctx, 0, -1.4 * s, 11 * s, 2.8 * s, 1, metal, L, lw);
+        rrect(ctx, -4 * s, -1.2 * s, 4 * s, 2.4 * s, 1, wood, L, lw);
+        break;
+      case 'spear': case 'pike': case 'pitchfork': case 'trident': case 'halberd': case 'lance': {
+        const len = kind === 'pike' ? 46 : kind === 'lance' ? 42 : 34;
+        rrect(ctx, -10 * s, -1.3 * s, (len + 10) * s, 2.6 * s, 1, wood, L, lw);
+        ctx.save(); ctx.translate(len * s, 0);
+        if (kind === 'pitchfork' || kind === 'trident') {
+          for (const dy of [-3.5, 0, 3.5]) rrect(ctx, 0, (dy - 0.8) * s, 8 * s, 1.6 * s, 0.8, metal, L, 1);
+          rrect(ctx, -1 * s, -4.4 * s, 2 * s, 8.8 * s, 1, metal, L, 1);
+        } else if (kind === 'halberd') {
+          path(ctx, metal, L, lw, () => { ctx.moveTo(-4 * s, -1); ctx.lineTo(4 * s, -9 * s); ctx.lineTo(8 * s, -2 * s); ctx.lineTo(10 * s, 0); ctx.lineTo(0, 2 * s); ctx.closePath(); });
+        } else if (kind === 'lance') {
+          path(ctx, look.trim, L, lw, () => { ctx.moveTo(-14 * s, -4.5 * s); ctx.lineTo(10 * s, 0); ctx.lineTo(-14 * s, 4.5 * s); ctx.closePath(); });
+        } else {
+          path(ctx, metal, L, lw, () => { ctx.moveTo(0, -3.5 * s); ctx.lineTo(10 * s, 0); ctx.lineTo(0, 3.5 * s); ctx.closePath(); });
+        }
+        ctx.restore();
+        break;
+      }
+      case 'axe': case 'dual_axe':
+        rrect(ctx, -6 * s, -1.4 * s, 26 * s, 2.8 * s, 1, wood, L, lw);
+        path(ctx, metal, L, lw, () => { ctx.moveTo(14 * s, -1.5 * s); ctx.quadraticCurveTo(22 * s, -12 * s, 26 * s, -7 * s); ctx.quadraticCurveTo(22 * s, 0, 26 * s, 7 * s); ctx.quadraticCurveTo(22 * s, 12 * s, 14 * s, 1.5 * s); ctx.closePath(); });
+        break;
+      case 'club':
+        path(ctx, wood, L, lw, () => { ctx.moveTo(-4 * s, -2 * s); ctx.lineTo(18 * s, -6 * s); ctx.quadraticCurveTo(28 * s, 0, 18 * s, 6 * s); ctx.lineTo(-4 * s, 2 * s); ctx.closePath(); });
+        for (const k of [12, 18, 23]) ellipse(ctx, k * s, (k % 2 ? -4 : 4) * s, 1.4 * s, 1.4 * s, P.shadow ? P.trim : '#d8d0c0', null);
+        break;
+      case 'hammer':
+        rrect(ctx, -6 * s, -1.4 * s, 26 * s, 2.8 * s, 1, wood, L, lw);
+        rrect(ctx, 18 * s, -7 * s, 9 * s, 14 * s, 2 * s, metal, L, lw);
+        break;
+      case 'pick':
+        rrect(ctx, -6 * s, -1.4 * s, 24 * s, 2.8 * s, 1, wood, L, lw);
+        path(ctx, metal, L, lw, () => { ctx.moveTo(16 * s, -1); ctx.quadraticCurveTo(20 * s, -12 * s, 10 * s, -16 * s); ctx.lineTo(19 * s, -2 * s); ctx.quadraticCurveTo(20 * s, 12 * s, 10 * s, 16 * s); ctx.lineTo(16 * s, 1); ctx.closePath(); });
+        break;
+      case 'scythe':
+        rrect(ctx, -10 * s, -1.4 * s, 40 * s, 2.8 * s, 1, wood, L, lw);
+        path(ctx, P.shadow ? P.trim : metal, L, lw, () => { ctx.moveTo(30 * s, 0); ctx.quadraticCurveTo(28 * s, -18 * s, 8 * s, -20 * s); ctx.quadraticCurveTo(22 * s, -12 * s, 27 * s, 0); ctx.closePath(); });
+        break;
+      case 'shovel':
+        rrect(ctx, -6 * s, -1.3 * s, 26 * s, 2.6 * s, 1, wood, L, lw);
+        path(ctx, metal, L, lw, () => { ctx.moveTo(18 * s, -5 * s); ctx.lineTo(28 * s, -5 * s); ctx.quadraticCurveTo(32 * s, 0, 28 * s, 5 * s); ctx.lineTo(18 * s, 5 * s); ctx.closePath(); });
+        break;
+      case 'staff': case 'orb_staff':
+        rrect(ctx, -8 * s, -1.4 * s, 36 * s, 2.8 * s, 1, wood, L, lw);
+        glow(ctx, 30 * s, 0, (heavy ? 13 : 9) * s, glowCol, 0.75);
+        ellipse(ctx, 30 * s, 0, 4 * s, 4 * s, kind === 'orb_staff' ? look.trim : shade(glowCol, 0.4), L, 1);
+        break;
+      case 'lantern':
+        rrect(ctx, 0, -1, 10 * s, 2, 1, P.metalD, L, 1);
+        glow(ctx, 14 * s, 0, 14 * s, look.eye, 0.85);
+        rrect(ctx, 10 * s, -5 * s, 8 * s, 10 * s, 2 * s, shade(look.eye, -0.2), L, lw);
+        break;
+      case 'bow': case 'longbow': {
+        const h = kind === 'longbow' ? 18 : 14;
+        ctx.strokeStyle = L; ctx.lineWidth = 3.4 * s;
+        ctx.beginPath(); ctx.arc(0, 0, h * s, -1.2, 1.2); ctx.stroke();
+        ctx.strokeStyle = wood; ctx.lineWidth = 2 * s;
+        ctx.beginPath(); ctx.arc(0, 0, h * s, -1.2, 1.2); ctx.stroke();
+        ctx.strokeStyle = P.shadow ? P.trim : '#eee'; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(Math.cos(-1.2) * h * s, Math.sin(-1.2) * h * s); ctx.lineTo(-4 * s, 0); ctx.lineTo(Math.cos(1.2) * h * s, Math.sin(1.2) * h * s); ctx.stroke();
+        break;
+      }
+      case 'crossbow':
+        rrect(ctx, -4 * s, -2 * s, 20 * s, 4 * s, 1, wood, L, lw);
+        ctx.strokeStyle = P.metalD; ctx.lineWidth = 2.4 * s;
+        ctx.beginPath(); ctx.arc(14 * s, 0, 9 * s, -1.9, 1.9, true); ctx.stroke();
+        break;
+      case 'raygun': case 'rifle': case 'long_rifle': {
+        const len = kind === 'long_rifle' ? 30 : kind === 'rifle' ? 22 : 12;
+        rrect(ctx, -3 * s, -2.6 * s, len * s, 5.2 * s, 2 * s, P.metal, L, lw);
+        rrect(ctx, -2 * s, 0, 4 * s, 7 * s, 1.5 * s, P.metalD, L, lw);
+        ellipse(ctx, len * s, 0, 2.6 * s, 2.6 * s, look.trim, L, 1);
+        glow(ctx, len * s, 0, 6 * s, look.trim, 0.6);
+        break;
+      }
+      case 'blades':
+        path(ctx, P.shadow ? P.trim : shade(look.cloth, 0.3), L, lw, () => { ctx.moveTo(0, -2 * s); ctx.quadraticCurveTo(14 * s, -12 * s, 26 * s, -4 * s); ctx.quadraticCurveTo(14 * s, -4 * s, 0, 2 * s); ctx.closePath(); });
+        break;
+      case 'claws':
+        for (const dy of [-3, 0, 3]) path(ctx, P.shadow ? P.trim : '#f0e8d8', L, 1, () => { ctx.moveTo(2 * s, (dy - 1) * s); ctx.quadraticCurveTo(9 * s, dy * s, 11 * s, (dy + 3) * s); ctx.lineTo(3 * s, (dy + 1) * s); ctx.closePath(); });
+        break;
+      case 'drum':
+        ellipse(ctx, 6 * s, 6 * s, 8 * s, 6 * s, P.trim, L, lw);
+        rrect(ctx, 0, 0, 2 * s, 12 * s, 1, wood, L, 1);
+        break;
+      case 'flute':
+        rrect(ctx, 0, -1.2 * s, 16 * s, 2.4 * s, 1, P.trim, L, 1);
+        break;
+      case 'lute':
+        ellipse(ctx, 10 * s, 0, 7 * s, 6 * s, P.wood, L, lw);
+        rrect(ctx, 14 * s, -1.2 * s, 12 * s, 2.4 * s, 1, P.wood, L, 1);
+        break;
+      case 'potion':
+        ellipse(ctx, 4 * s, 0, 5 * s, 5 * s, look.trim, L, lw);
+        rrect(ctx, 8 * s, -1.6 * s, 4 * s, 3.2 * s, 1, '#d8c8a8', L, 1);
+        glow(ctx, 4 * s, 0, 8 * s, look.trim, 0.4);
+        break;
+      default: break;
+    }
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------------ heads and hats
+  function head(ctx, P, look, x, y, r, pose) {
+    const L = P.line;
+    const kind = look.head || 'round';
+    const skin = P.skin;
+    if (look.hair === 'snakes') for (let i = 0; i < 7; i++) {
+      const a = -Math.PI + (i / 6) * Math.PI;
+      const wob = Math.sin(pose.t * 6 + i) * 0.25;
+      limb(ctx, x + Math.cos(a) * r * 0.7, y + Math.sin(a) * r * 0.7, x + Math.cos(a + wob) * r * 1.55, y + Math.sin(a + wob) * r * 1.4, r * 0.22, shade(look.skin, -0.1), L);
+    }
+    if (look.hair === true) for (let i = 0; i < 5; i++) limb(ctx, x + (i - 2) * r * 0.4, y - r * 0.4, x + (i - 2) * r * 0.55 + Math.sin(pose.t * 3 + i) * 2, y + r * 1.6, r * 0.32, P.cloth, L);
+    if (look.ears) {
+      for (const side of [-1, 1]) path(ctx, P.skinD, L, 1.2, () => { ctx.moveTo(x + side * r * 0.8, y - r * 0.2); ctx.lineTo(x + side * r * 1.75, y - r * 0.75); ctx.lineTo(x + side * r * 0.85, y + r * 0.35); ctx.closePath(); });
+    }
+    switch (kind) {
+      case 'alien':
+        ellipse(ctx, x, y - r * 0.2, r * 1.15, r * 1.25, skin, L, 1.6);
+        ellipse(ctx, x - r * 0.3, y - r * 0.6, r * 0.4, r * 0.25, P.skinL, null);
+        eyes(ctx, P, x, y + r * 0.05, r * 0.95, r * 0.42, 'black');
+        return;
+      case 'mantis':
+        path(ctx, skin, L, 1.6, () => { ctx.moveTo(x - r * 1.2, y - r * 0.6); ctx.quadraticCurveTo(x, y - r * 0.9, x + r * 1.2, y - r * 0.6); ctx.lineTo(x, y + r * 1.1); ctx.closePath(); });
+        eyes(ctx, P, x, y - r * 0.4, r * 1.3, r * 0.42, 'glow');
+        limb(ctx, x - r * 0.4, y - r * 0.8, x - r * 0.9, y - r * 1.9, 1.4, skin, L);
+        limb(ctx, x + r * 0.4, y - r * 0.8, x + r * 0.9, y - r * 1.9, 1.4, skin, L);
+        return;
+      case 'bug':
+        ellipse(ctx, x, y, r * 1.05, r * 0.95, skin, L, 1.6);
+        eyes(ctx, P, x, y - r * 0.1, r * 1.0, r * 0.38, 'glow');
+        limb(ctx, x - r * 0.5, y - r * 0.8, x - r * 1.0, y - r * 1.7, 1.2, P.skinD, L);
+        limb(ctx, x + r * 0.5, y - r * 0.8, x + r * 1.0, y - r * 1.7, 1.2, P.skinD, L);
+        ellipse(ctx, x - r * 1.0, y - r * 1.75, 1.6, 1.6, look.trim, null);
+        ellipse(ctx, x + r * 1.0, y - r * 1.75, 1.6, 1.6, look.trim, null);
+        return;
+      case 'robot':
+        rrect(ctx, x - r, y - r, r * 2, r * 1.9, r * 0.35, P.metal, L, 1.6);
+        rrect(ctx, x - r * 0.75, y - r * 0.4, r * 1.5, r * 0.6, r * 0.25, '#14161e', null);
+        eyes(ctx, P, x, y - r * 0.1, r * 0.7, r * 0.22, 'glow');
+        limb(ctx, x, y - r, x, y - r * 1.5, 1.2, P.metalD, L);
+        ellipse(ctx, x, y - r * 1.55, 1.8, 1.8, look.trim, null);
+        return;
+      case 'crystal':
+        path(ctx, skin, L, 1.6, () => { ctx.moveTo(x, y - r * 1.4); ctx.lineTo(x + r, y - r * 0.2); ctx.lineTo(x + r * 0.6, y + r); ctx.lineTo(x - r * 0.6, y + r); ctx.lineTo(x - r, y - r * 0.2); ctx.closePath(); });
+        path(ctx, P.skinL, null, 0, () => { ctx.moveTo(x, y - r * 1.4); ctx.lineTo(x + r * 0.3, y - r * 0.1); ctx.lineTo(x - r * 0.2, y + r * 0.2); ctx.closePath(); });
+        eyes(ctx, P, x, y + r * 0.1, r * 0.7, r * 0.22, 'glow');
+        return;
+      default: break;
+    }
+    // Faces of people and shadow folk.
+    ellipse(ctx, x, y, r, r * 1.02, skin, L, 1.6);
+    if (!P.shadow) ellipse(ctx, x - r * 0.35, y - r * 0.4, r * 0.35, r * 0.22, P.skinL, null);
+    else { ctx.strokeStyle = P.trim; ctx.lineWidth = 1.2; ctx.globalAlpha *= 0.8; ctx.beginPath(); ctx.arc(x, y, r * 0.92, -2.6, -0.6); ctx.stroke(); ctx.globalAlpha /= 0.8; }
+    const n = look.eyes || 2;
+    if (kind === 'hood') {
+      path(ctx, P.clothD, L, 1.6, () => { ctx.moveTo(x - r * 1.15, y + r * 0.6); ctx.quadraticCurveTo(x - r * 1.25, y - r * 1.4, x, y - r * 1.45); ctx.quadraticCurveTo(x + r * 1.25, y - r * 1.4, x + r * 1.15, y + r * 0.6); ctx.quadraticCurveTo(x, y - r * 0.35, x - r * 1.15, y + r * 0.6); ctx.closePath(); });
+    }
+    if (kind === 'mask') path(ctx, P.shadow ? '#d8d8f0' : P.clothD, L, 1.2, () => { ctx.ellipse(x, y + r * 0.1, r * 0.85, r * 0.5, 0, 0, TAU); });
+    if (kind === 'visor') { rrect(ctx, x - r * 0.95, y - r * 0.45, r * 1.9, r * 0.75, r * 0.3, '#151822', L, 1.2); glow(ctx, x, y - r * 0.08, r * 0.9, look.trim, 0.35); }
+    if (kind === 'cyborg') { rrect(ctx, x, y - r * 0.6, r * 0.95, r * 1.1, r * 0.2, P.metal, L, 1.2); }
+    if (kind !== 'visor') eyes(ctx, P, x, y + (kind === 'hood' ? r * 0.12 : 0), r * 0.7, r * (P.shadow ? 0.2 : 0.22), P.shadow ? 'glow' : (kind === 'cyborg' ? 'person' : 'person'), n);
+    if (kind === 'cyborg') { glow(ctx, x + r * 0.45, y, r * 0.6, look.eye, 0.6); ellipse(ctx, x + r * 0.45, y, r * 0.2, r * 0.2, look.eye, null); }
+    if (look.patch) { rrect(ctx, x + r * 0.05, y - r * 0.25, r * 0.55, r * 0.45, r * 0.15, '#111', null); limb(ctx, x - r, y - r * 0.6, x + r, y - r * 0.15, 0.8, '#111', '#111'); }
+    if (look.goggles) { ellipse(ctx, x - r * 0.35, y, r * 0.35, r * 0.32, 'rgba(160,255,140,0.5)', '#333', 2); ellipse(ctx, x + r * 0.35, y, r * 0.35, r * 0.32, 'rgba(160,255,140,0.5)', '#333', 2); }
+    if (!P.shadow && kind !== 'mask' && kind !== 'visor') {
+      // A mouth: a frown for most, tusks for orcs.
+      ctx.strokeStyle = L; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(x, y + r * 0.7, r * 0.28, -2.6, -0.5); ctx.stroke();
+      if (look.tusks) for (const sd of [-1, 1]) path(ctx, '#f6f0dc', L, 0.8, () => { ctx.moveTo(x + sd * r * 0.35, y + r * 0.62); ctx.lineTo(x + sd * r * 0.42, y + r * 0.25); ctx.lineTo(x + sd * r * 0.2, y + r * 0.6); ctx.closePath(); });
+    }
+    if (look.beard) path(ctx, look.beard, L, 1.2, () => { ctx.moveTo(x - r * 0.85, y + r * 0.2); ctx.quadraticCurveTo(x - r * 0.6, y + r * 1.8, x, y + r * 1.9); ctx.quadraticCurveTo(x + r * 0.6, y + r * 1.8, x + r * 0.85, y + r * 0.2); ctx.quadraticCurveTo(x, y + r * 0.85, x - r * 0.85, y + r * 0.2); ctx.closePath(); });
+    if (kind === 'helm') {
+      path(ctx, P.metal, L, 1.6, () => { ctx.moveTo(x - r * 1.08, y + r * 0.15); ctx.quadraticCurveTo(x - r * 1.1, y - r * 1.3, x, y - r * 1.3); ctx.quadraticCurveTo(x + r * 1.1, y - r * 1.3, x + r * 1.08, y + r * 0.15); ctx.lineTo(x + r * 0.55, y + r * 0.15); ctx.lineTo(x + r * 0.55, y - r * 0.2); ctx.lineTo(x - r * 0.55, y - r * 0.2); ctx.lineTo(x - r * 0.55, y + r * 0.15); ctx.closePath(); });
+      limb(ctx, x, y - r * 1.3, x, y - r * 0.25, 1.4, P.metalD, P.metalD);
+      if (look.armor) path(ctx, P.trim, null, 0, () => { ctx.ellipse(x, y - r * 1.38, r * 0.25, r * 0.5, 0, 0, TAU); });
+    }
+    if (kind === 'bald' && !P.shadow) ellipse(ctx, x, y - r * 0.7, r * 0.5, r * 0.15, P.skinL, null);
+    hat(ctx, P, look, x, y, r, pose);
+  }
+
+  function hat(ctx, P, look, x, y, r, pose) {
+    const L = P.line;
+    const h = look.hat;
+    if (!h) return;
+    switch (h) {
+      case 'straw':
+        ellipse(ctx, x, y - r * 0.6, r * 1.7, r * 0.42, P.shadow ? P.cloth : '#e8c86a', L, 1.4);
+        path(ctx, P.shadow ? P.clothL : '#f0d47a', L, 1.4, () => { ctx.ellipse(x, y - r * 0.85, r * 0.85, r * 0.6, 0, Math.PI, TAU); ctx.closePath(); });
+        break;
+      case 'wizard': case 'mitre': {
+        const col = h === 'mitre' ? '#f4f0e0' : P.clothD;
+        path(ctx, col, L, 1.6, () => { ctx.moveTo(x - r * 1.3, y - r * 0.55); ctx.quadraticCurveTo(x + r * 0.1, y - r * 3.3 + Math.sin(pose.t * 2) * 1.5, x + r * 0.6, y - r * 3.0); ctx.lineTo(x + r * 1.3, y - r * 0.55); ctx.closePath(); });
+        ellipse(ctx, x, y - r * 0.6, r * 1.45, r * 0.3, col, L, 1.4);
+        if (h === 'wizard' && !P.shadow) for (const [sx, sy] of [[-0.3, -1.4], [0.3, -2.1]]) ellipse(ctx, x + sx * r, y + sy * r, 1.5, 1.5, '#ffd700', null);
+        if (h === 'mitre') limb(ctx, x, y - r * 0.8, x + r * 0.2, y - r * 2.6, 1.6, '#ffd700', '#ffd700');
+        break;
+      }
+      case 'horns':
+        for (const sd of [-1, 1]) path(ctx, P.shadow ? P.trim : '#e8dcc4', L, 1.3, () => { ctx.moveTo(x + sd * r * 0.45, y - r * 0.75); ctx.quadraticCurveTo(x + sd * r * 1.25, y - r * 1.1, x + sd * r * 1.05, y - r * 1.9); ctx.quadraticCurveTo(x + sd * r * 0.85, y - r * 1.2, x + sd * r * 0.15, y - r * 0.95); ctx.closePath(); });
+        break;
+      case 'cap':
+        path(ctx, P.clothD, L, 1.4, () => { ctx.ellipse(x, y - r * 0.45, r * 1.02, r * 0.75, 0, Math.PI, TAU); ctx.closePath(); });
+        ellipse(ctx, x + r * 0.5, y - r * 0.42, r * 0.75, r * 0.18, P.clothD, L, 1.2);
+        break;
+      case 'helmet':
+        path(ctx, P.shadow ? P.clothL : '#e8c040', L, 1.4, () => { ctx.ellipse(x, y - r * 0.35, r * 1.1, r * 0.95, 0, Math.PI, TAU); ctx.closePath(); });
+        glow(ctx, x, y - r * 0.95, r * 0.6, '#fff4b0', 0.7);
+        ellipse(ctx, x, y - r * 0.95, r * 0.22, r * 0.18, '#fffbe0', L, 1);
+        break;
+      case 'crown': {
+        const g = P.shadow ? '#5c4a1f' : '#ffd23a';
+        path(ctx, g, L, 1.4, () => { ctx.moveTo(x - r * 0.95, y - r * 0.6); for (let i = 0; i <= 4; i++) { const px = x - r * 0.95 + (i / 4) * r * 1.9; ctx.lineTo(px, y - r * (i % 2 ? 1.25 : 1.75)); } ctx.lineTo(x + r * 0.95, y - r * 0.6); ctx.closePath(); });
+        for (const k of [-0.5, 0, 0.5]) ellipse(ctx, x + k * r, y - r * 0.85, 1.6, 1.6, P.shadow ? look.eye : '#ff3c5a', null);
+        if (P.shadow) glow(ctx, x, y - r * 1.2, r, look.eye, 0.35);
+        break;
+      }
+      case 'jester':
+        for (const sd of [-1, 1]) {
+          path(ctx, sd < 0 ? P.trim : P.clothL, L, 1.3, () => { ctx.moveTo(x, y - r * 0.8); ctx.quadraticCurveTo(x + sd * r * 1.4, y - r * 2.2, x + sd * r * 1.8, y - r * 1.2); ctx.lineTo(x + sd * r * 0.8, y - r * 0.5); ctx.closePath(); });
+          ellipse(ctx, x + sd * r * 1.85, y - r * 1.15, 2.4, 2.4, P.shadow ? look.eye : '#ffd700', L, 1);
+        }
+        break;
+      case 'feather':
+        path(ctx, P.clothD, L, 1.3, () => { ctx.ellipse(x, y - r * 0.6, r * 1.15, r * 0.5, -0.1, Math.PI, TAU); ctx.closePath(); });
+        limb(ctx, x + r * 0.4, y - r * 0.9, x + r * 1.5, y - r * 2.1, 2.4, look.trim, L);
+        break;
+      case 'viking':
+        path(ctx, P.metal, L, 1.4, () => { ctx.ellipse(x, y - r * 0.35, r * 1.1, r * 1.0, 0, Math.PI, TAU); ctx.closePath(); });
+        for (const sd of [-1, 1]) path(ctx, '#f0e6d0', L, 1.2, () => { ctx.moveTo(x + sd * r * 0.9, y - r * 0.8); ctx.quadraticCurveTo(x + sd * r * 1.8, y - r * 1.0, x + sd * r * 1.6, y - r * 2.0); ctx.quadraticCurveTo(x + sd * r * 1.3, y - r * 1.2, x + sd * r * 0.7, y - r * 1.15); ctx.closePath(); });
+        break;
+      case 'pirate':
+        path(ctx, '#1c1c24', L, 1.4, () => { ctx.moveTo(x - r * 1.5, y - r * 0.5); ctx.quadraticCurveTo(x, y - r * 2.4, x + r * 1.5, y - r * 0.5); ctx.quadraticCurveTo(x, y - r * 0.9, x - r * 1.5, y - r * 0.5); ctx.closePath(); });
+        ellipse(ctx, x, y - r * 1.1, 2, 2, '#f0f0f0', null);
+        break;
+      case 'bearskin':
+        path(ctx, '#18141c', L, 1.4, () => { ctx.ellipse(x, y - r * 1.2, r * 1.0, r * 1.6, 0, Math.PI * 0.95, Math.PI * 2.05); ctx.closePath(); });
+        break;
+      case 'halo_ring':
+        ctx.strokeStyle = look.trim; ctx.lineWidth = 2;
+        glow(ctx, x, y - r * 1.6, r, look.trim, 0.4);
+        ctx.beginPath(); ctx.ellipse(x, y - r * 1.6, r * 0.9, r * 0.28, 0, 0, TAU); ctx.stroke();
+        break;
+      default: break;
+    }
+  }
+
+  // ------------------------------------------------------------------ body plans
+  /**
+   * A person standing up (and shadow folk, robots, aliens on two legs). The body leans and the
+   * arms move with the pose; the weapon hand swings through a light or heavy attack.
+   */
+  function biped(ctx, P, look, pose) {
+    const L = P.line;
+    const heavy = look.build === 'heavy';
+    const thin = !!look.thin;
+    const bw = heavy ? 15 : thin ? 8.5 : 11;
+    const step = Math.sin(pose.walk * TAU);
+    const bob = Math.abs(Math.cos(pose.walk * TAU)) * 1.6;
+    const atk = pose.atk;
+    // An attack: a wind-up back, then a fast swing through.
+    const wind = atk < 0 ? 0 : atk < 0.45 ? ease(atk / 0.45) : 1 - ease((atk - 0.45) / 0.55);
+    const swing = atk < 0 ? 0 : atk < 0.45 ? -wind : (atk - 0.45) / 0.55 < 0.35 ? 1 : 1 - ease(((atk - 0.45) / 0.55 - 0.35) / 0.65);
+    const lean = (atk >= 0 ? (atk < 0.45 ? -0.08 * wind : 0.14 * Math.max(0, swing)) * (pose.heavy ? 1.7 : 1) : 0);
+    const hipY = -22 - bob;
+    const legs = look.legs || 'legs';
+    // Legs.
+    for (const sd of [-1, 1]) {
+      const sw = step * sd * 5;
+      const fx = sd * (bw * 0.45) + sw * 0.4, fy = -2 + Math.max(0, sw) * -0.5;
+      limb(ctx, sd * bw * 0.4, hipY + 4, fx, fy, heavy ? 6 : 4.6, P.clothD, L);
+      if (legs === 'hooves') ellipse(ctx, fx, fy, 3.2, 2.2, '#2a2018', L, 1);
+      else rrect(ctx, fx - 3.6, fy - 2.4, 7.2, 4, 1.8, P.shadow ? P.cloth : '#3a2a20', L, 1);
+    }
+    ctx.save();
+    ctx.translate(0, hipY + 6);
+    ctx.rotate(lean);
+    ctx.translate(0, -(hipY + 6));
+    // Cape behind.
+    if (look.cape) path(ctx, look.cape, L, 1.4, () => { const fl = Math.sin(pose.t * 4) * 2; ctx.moveTo(-bw * 0.9, hipY - 18); ctx.quadraticCurveTo(-bw * 1.6 + fl, hipY + 4, -bw * 1.3 + fl, hipY + 18); ctx.lineTo(bw * 1.3 + fl, hipY + 18); ctx.quadraticCurveTo(bw * 1.6 + fl, hipY + 4, bw * 0.9, hipY - 18); ctx.closePath(); });
+    if (look.jetpack) { rrect(ctx, -bw * 0.9, hipY - 20, bw * 1.8, 16, 4, P.metalD, L, 1.2); glow(ctx, 0, hipY + 2, 8, '#ffa040', 0.9); }
+    if (look.wings) wings(ctx, P, look, 0, hipY - 14, 1, pose);
+    // Body.
+    const top = hipY - 20;
+    path(ctx, P.cloth, L, 1.8, () => { ctx.moveTo(-bw, top + 4); ctx.quadraticCurveTo(-bw - 1.5, hipY + 2, -bw * 0.8, hipY + 6); ctx.lineTo(bw * 0.8, hipY + 6); ctx.quadraticCurveTo(bw + 1.5, hipY + 2, bw, top + 4); ctx.quadraticCurveTo(0, top - 2, -bw, top + 4); ctx.closePath(); });
+    if (!P.shadow) path(ctx, P.clothL, null, 0, () => { ctx.ellipse(-bw * 0.4, top + 9, bw * 0.35, 5, -0.3, 0, TAU); });
+    if (look.armor) { rrect(ctx, -bw * 0.75, top + 5, bw * 1.5, 12, 4, P.metal, L, 1.2); if (!P.shadow) limb(ctx, -bw * 0.5, top + 9, bw * 0.5, top + 9, 0.8, P.metalD, P.metalD); }
+    rrect(ctx, -bw * 0.85, hipY - 1, bw * 1.7, 3.4, 1.5, P.trim, L, 1);
+    if (P.shadow) { ctx.strokeStyle = P.trim; ctx.lineWidth = 1.3; ctx.globalAlpha *= 0.7; ctx.beginPath(); ctx.moveTo(-bw + 1, top + 6); ctx.quadraticCurveTo(-bw - 0.5, hipY - 2, -bw * 0.8 + 1, hipY + 4); ctx.stroke(); ctx.globalAlpha /= 0.7; }
+    if (look.strings) for (const sx of [-bw * 0.8, bw * 0.8, 0]) { ctx.strokeStyle = 'rgba(220,210,255,0.5)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(sx, top); ctx.lineTo(sx * 1.4, top - 90); ctx.stroke(); }
+    if (look.tail) limb(ctx, bw * 0.5, hipY + 2, bw * 1.8, hipY - 6 + Math.sin(pose.t * 5) * 3, 2.4, P.skinD, L);
+    // Arms: the off hand holds a shield or swings with the walk; the weapon hand attacks.
+    const shoulderY = top + 6;
+    const offA = 1.95 + step * 0.25;
+    const offHand = [-bw - 1 + Math.cos(offA) * 12, shoulderY + Math.sin(offA) * 12];
+    const wa = 1.3 - step * 0.2 - wind * (pose.heavy ? 2.6 : 1.8) + Math.max(0, swing) * (pose.heavy ? 1.2 : 0.9);
+    const ranged = ['bow', 'longbow', 'crossbow', 'raygun', 'rifle', 'long_rifle', 'staff', 'orb_staff', 'lantern', 'potion'].includes(look.weapon);
+    const aim = ranged ? (atk >= 0 ? 0.25 + 0.25 * (1 - wind) : 0.9) : wa;
+    const wHand = [bw + 1 + Math.cos(aim) * 13, shoulderY + Math.sin(aim) * 13];
+    limb(ctx, -bw + 1, shoulderY, offHand[0], offHand[1], heavy ? 5.6 : 4.2, P.cloth, L);
+    ellipse(ctx, offHand[0], offHand[1], 2.8, 2.8, P.skin, L, 1);
+    if (look.twin) { ctx.globalAlpha *= 0.55; ellipse(ctx, -bw - 3, top - 6, 7, 7, P.skin, L, 1.2); ctx.globalAlpha /= 0.55; }
+    // Head.
+    const hr = heavy ? 9.5 : thin ? 8 : 9;
+    head(ctx, P, look, 0, top - hr + 2 + Math.sin(pose.t * 2.5) * 0.4, hr, pose);
+    // Shield in front.
+    if (look.shield === 'round') ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 8.5, 9.5, P.shadow ? P.cloth : look.trim, L, 1.6), ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 2.6, 2.6, P.metal, L, 1);
+    if (look.shield === 'tower') rrect(ctx, offHand[0] - 7, offHand[1] - 16, 15, 24, 4, P.shadow ? P.cloth : look.trim, L, 1.6), rrect(ctx, offHand[0] - 3.5, offHand[1] - 12, 8, 16, 3, P.metal, null);
+    if (look.shield === 'energy') { glow(ctx, offHand[0] + 2, offHand[1] - 4, 15, look.trim, 0.45); ctx.strokeStyle = look.trim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(offHand[0] + 2, offHand[1] - 4, 11, -1.9, 1.9); ctx.stroke(); }
+    // Weapon arm and weapon.
+    limb(ctx, bw - 1, shoulderY, wHand[0], wHand[1], heavy ? 5.6 : 4.2, P.cloth, L);
+    const w = look.weapon || 'none';
+    if (w === 'dual' || w === 'dual_axe') weapon(ctx, P, look, w === 'dual' ? 'dagger' : 'axe', offHand[0], offHand[1], offA + 0.3, 0.9, pose.heavy);
+    if (w !== 'none') weapon(ctx, P, look, w === 'dual' ? 'dagger' : w === 'dual_axe' ? 'axe' : w, wHand[0], wHand[1], ranged ? -0.25 + (1 - aim) * 0.3 : aim - Math.PI / 2 - 0.4, 1, pose.heavy);
+    ellipse(ctx, wHand[0], wHand[1], 2.9, 2.9, P.skin, L, 1);
+    if (look.glow) glow(ctx, 0, top + 10, bw * 1.6, look.trim, 0.35 + 0.15 * Math.sin(pose.t * 6));
+    ctx.restore();
+  }
+
+  function wings(ctx, P, look, x, y, s, pose) {
+    const L = P.line;
+    const flap = Math.sin(pose.t * (look.wings === 'bug' ? 30 : 9)) * 0.35;
+    for (const sd of [-1, 1]) {
+      ctx.save();
+      ctx.translate(x + sd * 4 * s, y);
+      ctx.rotate(sd * (0.35 + flap));
+      if (look.wings === 'bug') { ctx.globalAlpha *= 0.55; ellipse(ctx, sd * 13 * s, -4 * s, 13 * s, 5.5 * s, '#e8fff4', L, 1, sd * 0.2); ctx.globalAlpha /= 0.55; }
+      else if (look.wings === 'feather') path(ctx, P.clothL, L, 1.3, () => { ctx.moveTo(0, 0); ctx.quadraticCurveTo(sd * 18 * s, -18 * s, sd * 30 * s, -10 * s); ctx.lineTo(sd * 24 * s, -2 * s); ctx.lineTo(sd * 26 * s, 3 * s); ctx.lineTo(sd * 16 * s, 2 * s); ctx.lineTo(sd * 14 * s, 8 * s); ctx.closePath(); });
+      else path(ctx, P.clothD, L, 1.3, () => { ctx.moveTo(0, 0); ctx.lineTo(sd * 26 * s, -14 * s); ctx.quadraticCurveTo(sd * 22 * s, -4 * s, sd * 26 * s, 4 * s); ctx.quadraticCurveTo(sd * 16 * s, 0, sd * 14 * s, 8 * s); ctx.quadraticCurveTo(sd * 8 * s, 2 * s, 0, 6 * s); ctx.closePath(); });
+      ctx.restore();
+    }
+  }
+
+  /** Floating things: wisps, ghosts, drones, eyes, saucers, brains, swarms. */
+  function floater(ctx, P, look, pose) {
+    const L = P.line;
+    const hover = -26 + Math.sin(pose.t * 2.6 + pose.seed) * 3;
+    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * (pose.heavy ? 7 : 4) : 0;
+    const y = hover + lunge;
+    ellipse(ctx, 0, -1, 9, 3, 'rgba(0,0,0,0.18)', null);
+    const body = look.body || 'orb';
+    switch (body) {
+      case 'orb': case 'swarm': case 'moth': case 'bat': case 'bug': {
+        const many = body === 'orb' ? 3 : 5;
+        for (let i = 0; i < many; i++) {
+          const a = pose.t * (body === 'swarm' ? 3 : 1.6) + i * (TAU / many) + pose.seed;
+          const ox = Math.cos(a) * 15, oy = Math.sin(a * 1.3) * 9;
+          ctx.save(); ctx.translate(ox, y + oy); ctx.scale(1.6, 1.6); ctx.translate(-ox, -(y + oy));
+          if (body === 'orb') { glow(ctx, ox, y + oy, 10, P.trim, 0.6); ellipse(ctx, ox, y + oy, 5, 5, P.skin, P.trim, 1.2); eyes(ctx, P, ox, y + oy, 3.2, 0.9, 'glow'); }
+          else if (body === 'bat' || body === 'moth') {
+            const fl = Math.sin(pose.t * 18 + i) * 0.6;
+            for (const sd of [-1, 1]) path(ctx, body === 'moth' ? P.clothL : P.cloth, P.trim, 0.8, () => { ctx.moveTo(ox, y + oy); ctx.lineTo(ox + sd * 7, y + oy - 4 - fl * 3); ctx.lineTo(ox + sd * 5, y + oy + 3); ctx.closePath(); });
+            ellipse(ctx, ox, y + oy, 2.6, 3.2, P.skin, P.trim, 0.8);
+            eyes(ctx, P, ox, y + oy - 0.5, 2, 0.6, 'glow');
+          } else if (body === 'bug') {
+            ctx.globalAlpha *= 0.6; for (const sd of [-1, 1]) ellipse(ctx, ox + sd * 4, y + oy - 3, 4, 2, '#e8fff4', null, 0, sd * 0.4); ctx.globalAlpha /= 0.6;
+            ellipse(ctx, ox, y + oy, 3.4, 4, P.skin, L, 0.9);
+            eyes(ctx, P, ox, y + oy - 1, 2.2, 0.7, 'glow');
+          } else { glow(ctx, ox, y + oy, 6, P.trim, 0.5); rrect(ctx, ox - 2, y + oy - 2, 4, 4, 1, P.skin, L, 0.7); }
+          ctx.restore();
+        }
+        return;
+      }
+      case 'sheet': case 'cloak': case 'robe': {
+        const sway = Math.sin(pose.t * 3) * 3;
+        const col = body === 'robe' ? P.cloth : P.skin;
+        if (look.hair) for (let i = 0; i < 6; i++) limb(ctx, -10 + i * 4, y - 20, -14 + i * 5.6 + sway * 1.4, y + 12 + (i % 2) * 6, 2.6, P.trim, P.line);
+        path(ctx, col, L, 1.6, () => {
+          ctx.moveTo(-12, y - 6);
+          ctx.quadraticCurveTo(-13, y + 14, -10 + sway, y + 22);
+          for (let i = 0; i <= 4; i++) ctx.lineTo(-10 + sway + i * 5, y + 22 + (i % 2 ? -4 : 0));
+          ctx.quadraticCurveTo(13, y + 14, 12, y - 6);
+          ctx.quadraticCurveTo(12, y - 26, 0, y - 26);
+          ctx.quadraticCurveTo(-12, y - 26, -12, y - 6);
+          ctx.closePath();
+        });
+        if (P.shadow) { ctx.strokeStyle = P.trim; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, y - 10, 10, -2.6, -0.5); ctx.stroke(); }
+        if (body === 'cloak') { path(ctx, '#05040a', null, 0, () => ctx.ellipse(0, y - 12, 7, 8, 0, 0, TAU)); eyes(ctx, P, 0, y - 12, 6, 1.6, 'glow'); }
+        else if (body === 'robe') head(ctx, P, look, 0, y - 30, 8, pose);
+        else eyes(ctx, P, 0, y - 12, 7, 1.9, 'glow');
+        if (look.hat && body !== 'robe') hat(ctx, P, look, 0, y - 18, 10, pose);
+        if (look.weapon) {
+          const a = pose.atk >= 0 ? -1.2 + Math.sin(pose.atk * Math.PI) * (pose.heavy ? 2.2 : 1.4) : -0.6;
+          limb(ctx, 10, y - 4, 18, y + 2, 3.4, col, L);
+          weapon(ctx, P, look, look.weapon, 18, y + 2, a, 0.9, pose.heavy);
+        }
+        return;
+      }
+      case 'eye': {
+        const look2 = pose.atk >= 0 ? 0.7 : 0.3;
+        glow(ctx, 0, y - 6, 22, look.eye, 0.4);
+        ellipse(ctx, 0, y - 6, 14, 13, look.metal ? P.metal : P.skin, L, 1.8);
+        ellipse(ctx, 0, y - 4, 10, 8 * (0.6 + look2 * 0.4), '#f4f4f8', L, 1);
+        ellipse(ctx, 0, y - 3, 4.6, 4.6, look.eye, null);
+        ellipse(ctx, 0, y - 3, 2, 2, '#05050a', null);
+        for (const sd of [-1, 1]) limb(ctx, sd * 10, y + 4, sd * 16 + Math.sin(pose.t * 3 + sd) * 3, y + 16, 2.4, P.skinD, L);
+        return;
+      }
+      case 'drone': {
+        ellipse(ctx, 0, y - 4, 12, 7, P.metal, L, 1.6);
+        rrect(ctx, -6, y - 6, 12, 4, 2, '#151822', null);
+        eyes(ctx, P, 0, y - 4, 0, 1.6, 'glow', 1);
+        for (const sd of [-1, 1]) { limb(ctx, sd * 10, y - 6, sd * 16, y - 12, 1.6, P.metalD, L); ctx.globalAlpha *= 0.5; ellipse(ctx, sd * 16, y - 13, 8 * Math.abs(Math.sin(pose.t * 30)), 1.4, '#e0e8f0', null); ctx.globalAlpha /= 0.5; }
+        if (look.shield === 'energy') { glow(ctx, 0, y + 6, 18, look.trim, 0.4); ctx.strokeStyle = look.trim; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(0, y - 2, 17, 0.2, Math.PI - 0.2); ctx.stroke(); }
+        return;
+      }
+      case 'harpy': {
+        wings(ctx, P, { wings: 'feather' }, 0, y - 6, 0.9, pose);
+        path(ctx, P.cloth, L, 1.6, () => ctx.ellipse(0, y, 9, 12, 0, 0, TAU));
+        for (const sd of [-1, 1]) limb(ctx, sd * 4, y + 10, sd * 6, y + 18, 2, '#c8a040', L);
+        head(ctx, P, { ...look, head: 'round', hair: true }, 0, y - 16, 7.5, pose);
+        return;
+      }
+      case 'brain': {
+        if (look.guns) for (const sd of [-1, 1]) { rrect(ctx, sd * 18 - 4, y - 2, 8, 12, 3, P.metal, L, 1.2); glow(ctx, sd * 18, y + 10, 5, look.trim, 0.6); }
+        rrect(ctx, -12, y - 2, 24, 14, 6, P.cloth, L, 1.6);
+        glow(ctx, 0, y - 10, 20, look.trim, 0.35);
+        path(ctx, P.skin, L, 1.6, () => ctx.ellipse(0, y - 12, 15, 12, 0, 0, TAU));
+        ctx.strokeStyle = P.skinD; ctx.lineWidth = 1.4;
+        for (const [a, b] of [[-8, -16], [0, -20], [7, -14], [-4, -8], [5, -6]]) { ctx.beginPath(); ctx.arc(a, y + b + 6, 4, 0.2, 2.6); ctx.stroke(); }
+        eyes(ctx, P, 0, y + 4, 8, 1.8, 'glow');
+        if (look.hat) hat(ctx, P, look, 0, y - 16, 10, pose);
+        return;
+      }
+      case 'tank': {
+        ellipse(ctx, 0, y + 6, 22, 7, P.clothD, L, 1.6);
+        rrect(ctx, -18, y - 8, 36, 14, 6, P.cloth, L, 1.8);
+        rrect(ctx, -9, y - 16, 18, 10, 4, P.clothL, L, 1.4);
+        const ang = pose.atk >= 0 ? -0.3 + Math.sin(pose.atk * Math.PI) * 0.15 : -0.1;
+        ctx.save(); ctx.translate(6, y - 11); ctx.rotate(Math.PI / 2 + ang); rrect(ctx, -2, 0, 4, 20, 2, P.metal, L, 1.2); ctx.restore();
+        glow(ctx, 0, y + 12, 14, look.trim, 0.5);
+        eyes(ctx, P, -4, y - 12, 0, 1.3, 'glow', 1);
+        return;
+      }
+      case 'saucer': {
+        glow(ctx, 0, y + 10, 18, look.trim, pose.atk >= 0 ? 0.8 : 0.4);
+        path(ctx, P.metal, L, 1.8, () => ctx.ellipse(0, y, 22, 7, 0, 0, TAU));
+        path(ctx, 'rgba(160,240,255,0.55)', L, 1.4, () => { ctx.ellipse(0, y - 4, 10, 8, 0, Math.PI, TAU); ctx.closePath(); });
+        if (look.guns) for (const sd of [-1, 1]) rrect(ctx, sd * 16 - 3, y + 2, 6, 6, 2, P.metalD, L, 1);
+        for (let i = 0; i < 5; i++) ellipse(ctx, -16 + i * 8, y + 1, 1.5, 1.5, (Math.floor(pose.t * 6) + i) % 2 ? look.trim : '#ffffff', null);
+        eyes(ctx, P, 0, y - 6, 4, 1.3, 'black');
+        return;
+      }
+      default: break;
+    }
+  }
+
+  /** Four legs: hounds, stalkers, chimeras (and the body under a centaur or a cavalier). */
+  function quad(ctx, P, look, pose) {
+    const L = P.line;
+    const long = look.long ? 1.35 : 1;
+    const step = pose.walk * TAU;
+    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * (pose.heavy ? 6 : 3) : 0;
+    const y = -16 * long;
+    for (const [lx, ph] of [[-11, 0], [11, Math.PI], [-6, Math.PI], [6, 0]]) {
+      const sw = Math.sin(step + ph) * 4;
+      limb(ctx, lx, y + 4, lx + sw * 0.6, -1, 3.4, P.skinD, L);
+    }
+    if (look.tail) limb(ctx, -14, y - 2, -24, y - 10 + Math.sin(pose.t * 5) * 3, 2.6, P.skinD, L);
+    path(ctx, P.skin, L, 1.8, () => ctx.ellipse(0, y, 15, 8.5, 0, 0, TAU));
+    if (look.spikes || P.shadow) for (let i = 0; i < 5; i++) path(ctx, P.shadow ? P.trim : P.skinD, null, 0, () => { const sx = -9 + i * 4.5; ctx.moveTo(sx - 2, y - 7); ctx.lineTo(sx, y - 12 - (i % 2) * 2); ctx.lineTo(sx + 2, y - 7); ctx.closePath(); });
+    if (look.mane) path(ctx, look.trim, L, 1.2, () => ctx.ellipse(13, y - 6, 9, 9, 0, 0, TAU));
+    // A long head low and forward (down the screen: towards you).
+    ctx.save();
+    ctx.translate(12 + lunge, y - 4);
+    path(ctx, P.skin, L, 1.6, () => { ctx.ellipse(0, 0, 8, 6.5, 0.2, 0, TAU); });
+    path(ctx, P.skinD, L, 1.3, () => { ctx.ellipse(6, 3, 5.5, 3.5, 0.3, 0, TAU); });
+    if (pose.atk >= 0) path(ctx, '#2a0a10', null, 0, () => ctx.ellipse(7, 5, 3.5, 1.4 + Math.sin(pose.atk * Math.PI) * 2, 0.3, 0, TAU));
+    for (const sd of [-1, 1]) path(ctx, P.skinD, L, 1, () => { ctx.moveTo(-3, -4); ctx.lineTo(-1 + sd, -11); ctx.lineTo(2, -4); ctx.closePath(); });
+    if (look.horns) for (const sd of [-1, 1]) limb(ctx, -1, -5, -4 + sd * 3, -11, 2, '#e8dcc4', L);
+    eyes(ctx, P, 0, -1, 5, P.shadow ? 1.4 : 1.6, P.shadow ? 'glow' : 'person');
+    ctx.restore();
+    if (look.glitch) { ctx.globalAlpha *= 0.3; ctx.translate(Math.sin(pose.t * 37) * 3, 0); path(ctx, look.trim, null, 0, () => ctx.ellipse(0, y, 15, 8.5, 0, 0, TAU)); ctx.translate(-Math.sin(pose.t * 37) * 3, 0); ctx.globalAlpha /= 0.3; }
+  }
+
+  /** A horse body with a person on top: a centaur, or a knight on a charger. */
+  function centaur(ctx, P, look, pose) {
+    const L = P.line;
+    const horse = look.rider ? { ...P, skin: '#f0f0f4', skinD: '#c8c8d4' } : P;
+    quad(ctx, horse, { ...look, horns: false, tail: true }, pose);
+    ctx.save();
+    ctx.translate(-2, -24);
+    const top = { ...look, legs: 'none' };
+    const upper = (c) => {
+      const bw = 9;
+      path(c, P.cloth, L, 1.6, () => { c.moveTo(-bw, -18); c.quadraticCurveTo(-bw - 1, -2, -bw * 0.8, 2); c.lineTo(bw * 0.8, 2); c.quadraticCurveTo(bw + 1, -2, bw, -18); c.quadraticCurveTo(0, -22, -bw, -18); c.closePath(); });
+      if (look.armor || look.rider) rrect(c, -7, -16, 14, 10, 3, P.metal, L, 1.2);
+      const atk = pose.atk;
+      const aim = atk >= 0 ? 0.2 : 0.7;
+      const hand = [bw + 1 + Math.cos(aim) * 11, -14 + Math.sin(aim) * 11];
+      limb(c, bw - 1, -14, hand[0], hand[1], 3.8, P.cloth, L);
+      weapon(c, P, look, look.weapon, hand[0], hand[1], look.weapon === 'lance' ? 0.15 + (atk >= 0 ? -Math.sin(atk * Math.PI) * 0.3 : 0) : -0.2, 1, pose.heavy);
+      ellipse(c, hand[0], hand[1], 2.6, 2.6, P.skin, L, 1);
+      head(c, P, top, 0, -27, 8, pose);
+    };
+    upper(ctx);
+    ctx.restore();
+  }
+
+  /** Many legs, low and fast: crawlers, mites, the brood mother. */
+  function crawler(ctx, P, look, pose) {
+    const L = P.line;
+    const y = -12;
+    for (let i = 0; i < 6; i++) {
+      const sd = i < 3 ? -1 : 1;
+      const k = i % 3;
+      const ph = pose.walk * TAU * 2 + k * 2 + (sd > 0 ? Math.PI : 0);
+      const kx = sd * (14 + k * 2), ky = y - 6 + k * 5;
+      limb(ctx, sd * 6, y + k * 3, kx, ky + Math.sin(ph) * 3, 2.2, P.skinD, L);
+      limb(ctx, kx, ky + Math.sin(ph) * 3, kx + sd * 5, -1, 2, P.skinD, L);
+    }
+    if (look.sac) { glow(ctx, -6, y - 6, 12, look.trim, 0.5); path(ctx, look.trim, L, 1.2, () => ctx.ellipse(-6, y - 5, 8, 7, 0, 0, TAU)); }
+    path(ctx, P.skin, L, 1.8, () => ctx.ellipse(0, y, 12, 9, 0, 0, TAU));
+    if (P.shadow) { ctx.strokeStyle = P.trim; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(0, y, 10, -2.6, -0.6); ctx.stroke(); }
+    else ellipse(ctx, -4, y - 4, 5, 2.5, P.skinL, null);
+    const bite = pose.atk >= 0 ? Math.sin(pose.atk * Math.PI) : 0;
+    for (const sd of [-1, 1]) path(ctx, P.shadow ? P.trim : '#f0e8d0', L, 1, () => { ctx.moveTo(sd * 3, y + 7); ctx.quadraticCurveTo(sd * (7 + bite * 3), y + 12, sd * 2, y + 15); ctx.lineTo(sd * 1.5, y + 9); ctx.closePath(); });
+    eyes(ctx, P, 0, y + 1, 7, 1.5, 'glow', 3);
+  }
+
+  /** A serpent (and the gorgon queen's serpent tail): segments in an S that slither. */
+  function serpent(ctx, P, look, pose) {
+    const L = P.line;
+    const segs = 9;
+    for (let i = segs - 1; i >= 0; i--) {
+      const k = i / segs;
+      const sx = Math.sin(pose.walk * TAU * 2 + i * 0.75) * (5 + k * 12);
+      const sy = -6 - i * 6.2;
+      const r = 8 - k * 4;
+      ellipse(ctx, sx, sy + 12, r * 1.2, r * 0.9, i % 2 ? P.skin : P.skinD, L, 1.4);
+      if (!P.shadow) ellipse(ctx, sx, sy + 12 + r * 0.35, r * 0.6, r * 0.3, P.skinL, null);
+      if (P.shadow && i % 2) { ctx.strokeStyle = P.trim; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(sx, sy + 12, r * 0.8, -2.5, -0.7); ctx.stroke(); }
+    }
+    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * (pose.heavy ? 8 : 4) : 0;
+    if (look.torso) {
+      ctx.save(); ctx.translate(0, -24);
+      biped(ctx, P, { ...look, legs: 'none', head: look.head || 'round', weapon: 'bow' }, { ...pose, walk: 0 });
+      ctx.restore();
+      return;
+    }
+    ctx.save();
+    ctx.translate(Math.sin(pose.walk * TAU * 2) * 4, -2 + lunge);
+    path(ctx, P.skin, L, 1.6, () => ctx.ellipse(0, 0, 10, 8, 0, 0, TAU));
+    if (look.horns) for (const sd of [-1, 1]) limb(ctx, sd * 5, -5, sd * 10, -13, 2.4, P.shadow ? P.trim : '#e8dcc4', L);
+    eyes(ctx, P, 0, -2, 8, 1.7, 'glow');
+    if (pose.atk >= 0) path(ctx, P.shadow ? P.trim : '#ff5c7a', null, 0, () => { ctx.moveTo(-1, 6); ctx.lineTo(0, 12 + lunge); ctx.lineTo(1, 6); ctx.closePath(); });
+    ctx.restore();
+  }
+
+  /** Blobs: goo in a suit, the eyestalk, the tentacle thing. */
+  function blob(ctx, P, look, pose) {
+    const L = P.line;
+    const squish = Math.sin(pose.walk * TAU * 2) * 0.08;
+    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) : 0;
+    if (look.tentacles) for (let i = 0; i < 6; i++) {
+      const a = Math.PI * (0.15 + i * 0.14);
+      const len = 16 + (pose.atk >= 0 && i % 2 ? lunge * 10 : 0);
+      limb(ctx, Math.cos(a) * 10, -10, Math.cos(a) * (10 + len * 0.6) + Math.sin(pose.t * 4 + i) * 3, -10 + Math.sin(a) * len, 3, P.skinD, L);
+    }
+    path(ctx, P.skin, L, 1.8, () => ctx.ellipse(0, -14, 15 * (1 + squish), 14 * (1 - squish), 0, 0, TAU));
+    ellipse(ctx, -5, -21, 5, 3, P.skinL, null);
+    if (look.helmet) {
+      path(ctx, 'rgba(200,240,255,0.32)', '#c8d8e8', 1.6, () => ctx.ellipse(0, -16, 17, 17, 0, 0, TAU));
+      rrect(ctx, -14, -6, 28, 6, 3, P.cloth, L, 1.4);
+    }
+    if (look.stalks) for (let i = 0; i < 3; i++) {
+      const sx = (i - 1) * 7, top = -34 - (i === 1 ? 5 : 0) + Math.sin(pose.t * 3 + i) * 2;
+      limb(ctx, sx, -24, sx * 1.4, top, 2.2, P.skinD, L);
+      ellipse(ctx, sx * 1.4, top, 4, 4, '#ffffff', L, 1);
+      ellipse(ctx, sx * 1.4, top + 0.5, 1.8, 1.8, '#111', null);
+    } else eyes(ctx, P, 0, -15, 8, 2.4, look.helmet ? 'person' : 'glow');
+  }
+
+  /** Three tall machine legs under a body: tripods, mech walkers, siege mechs. */
+  function tripod(ctx, P, look, pose) {
+    const L = P.line;
+    const h = 30;
+    for (let i = 0; i < 3; i++) {
+      const sx = (i - 1) * 14;
+      const lift = Math.max(0, Math.sin(pose.walk * TAU + i * 2.1)) * 4;
+      limb(ctx, sx * 0.4, -h, sx, -h * 0.5 - lift, 3, P.metalD, L);
+      limb(ctx, sx, -h * 0.5 - lift, sx * 1.15, -lift * 0.5, 2.6, P.metal, L);
+    }
+    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * 3 : 0;
+    path(ctx, P.cloth, L, 1.8, () => ctx.ellipse(0, -h - 6 + lunge, 18, 10, 0, 0, TAU));
+    path(ctx, P.clothL, null, 0, () => { ctx.ellipse(-4, -h - 10 + lunge, 9, 4, 0, 0, TAU); });
+    rrect(ctx, -10, -h - 4 + lunge, 20, 6, 3, '#151822', null);
+    eyes(ctx, P, 0, -h - 1 + lunge, 0, 2.2, 'glow', 1);
+    glow(ctx, 0, -h - 1 + lunge, 10, look.trim, pose.atk >= 0 ? 0.9 : 0.4);
+    for (const sd of [-1, 1]) rrect(ctx, sd * 18 - 3, -h - 6 + lunge, 6, 12, 2, P.metal, L, 1.2);
+  }
+
+  /** Four soldiers carrying a log: the battering crew. */
+  function ram(ctx, P, look, pose) {
+    const L = P.line;
+    const push = pose.atk >= 0 ? Math.sin(pose.atk * Math.PI) * (pose.heavy ? 8 : 4) : 0;
+    rrect(ctx, -26, -24 + push, 52, 9, 4, P.wood, L, 1.6);
+    path(ctx, P.metal, L, 1.4, () => ctx.ellipse(0, -14 + push, 6, 5, 0, 0, TAU));
+    for (const [sx, sy] of [[-16, -6], [16, -6], [-8, 2], [8, 2]]) {
+      ctx.save(); ctx.translate(sx, sy); ctx.scale(0.55, 0.55);
+      biped(ctx, P, { ...look, plan: 'biped', weapon: 'none', head: 'helm', hat: null }, { ...pose, atk: -1, walk: pose.walk + sx * 0.01 });
+      ctx.restore();
+    }
+  }
+
+  const PLANS = { biped, float: floater, quad, centaur, crawler, serpent, blob, tripod, ram };
+
+  /**
+   * Draw enemy `id` with its feet at (0, 0). `px` is how many pixels a size-1 enemy stands; the
+   * enemy's own size scales it. Dying shrinks and fades it (shadow folk melt into wisps; the
+   * caller adds the bursts); being hit flashes it white.
+   */
+  function draw(ctx, id, pose, px) {
+    const e = BATTLE_DATA.ENEMIES[id];
+    if (!e) return;
+    const look = e.look;
+    const P = palette(look);
+    const s = (px / 60) * (look.size || 1);
+    ctx.save();
+    const d = pose.dying || 0;
+    if (d > 0) {
+      ctx.globalAlpha *= clamp(1 - d * 1.15, 0, 1);
+      if (P.shadow) ctx.scale(1 + d * 0.4, 1 - d * 0.7);
+      else { ctx.rotate(d * 1.2 * (pose.seed % 2 ? 1 : -1)); ctx.translate(0, d * 6); }
+    }
+    if (pose.hurt > 0) {
+      // A white flash over the enemy alone: drawn on a canvas of its own first, then whitened
+      // where it is (on the battle canvas that would whiten the ground behind it too).
+      const w = Math.ceil(150 * s), h = Math.ceil(160 * s);
+      const off = flashCanvas(w, h);
+      const o = off.getContext('2d');
+      o.setTransform(1, 0, 0, 1, 0, 0);
+      o.globalAlpha = 1;
+      o.clearRect(0, 0, w, h);
+      o.translate(w / 2, h * 0.86);
+      o.scale(s, s);
+      body(o, P, look, pose);
+      o.setTransform(1, 0, 0, 1, 0, 0);
+      o.globalCompositeOperation = 'source-atop';
+      o.globalAlpha = Math.min(1, pose.hurt) * 0.65;
+      o.fillStyle = '#ffffff';
+      o.fillRect(0, 0, w, h);
+      o.globalCompositeOperation = 'source-over';
+      o.globalAlpha = 1;
+      ctx.drawImage(off, 0, 0, w, h, -w / 2, -h * 0.86, w, h);
+    } else {
+      ctx.scale(s, s);
+      body(ctx, P, look, pose);
+    }
+    ctx.restore();
+  }
+
+  /** The ground shadow, then the enemy (bobbing as it takes coins). */
+  function body(ctx, P, look, pose) {
+    ellipse(ctx, 0, 0, 16, 4.5, 'rgba(0,0,0,0.28)', null);
+    if (pose.capture) ctx.translate(0, Math.abs(Math.sin(pose.t * 9)) * -3);
+    (PLANS[look.plan] || biped)(ctx, P, look, pose);
+  }
+
+  let flashC = null;
+  function flashCanvas(w, h) {
+    if (!flashC) flashC = document.createElement('canvas');
+    if (flashC.width < w) flashC.width = w;
+    if (flashC.height < h) flashC.height = h;
+    return flashC;
+  }
+
+  /** A still picture of an enemy, for the wiki and the level screen (cached). */
+  const stills = new Map();
+  function still(id, size = 96, silhouette = false) {
+    const key = `${id}|${size}|${silhouette}`;
+    if (stills.has(key)) return stills.get(key);
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const e = BATTLE_DATA.ENEMIES[id];
+    const big = (e && e.look.size) || 1;
+    ctx.translate(size / 2, size * 0.86);
+    draw(ctx, id, { t: 0.4, walk: 0.1, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 1 }, (size * 0.62) / Math.max(1, big));
+    if (silhouette) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = '#2a2440';
+      ctx.fillRect(0, 0, size, size);
+    }
+    const url = c.toDataURL();
+    stills.set(key, url);
+    return url;
+  }
+
+  return { draw, still, palette, glowSprite };
+})();

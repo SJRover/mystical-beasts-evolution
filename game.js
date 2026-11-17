@@ -245,6 +245,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Load save data
   loadGame();
+  // 1.4: battle mode (battle.js): the Battle tab, and noting beasts' prestige from here on.
+  if (typeof BATTLE !== 'undefined') { try { BATTLE.init(); } catch (e) { console.error('battle init', e); } }
 
   // Mobile drawer listeners
   const menuBtn = document.getElementById('menu-toggle-btn');
@@ -375,7 +377,9 @@ function saveGame() {
     beastHubBeasts: state.beastHubBeasts,
     lastDailySpinDate: state.lastDailySpinDate,
     maxTimeSeen: state.maxTimeSeen,
-    isTutorialCompleted: state.isTutorialCompleted
+    isTutorialCompleted: state.isTutorialCompleted,
+    // 1.4: battle mode's progress (battle.js); older saves have none and start fresh.
+    battle: state.battle || null
   };
 
   localStorage.setItem('mystic_beasts_evolution_save', JSON.stringify(saveData));
@@ -462,6 +466,7 @@ function loadGame() {
     state.lastDailySpinDate = saveData.lastDailySpinDate || '';
     state.maxTimeSeen = saveData.maxTimeSeen || 0;
     state.isTutorialCompleted = typeof saveData.isTutorialCompleted !== 'undefined' ? saveData.isTutorialCompleted : false;
+    state.battle = saveData.battle || null;
 
     // Map Prime System
     if (saveData.primeSystem) {
@@ -591,6 +596,7 @@ function loadGame() {
       state.t20MergesCount = 0;
       state.premiumCratesCount = 0;
       state.doubleEssenceEndTime = 0;
+      state.battle = null;
       state.beastsOnField = [];
 
       state.primeSystem = {
@@ -5137,7 +5143,8 @@ function checkDailySpinAvailable() {
     return false; // CHEATER! Date rollback detected.
   }
   const today = new Date().getFullYear() + '-' + (new Date().getMonth() + 1) + '-' + new Date().getDate();
-  return state.lastDailySpinDate !== today;
+  // 1.4: or a free spin earned in battle (every five stars).
+  return state.lastDailySpinDate !== today || ((state.battle && state.battle.freeSpins) || 0) > 0;
 }
 
 function updateDailySpinHUD() {
@@ -5149,7 +5156,7 @@ function updateDailySpinHUD() {
 
 function showDailySpinModal() {
   if (!checkDailySpinAvailable()) {
-    showWarning("Spin Claimed", "You have already claimed your free daily spin today! Come back tomorrow.");
+    showWarning("Spin Claimed", "You have already claimed your free daily spin today! Come back tomorrow. Earn free spins in battle: one for every five stars.");
     return;
   }
   const modal = document.getElementById('daily-spin-modal');
@@ -5266,6 +5273,9 @@ function triggerDailySpin() {
   const spinBtn = document.getElementById('wheel-spin-btn');
   spinBtn.classList.add('disabled');
   spinBtn.disabled = true;
+  // 1.4: once today's spin is used, this one is a battle free spin.
+  const todayKey = new Date().getFullYear() + '-' + (new Date().getMonth() + 1) + '-' + new Date().getDate();
+  const usingFreeSpin = state.lastDailySpinDate === todayKey && state.battle && state.battle.freeSpins > 0;
   
   dailySpinWinningRarity = rollRarity();
   dailySpinWinningTier = rollTier();
@@ -5311,9 +5321,11 @@ function triggerDailySpin() {
     if (typeof FX !== 'undefined') { FX.spinLights(false); FX.spinReveal(template.rarity); }
     
     const today = new Date().getFullYear() + '-' + (new Date().getMonth() + 1) + '-' + new Date().getDate();
-    state.lastDailySpinDate = today;
+    if (usingFreeSpin) state.battle.freeSpins--;
+    else state.lastDailySpinDate = today;
     saveGame();
     updateDailySpinHUD();
+    if (typeof BATTLE !== 'undefined') BATTLE.renderTab();
     
   }, 4000);
 }
@@ -5399,6 +5411,7 @@ function startInteractiveTutorial() {
   state.t20MergesCount = 0;
   state.premiumCratesCount = 0;
   state.doubleEssenceEndTime = 0;
+  state.battle = null;
 
   state.primeSystem = {
     essence: 0,
@@ -5542,6 +5555,7 @@ function setupTutorialListeners() {
       state.t20MergesCount = 0;
       state.premiumCratesCount = 0;
       state.doubleEssenceEndTime = 0;
+      state.battle = null;
 
       state.primeSystem = {
         essence: 0,
