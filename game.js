@@ -4051,6 +4051,11 @@ function updatePrestigeConfirmBtn() {
 }
 
 function executePrestigeAscent() {
+  // 1.4: from the Beast Hub, back to the field first, so the prestige clears the field and the hub
+  // keeps its showcase. Prestiging in the hub cleared the showcase instead and left the field as
+  // it was before, which came back on leaving the hub: the whole field went on into the next
+  // prestige (Sam, 17 Nov).
+  if (state.inBeastHub) toggleBeastHub(false);
   const target = getPrestigeTarget();
   if (state.essence < target) return;
 

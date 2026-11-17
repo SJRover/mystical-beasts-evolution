@@ -768,7 +768,9 @@ body {
   background: rgba(34, 184, 207, 0.12);
   border: 2.5px dashed var(--color-accent);
   border-radius: 50%;
-  animation: pulse-dashed 1.2s linear infinite;
+  /* No animation: pulse-dashed moves an SVG stroke's dashes, which a plain box does not have, so
+     it never showed; but it made the browser restyle every matching beast every frame, and with a
+     crowded field holding a beast fell to 30 fps (1.4). */
   box-shadow: 0 0 15px rgba(34, 184, 207, 0.4);
 }
 
