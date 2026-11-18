@@ -48,10 +48,15 @@ const BattleEngine = (() => {
      */
     constructor(level, deck, opts = {}) {
       this.level = level;
+      // Two rules change the battle itself: slow orders (cards recharge twice as long) and a small
+      // band (five of yours on the field at most).
+      const kind = (level.rule || {}).kind;
       this.cards = deck.map((c) => {
         const stats = BATTLE_DATA.beastStats(c.id, c.prestige || 0);
-        return { id: c.id, prestige: c.prestige || 0, stats, cooldown: BATTLE_DATA.cooldownOf(c.id) * (opts.rest || 1), ready: 0 };
+        return { id: c.id, prestige: c.prestige || 0, stats, cooldown: BATTLE_DATA.cooldownOf(c.id) * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0 };
       });
+      this.maxYours = kind === 'few' ? 5 : MAX_YOURS;
+      this.garrisoned = false;
       this.heavyEvery = opts.fury ? 3 : 5;
       this.perk = opts.perk || null;
       this.units = [];
@@ -75,7 +80,7 @@ const BattleEngine = (() => {
     /** Whether card `i` can be played now. */
     canDeploy(i) {
       const c = this.cards[i];
-      return !this.result && !!c && this.time >= c.ready && this.yours.length < MAX_YOURS;
+      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.maxYours;
     }
 
     /**
@@ -106,23 +111,33 @@ const BattleEngine = (() => {
       const e = BATTLE_DATA.ENEMIES[s.foe];
       const role = BATTLE_DATA.ROLES[e.role];
       const elite = !!s.elite && e.role !== 'boss';
-      const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points), BATTLE_DATA.enemyRadius(e.id) * (elite ? 1.15 : 1), { hpMul: role.hp || 1, multi: role.multi || 1, boss: e.role === 'boss', elite });
+      // A champion (battle_data.js, the Champion pattern): its stats from several times the level's
+      // points (`mul`), a size and a half up, hitting two at once. A horde's are weaker (mul < 1).
+      const champ = !!s.champ && e.role !== 'boss';
+      const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points * (s.mul || 1)), Math.min(110, BATTLE_DATA.enemyRadius(e.id) * (elite ? 1.15 : 1) * (champ ? 1.45 : 1)), { hpMul: role.hp || 1, multi: champ ? 2 : role.multi || 1, boss: e.role === 'boss', elite });
       u.shooter = e.role === 'ranged' || e.role === 'caster';
-      if (s.announce) this.events.push({ type: 'wave', text: s.announce });
-      // Out of their camp around the pile (the middle half of the width), so it is defended.
-      const fx = 0.25 + 0.5 * s.x;
+      u.champ = champ;
+      u.weak = (s.mul || 1) < 1;
+      if (s.announce) this.events.push({ type: 'wave', text: s.announce, champ });
+      // Out of their camp around the pile (the middle half of the width), so it is defended; a
+      // horde or a garrison across the whole width, in rows.
+      const fx = s.wide ? s.x : 0.25 + 0.5 * s.x;
       u.x = Math.max(u.r + 10, Math.min(ARENA.w - u.r - 10, fx * ARENA.w));
       const gap = PILE_R + u.r + 6;
-      if (Math.abs(u.x - PILES.foe.x) < gap) u.x = PILES.foe.x + (u.x < PILES.foe.x ? -gap : gap);
-      u.y = PILES.foe.y + 50;
+      if (!s.row && Math.abs(u.x - PILES.foe.x) < gap) u.x = PILES.foe.x + (u.x < PILES.foe.x ? -gap : gap);
+      u.y = PILES.foe.y + 50 + (s.row || 0) * 58;
       this.units.push(u);
       this.seen.add(e.id);
       this.events.push({ type: 'spawn', unit: u });
     }
 
-    /** The level's defenders, out beside their pile. */
+    /** The level's defenders, out beside their pile; the first time, a fortress's whole garrison. */
     rally() {
       (this.level.rally || []).forEach((id, i) => this.spawnFoe({ foe: id, x: 0.5 + (i % 2 ? 1 : -1) * (0.12 + 0.05 * i) }));
+      if (!this.garrisoned && (this.level.garrison || []).length) {
+        this.garrisoned = true;
+        this.level.garrison.forEach((s, i) => this.spawnFoe(i ? s : { ...s, announce: 'The garrison comes out!' }));
+      }
       this.events.push({ type: 'rally' });
     }
 

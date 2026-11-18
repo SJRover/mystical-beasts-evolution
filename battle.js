@@ -92,7 +92,9 @@ const BATTLE = (() => {
   }
   const miniStats = (s) => `<i class="atk">A${s.atk}</i><i class="hp">H${s.hp}</i><i class="spd">S${s.spd}</i><i class="rng">R${s.rng}</i>`;
   const heartsHtml = (d) => { let s = ''; for (let i = 1; i <= 5; i++) s += `<span class="bt-dstar ${d >= i ? 'full' : d >= i - 0.5 ? 'half' : ''}">★</span>`; return s; };
-  const RULE_ICON = { quick: '⏱', range: '🎯', speed: '💨', rarity: '◇', three: '3' };
+  const RULE_ICON = { quick: '⏱', range: '🎯', speed: '💨', rarity: '◇', three: '3', slow: '🐢', few: '5', tough: '❤' };
+  /** The four patterns unlike the rest get a badge on their level's tile. */
+  const PATTERN_ICON = { champion: '👑', horde: '👥', fortress: '🏰', tide: '🌊' };
   function ruleText(rule) {
     const v = rule.value;
     return {
@@ -101,6 +103,9 @@ const BATTLE = (() => {
       speed: `Only beasts with Speed ${v} or more.`,
       rarity: 'Only Common and Rare beasts.',
       three: 'Three beasts at most.',
+      slow: 'Every card takes twice as long to recharge, so choose each one with care.',
+      few: 'At most five of your beasts on the field at once.',
+      tough: `Only beasts with Health ${v} or more.`,
     }[rule.kind];
   }
   const PERK_LOOK = {
@@ -294,6 +299,7 @@ const BATTLE = (() => {
           <span class="bt-level-n">${n}</span>
           ${lv.boss ? '<span class="bt-level-boss">BOSS</span>' : ''}
           ${lv.rule ? `<span class="bt-level-rule" title="${D.RULES[lv.rule.kind].name}">${RULE_ICON[lv.rule.kind]}</span>` : ''}
+          ${PATTERN_ICON[lv.pattern] ? `<span class="bt-level-pat" title="${D.PATTERNS[lv.pattern].name}">${PATTERN_ICON[lv.pattern]}</span>` : ''}
           ${won ? `<span class="bt-level-done ${b.stars[id] ? 'star' : ''}"><i>✓</i>${b.stars[id] ? '<em>★</em>' : ''}</span>` : ''}
           ${open ? '' : '<span class="bt-level-lock">🔒</span>'}
         </button>`;
@@ -302,7 +308,8 @@ const BATTLE = (() => {
         <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>One chest for the whole world: earn all ${w.levels} stars in ${w.name} for a guaranteed ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.</span></div><em>${chest}</em></div>
         <div class="bt-dim bt-levels-note">Won levels can be played again, for stars or for the enemies a challenge needs.</div>
         <div class="bt-levels">${tiles}</div>
-        <div class="bt-dim bt-rule-key">Rule levels: ⏱ quick cards · 🎯 long reach · 💨 swift · ◇ Commons and Rares · 3 three beasts</div>`;
+        <div class="bt-dim bt-rule-key">Rules: ⏱ quick cards · 🎯 long reach · 💨 swift · ◇ Commons and Rares · 3 three beasts · 🐢 slow orders · 5 five on the field · ❤ thick skin</div>
+        <div class="bt-dim bt-rule-key">Levels unlike the rest: 👑 champions · 👥 a horde · 🏰 a fortress · 🌊 a rising tide</div>`;
       sh.body.querySelectorAll('.bt-level').forEach((btn) => btn.addEventListener('click', () => {
         const n = Number(btn.dataset.n);
         if (!levelOpen(w, n)) { showWarning('Level locked', `Win level ${n - 1} first.`); return; }
@@ -319,12 +326,13 @@ const BATTLE = (() => {
   const allowedIn = (level, id) => !level || D.ruleAllows(level.rule, id, D.beastStats(id, prestigeOf(id)));
   const deckMax = (level) => (level && level.rule && level.rule.kind === 'three' ? 3 : 6);
   /** A level with a rule keeps its own six, so your usual six is not lost. */
-  const deckKey = (sys, level) => (level && level.rule ? `${sys}|${level.rule.kind}|${level.rule.value}` : sys);
+  const limits = (level) => !!(level && level.rule && D.DECK_RULES.includes(level.rule.kind));
+  const deckKey = (sys, level) => (limits(level) ? `${sys}|${level.rule.kind}|${level.rule.value}` : sys);
   function bestDeck(sys, level) {
     return owned(sys).filter((id) => allowedIn(level, id)).sort((a, c) => powerOf(c) - powerOf(a)).slice(0, deckMax(level));
   }
   function foesOf(level) {
-    const ids = [...new Set([...level.spawns.map((s) => s.foe), ...(level.rally || [])])];
+    const ids = [...new Set([...level.spawns.map((s) => s.foe), ...(level.rally || []), ...(level.garrison || []).map((s) => s.foe)])];
     return ids.sort((a, c) => (D.ENEMIES[a].role === 'boss') - (D.ENEMIES[c].role === 'boss') || D.ENEMIES[a].debut - D.ENEMIES[c].debut);
   }
   const SORTS = [['tier', 'Tier'], ['rarity', 'Rarity'], ['atk', 'ATK'], ['hp', 'HP'], ['spd', 'SPD'], ['rng', 'RNG']];
@@ -341,7 +349,7 @@ const BATTLE = (() => {
     const key = deckKey(sys, level);
     const max = deckMax(level);
     const mine = owned(sys);
-    let deck = (b.decks[key] || (level.rule ? [] : b.decks[sys]) || []).filter((id) => mine.includes(id) && allowedIn(level, id)).slice(0, max);
+    let deck = (b.decks[key] || (limits(level) ? [] : b.decks[sys]) || []).filter((id) => mine.includes(id) && allowedIn(level, id)).slice(0, max);
     if (!deck.length) deck = bestDeck(sys, level);
     if (!b.pickSort) b.pickSort = { key: 'tier', dir: -1, rarity: 'all' };
     const sort = b.pickSort;
@@ -642,7 +650,7 @@ const BATTLE = (() => {
     const b = run.battle;
     if (!b.canDeploy(i)) {
       if (b.result) return;
-      if (b.yours.length >= BE.MAX_YOURS) toast(`${BE.MAX_YOURS} beasts is the most on the field at once`);
+      if (b.yours.length >= b.maxYours) toast(`${b.maxYours} beasts is the most on the field at once${b.maxYours < BE.MAX_YOURS ? ' here' : ''}`);
       else toast(`${D.T(b.cards[i].id).name} is still recharging`);
       sfx('nope');
       return;
@@ -715,12 +723,33 @@ const BATTLE = (() => {
 
   /** How a beast attacks up close, from how it moves and its best stat. */
   const beastStyles = new Map();
+  /**
+   * How a beast walks and fights (Sam, 18 Nov: "improved walking or running animation and unique
+   * and varied attack animation depending on their stats or who they are ... same with beasts"),
+   * from how it gets about, its best stat and a fixed pick of its own so two alike still differ.
+   * Walkers: quick ones trot, tough ones waddle with a thud each step, strong ones stride. Hoppers
+   * bound, fliers flap, floaters drift, swimmers undulate. Up close: sluggers slam down or chomp
+   * twice, quick ones pounce or strike three times in a flurry, tough ones ram or stomp a ring
+   * into the ground, fliers swoop, floaters swoop or twirl, swimmers roll. Ranged beasts with
+   * Range as their best stat rise over a glowing ring to channel their shot; others spit and kick.
+   */
   function beastStyle(id) {
     if (!beastStyles.has(id)) {
       const s = D.beastStats(id, 0);
       const mo = motionOf(id);
       const top = ['atk', 'hp', 'spd'].sort((a, c) => s[c] - s[a])[0];
-      beastStyles.set(id, mo === 'fly' || mo === 'float' ? 'swoop' : mo === 'swim' ? 'roll' : mo === 'hop' || top === 'spd' ? 'pounce' : top === 'hp' ? 'ram' : 'slam');
+      const own = D.hash(id + '|moves') % 2;
+      let atk;
+      if (mo === 'fly') atk = 'swoop';
+      else if (mo === 'float') atk = own ? 'twirl' : 'swoop';
+      else if (mo === 'swim') atk = 'roll';
+      else if (mo === 'hop') atk = top === 'atk' ? 'slam' : 'pounce';
+      else if (top === 'spd') atk = own ? 'flurry' : 'pounce';
+      else if (top === 'hp') atk = own ? 'stomp' : 'ram';
+      else atk = own ? 'chomp' : 'slam';
+      const walk = mo === 'walk' ? (top === 'spd' ? 'trot' : top === 'hp' ? 'waddle' : 'stride') : mo;
+      const ranged = s.rng >= Math.max(s.atk, s.hp, s.spd) ? 'channel' : 'spit';
+      beastStyles.set(id, { atk, walk, ranged, pace: 1 + Math.min(0.6, (s.spd - 1) * 0.05) });
     }
     return beastStyles.get(id);
   }
@@ -734,9 +763,10 @@ const BATTLE = (() => {
           sfx('spawn');
           if (D.ENEMIES[u.kind].look.shadow) burst(u.x, u.y - 10, '#6a5a8a', 8, 90, 'smoke'); else burst(u.x, u.y, '#c8b8a0', 8, 80, 'smoke');
           if (u.elite) { burst(u.x, u.y - u.r, '#ffd84a', 16, 200, 'star'); ring(u.x, u.y, u.r * 2.2, '#ffd84a'); }
+          if (u.champ) { burst(u.x, u.y - u.r, '#ff6a3c', 26, 260, 'spark'); ring(u.x, u.y, u.r * 2.6, '#ff6a3c'); run.shake = Math.max(run.shake || 0, 7); }
           if (!B().seen[u.kind]) seenNow(u.kind);
           break;
-        case 'wave': run.banner = { text: ev.text, t: 2.2, max: 2.2 }; sfx('rally'); break;
+        case 'wave': run.banner = { text: ev.text, t: 2.2, max: 2.2, champ: !!ev.champ }; sfx('rally'); break;
         case 'swing':
           if (ev.ranged) {
             const style = shotStyle(u);
@@ -799,7 +829,7 @@ const BATTLE = (() => {
         case 'DEITY': ring(x, y, u.r * 1.6, '#ffe9a0'); burst(x, y, '#ffd84a', 6 * n, 200, 'spark'); break;
         default: burst(x, y, colourOf(by), 6 * n, 200, 'spark');
       }
-      if (!shoots(by) && beastStyle(by.kind) === 'slam') burst(u.x, u.y, '#a89880', 3 * n, 90, 'smoke');
+      if (!shoots(by) && ['slam', 'stomp'].includes(beastStyle(by.kind).atk)) burst(u.x, u.y, '#a89880', 3 * n, 90, 'smoke');
     } else {
       const st = ENEMY_ART.styleOf(D.ENEMIES[by.kind].look.weapon);
       const col = colourOf(by);
@@ -1031,7 +1061,22 @@ const BATTLE = (() => {
    * (Sam, 17 Nov: the black one was hard to see): a white heart with a dark rim and an angry face,
    * the white draining from the top as it is hurt; the face shows on both the full and the empty part.
    */
-  function heart(ctx, x, y, size, frac, mine, elite) {
+  /** A small gold crown (champions, and their call-out). */
+  function crown(ctx, x, y, w) {
+    const h = w * 0.62;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2, y + h / 2);
+    ctx.lineTo(x - w / 2, y - h * 0.15); ctx.lineTo(x - w * 0.25, y + h * 0.12); ctx.lineTo(x, y - h / 2);
+    ctx.lineTo(x + w * 0.25, y + h * 0.12); ctx.lineTo(x + w / 2, y - h * 0.15); ctx.lineTo(x + w / 2, y + h / 2);
+    ctx.closePath();
+    ctx.fillStyle = '#ffd43b'; ctx.fill();
+    ctx.lineWidth = Math.max(1, w * 0.07); ctx.strokeStyle = '#7a4a00'; ctx.stroke();
+    ctx.fillStyle = '#ff3c3c';
+    ctx.beginPath(); ctx.arc(x, y + h * 0.2, w * 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function heart(ctx, x, y, size, frac, mine, elite, champ) {
     const h = size;
     const top = y + h * 0.35 - frac * h * 0.84;
     heartPath(ctx, x, y, h);
@@ -1059,7 +1104,7 @@ const BATTLE = (() => {
     ctx.restore();
     heartPath(ctx, x, y, h);
     ctx.lineWidth = Math.max(1.6, h * 0.12);
-    ctx.strokeStyle = mine ? '#ffffff' : elite ? '#ffd43b' : '#1a0a12';
+    ctx.strokeStyle = mine ? '#ffffff' : champ ? '#ff6a3c' : elite ? '#ffd43b' : '#1a0a12';
     ctx.stroke();
     if (!mine) { ctx.lineWidth = Math.max(0.8, h * 0.04); ctx.strokeStyle = 'rgba(255,255,255,0.55)'; heartPath(ctx, x, y, h * 1.16); ctx.stroke(); }
   }
@@ -1233,7 +1278,10 @@ const BATTLE = (() => {
       if (u.state === 'dying') continue;
       const hgt = u.side === 'you' ? u.r * 2.85 : u.r * (D.ENEMIES[u.kind].look.plan === 'float' ? 3.0 : 3.5);
       const size = Math.max(15, Math.min(u.boss ? 42 : 30, u.r * z * (u.boss ? 0.9 : 0.85)));
-      heart(ctx, sx(u.x), Math.max(run.top + size * 0.55, sy(u.y - hgt) - size * 0.45), size, u.hp / u.maxHp, u.side === 'you', u.elite);
+      const size2 = u.champ ? Math.min(40, size * 1.25) : size;
+      const hy = Math.max(run.top + size2 * 0.55 + (u.champ ? size2 * 0.5 : 0), sy(u.y - hgt) - size2 * 0.45);
+      heart(ctx, sx(u.x), hy, size2, u.hp / u.maxHp, u.side === 'you', u.elite, u.champ);
+      if (u.champ) crown(ctx, sx(u.x), hy - size2 * 0.62, size2 * 0.62);
     }
     drawFx(ctx, z);
     ctx.restore();
@@ -1245,11 +1293,12 @@ const BATTLE = (() => {
       const a = Math.min(1, k * 4, (1 - k) * 8);
       const fs = Math.min(34, run.vw * 0.085);
       ctx.globalAlpha = a;
-      ctx.fillStyle = 'rgba(90,10,20,0.78)';
-      const bw = Math.min(run.vw - 24, fs * (run.banner.text.length * 0.62 + 2));
+      ctx.fillStyle = run.banner.champ ? 'rgba(130,30,0,0.85)' : 'rgba(90,10,20,0.78)';
+      const bw = Math.min(run.vw - 24, fs * (run.banner.text.length * 0.62 + 2) + (run.banner.champ ? fs * 1.6 : 0));
       const by = run.top + 46;
       ctx.fillRect(run.vw / 2 - bw / 2, by - fs * 0.85, bw, fs * 1.3);
       ctx.fillStyle = '#ffd43b'; ctx.fillRect(run.vw / 2 - bw / 2, by - fs * 0.85, bw, 3); ctx.fillRect(run.vw / 2 - bw / 2, by + fs * 0.45 - 3, bw, 3);
+      if (run.banner.champ) { crown(ctx, run.vw / 2 - bw / 2 + fs * 0.75, by - fs * 0.2, fs * 0.8); crown(ctx, run.vw / 2 + bw / 2 - fs * 0.75, by - fs * 0.2, fs * 0.8); }
       ctx.font = `800 ${fs}px Fredoka, sans-serif`; ctx.textAlign = 'center';
       ctx.fillStyle = '#ffffff'; ctx.fillText(run.banner.text, run.vw / 2, by + fs * 0.2);
       ctx.globalAlpha = 1;
@@ -1401,15 +1450,57 @@ const BATTLE = (() => {
     const z = run.cam.zoom;
     const S = u.r * 3 * z;
     const mo = motionOf(u.kind);
-    const walk = run.walk.get(u.uid) || 0;
-    let ox = 0, oy = 0, scx = 1, scy = 1, rot = 0, alpha = 1;
+    const st = beastStyle(u.kind);
+    const walk = (run.walk.get(u.uid) || 0) * st.pace;
+    let ox = 0, oy = 0, scx = 1, scy = 1, rot = 0, alpha = 1, under = 0;
     if (u.state === 'walk') {
       const ph = walk * Math.PI * 2;
-      if (mo === 'hop') { oy = -Math.abs(Math.sin(ph)) * S * 0.14; scy = 1 + Math.sin(ph * 2) * 0.05; }
-      else if (mo === 'fly' || mo === 'float' || mo === 'swim') { oy = -S * 0.08 + Math.sin(t * 3 + u.uid) * S * 0.04; rot = Math.sin(t * 2 + u.uid) * 0.05; }
-      else { oy = -Math.abs(Math.sin(ph)) * S * 0.05; rot = Math.sin(ph) * 0.06; }
+      const foot = Math.abs(Math.sin(ph));
+      switch (st.walk) {
+        case 'hop': {
+          // A bound: crouch, stretch up into the air, squash on landing.
+          const air = Math.abs(Math.sin(ph * 0.75));
+          oy = -air * S * 0.2;
+          scy = air > 0.2 ? 1 + air * 0.08 : 1 - (0.2 - air) * 0.6;
+          scx = 2 - scy;
+          if (air < 0.08 && !u._landed) { u._landed = true; burst(u.x, u.y, '#c8b8a0', 2, 40, 'smoke'); } else if (air > 0.3) u._landed = false;
+          break;
+        }
+        case 'fly': {
+          // Wings beating: quick lifts on each downstroke, a squash and stretch with it.
+          const flap = Math.sin(t * 11 + u.uid);
+          oy = -S * 0.16 + flap * S * 0.035 + Math.sin(t * 1.7 + u.uid) * S * 0.03;
+          scy = 1 + flap * 0.05; scx = 1 - flap * 0.03;
+          rot = Math.sin(t * 1.3 + u.uid) * 0.06;
+          break;
+        }
+        case 'float':
+          oy = -S * 0.1 + Math.sin(t * 2.2 + u.uid) * S * 0.05;
+          rot = Math.sin(t * 1.4 + u.uid) * 0.09;
+          if (Math.random() < 0.06) burst(u.x + (Math.random() - 0.5) * u.r, u.y - u.r * 0.6, colourOf(u), 1, 25, 'spark');
+          break;
+        case 'swim':
+          // Undulating through the air as if through water, a bubble now and then.
+          ox = Math.sin(ph * 1.2) * S * 0.07;
+          oy = -S * 0.07 + Math.sin(t * 2.6 + u.uid) * S * 0.03;
+          rot = Math.cos(ph * 1.2) * 0.14;
+          if (Math.random() < 0.04) burst(u.x, u.y - u.r * 0.8, '#bfe8ff', 1, 30, 'spark');
+          break;
+        case 'trot':
+          // Quick light steps, up on its toes, a bounce in each.
+          oy = -foot * S * 0.07; scy = 1 + foot * 0.04; rot = Math.sin(ph) * 0.05;
+          break;
+        case 'waddle':
+          // Heavy, rocking side to side, squashing down with a thud at each step.
+          oy = -foot * S * 0.025; rot = Math.sin(ph) * 0.13; scy = 1 - (1 - foot) * 0.06; scx = 2 - scy;
+          if (foot < 0.06 && !u._landed) { u._landed = true; burst(u.x + Math.sin(ph) * u.r * 0.5, u.y, '#b8a890', 2, 35, 'smoke'); } else if (foot > 0.3) u._landed = false;
+          break;
+        default: // stride: a firm step with a nod
+          oy = -foot * S * 0.05; rot = Math.sin(ph) * 0.06; scy = 1 + Math.cos(ph * 2) * 0.025;
+      }
     } else {
       oy = Math.sin(t * 2.4 + u.uid) * S * 0.015;
+      if (mo === 'fly' || mo === 'float' || mo === 'swim') oy -= S * 0.1;
     }
     const ph = swingPhase(u);
     const heavyNow = ph >= 0 && (ph < 0.45 ? nextIsHeavy(u) : u.lastHeavy);
@@ -1422,7 +1513,32 @@ const BATTLE = (() => {
     const p = ph >= 0.45 ? (ph - 0.45) / 0.55 : -1;
     const hit = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.7) * Math.PI);
     if (ph >= 0 && !shoots(u)) {
-      switch (beastStyle(u.kind)) {
+      switch (st.atk) {
+        case 'flurry': {
+          // Three quick strikes in the time of one.
+          if (p < 0) { scx *= 1 + wind * 0.06; scy *= 1 - wind * 0.06; }
+          else { const jab = Math.abs(Math.sin(Math.min(1, p / 0.8) * Math.PI * 3)); ox += nx * jab * S * 0.2 * hv; oy += ny * jab * S * 0.2 * hv; rot += dirx * jab * 0.1; scx *= 1 + jab * 0.06; }
+          break;
+        }
+        case 'chomp': {
+          // Two bites: squash down onto it, open up, squash again.
+          if (p < 0) { scy *= 1 + wind * 0.1; scx *= 1 - wind * 0.05; ox -= nx * wind * S * 0.04; }
+          else { const b = Math.abs(Math.sin(Math.min(1, p / 0.8) * Math.PI * 2)); ox += nx * b * S * 0.15 * hv; oy += ny * b * S * 0.15 * hv; scy *= 1 - b * 0.16 * hv; scx *= 1 + b * 0.1 * hv; }
+          break;
+        }
+        case 'stomp': {
+          // Up on its back legs, then down hard: a ring of dust.
+          if (p < 0) { oy -= wind * S * 0.14 * hv; scy *= 1 + wind * 0.1; rot -= dirx * wind * 0.12; }
+          else { const k = p < 0.2 ? 1 - p / 0.2 : 0; oy -= k * S * 0.14 * hv; const sq = p < 0.5 ? Math.sin((p / 0.5) * Math.PI) : 0; scy *= 1 - sq * 0.15; scx *= 1 + sq * 0.12; if (p > 0.15 && !u._stomped) { u._stomped = true; ring(u.x, u.y, u.r * (heavyNow ? 3.2 : 2.2), '#d8c8a8'); } }
+          if (p < 0) u._stomped = false;
+          break;
+        }
+        case 'twirl': {
+          // A spin into it, trailing sparkles.
+          if (p < 0) { oy -= wind * S * 0.08; rot -= dirx * wind * 0.3; }
+          else { rot += dirx * Math.min(1, p / 0.7) * Math.PI * 2; ox += nx * hit * S * 0.22 * hv; oy += ny * hit * S * 0.22 * hv; if (Math.random() < 0.5) burst(u.x, u.y - u.r * 0.6, colourOf(u), 1, 60, 'spark'); }
+          break;
+        }
         case 'slam':
           if (p < 0) { oy -= wind * S * 0.2 * hv; scy *= 1 + wind * 0.08; scx *= 1 - wind * 0.04; }
           else { const k = p < 0.25 ? 1 - p / 0.25 : 0; oy -= k * S * 0.2 * hv; const sq = p < 0.5 ? Math.sin((p / 0.5) * Math.PI) : 0; scy *= 1 - sq * 0.18 * hv; scx *= 1 + sq * 0.16 * hv; ox += nx * sq * S * 0.05; }
@@ -1444,9 +1560,16 @@ const BATTLE = (() => {
           else { ox += nx * hit * S * 0.24 * hv; oy += ny * hit * S * 0.24 * hv; rot += dirx * (heavyNow ? p * Math.PI * 2 : hit * 0.5); }
       }
     } else if (ph >= 0) {
-      // Ranged: rise as the shot gathers, then a kick back from the target.
-      if (p < 0) { oy -= wind * S * 0.06; scx *= 1 + wind * 0.05 * hv; scy *= 1 + wind * 0.05 * hv; }
-      else { const k = p < 0.4 ? 1 - p / 0.4 : 0; ox -= nx * k * S * 0.08 * hv; oy -= ny * k * S * 0.08 * hv; scx *= 1 + k * 0.08; scy *= 1 - k * 0.06; }
+      if (st.ranged === 'channel') {
+        // Up over a glowing ring as the shot gathers, held there as it goes, then down.
+        const k = p < 0 ? wind : p < 0.5 ? 1 : 1 - (p - 0.5) / 0.5;
+        oy -= k * S * 0.12; under = k; rot += Math.sin(t * 9) * 0.04 * k;
+        if (p >= 0 && p < 0.3) { scx *= 1 + (1 - p / 0.3) * 0.08; scy *= 1 - (1 - p / 0.3) * 0.05; }
+      } else {
+        // Spit: rise as the shot gathers, then a kick back from the target.
+        if (p < 0) { oy -= wind * S * 0.06; scx *= 1 + wind * 0.05 * hv; scy *= 1 + wind * 0.05 * hv; }
+        else { const k = p < 0.4 ? 1 - p / 0.4 : 0; ox -= nx * k * S * 0.08 * hv; oy -= ny * k * S * 0.08 * hv; scx *= 1 + k * 0.08; scy *= 1 - k * 0.06; }
+      }
     }
     if (u.state === 'dying') {
       const d = Math.min(1, u.dyingT / BE.DYING);
@@ -1454,10 +1577,21 @@ const BATTLE = (() => {
     }
     if (u.state === 'capture') oy -= Math.abs(Math.sin(t * 9)) * S * 0.05;
     const x = sx(u.x), y = sy(u.y);
-    // Ground shadow, smaller under a flier.
+    // Ground shadow, smaller the higher it is.
     ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    const fl = mo === 'fly' || mo === 'float' ? 0.7 : 1;
-    ctx.beginPath(); ctx.ellipse(x, y, S * 0.3 * fl, S * 0.09 * fl, 0, 0, Math.PI * 2); ctx.fill();
+    const fl = Math.max(0.45, 1 + oy / S * 1.6) * (mo === 'fly' || mo === 'float' ? 0.85 : 1);
+    ctx.beginPath(); ctx.ellipse(x + ox, y, S * 0.3 * fl, S * 0.09 * fl, 0, 0, Math.PI * 2); ctx.fill();
+    // The channelling ring under a long-range beast.
+    if (under > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.75 * under;
+      ctx.strokeStyle = colourOf(u); ctx.lineWidth = Math.max(1.5, 3 * z);
+      ctx.beginPath(); ctx.ellipse(x, y, S * 0.36, S * 0.11, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = Math.max(1, 1.5 * z);
+      ctx.beginPath(); ctx.ellipse(x, y, S * 0.24, S * 0.075, 0, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 5; i++) { const a = t * 3 + (i * Math.PI * 2) / 5; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * S * 0.3, y + Math.sin(a) * S * 0.09, Math.max(1, 2 * z), 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
     // A heavy blow, or a shot, gathering: a glow in the beast's colour.
     if (ph >= 0 && ph < 0.6 && (heavyNow || shoots(u))) {
       const k = ph < 0.45 ? ph / 0.45 : 1;
@@ -1471,8 +1605,10 @@ const BATTLE = (() => {
     ctx.translate(x + ox, y + oy);
     ctx.rotate(rot);
     ctx.scale(scx * (tgt && dirx < 0 ? -1 : 1), scy);
-    ctx.drawImage(img, -S / 2, -S * 0.92, S, S);
-    if (u._hurt > 0 && run.whites[u.kind]) { ctx.globalAlpha = alpha * u._hurt * 0.75; ctx.drawImage(run.whites[u.kind], -S / 2, -S * 0.92, S, S); }
+    // A legend's picture stands on a line higher up its picture than a beast's does.
+    const foot = D.LEGENDS[u.kind] ? 0.81 : 0.92;
+    ctx.drawImage(img, -S / 2, -S * foot, S, S);
+    if (u._hurt > 0 && run.whites[u.kind]) { ctx.globalAlpha = alpha * u._hurt * 0.75; ctx.drawImage(run.whites[u.kind], -S / 2, -S * foot, S, S); }
     ctx.restore();
   }
 
@@ -1482,14 +1618,22 @@ const BATTLE = (() => {
     const ph = swingPhase(u);
     const heavyNow = ph >= 0 && (ph < 0.45 ? nextIsHeavy(u) : u.lastHeavy);
     const pose = {
-      t: t + u.uid * 0.37, walk: (run.walk.get(u.uid) || 0) % 1, atk: ph, heavy: heavyNow,
+      t: t + u.uid * 0.37, walk: (run.walk.get(u.uid) || 0) % 1, walkRaw: run.walk.get(u.uid) || 0, atk: ph, heavy: heavyNow,
       hurt: u._hurt || 0, dying: u.state === 'dying' ? Math.min(1, u.dyingT / BE.DYING) : 0,
       capture: u.state === 'capture', seed: u.uid, ranged: shoots(u),
     };
     ctx.save();
     ctx.translate(sx(u.x), sy(u.y));
     // Drawn to fill its footprint (battle_data.js enemyRadius), an elite a size up.
-    const px = (90 * z * D.enemySize(u.kind) * (u.elite ? 1.15 : 1)) / (e.look.size || 1);
+    const px = (90 * z * D.enemySize(u.kind) * (u.elite ? 1.15 : 1) * (u.champ ? 1.45 : 1)) / (e.look.size || 1);
+    if (u.champ && u.state !== 'dying') {
+      // A champion: a red-gold glow and a pulsing ring on the ground round it.
+      ctx.globalAlpha = 0.5 + 0.15 * Math.sin(t * 4 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ff6a3c'), -u.r * z * 1.8, -u.r * z * 2.9, u.r * z * 3.6, u.r * z * 3.6);
+      const k = (t * 0.8 + u.uid * 0.13) % 1;
+      ctx.globalAlpha = 0.85 * (1 - k); ctx.strokeStyle = '#ffb03c'; ctx.lineWidth = Math.max(1.5, 3 * z);
+      ctx.beginPath(); ctx.ellipse(0, 0, u.r * z * (0.9 + k * 0.7), u.r * z * (0.3 + k * 0.22), 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     if (u.boss) { ctx.globalAlpha = 0.25; ctx.drawImage(ENEMY_ART.glowSprite('#ff3c3c'), -u.r * z * 2.2, -u.r * z * 3.4, u.r * z * 4.4, u.r * z * 4.4); ctx.globalAlpha = 1; }
     if (u.elite && u.state !== 'dying') {
       ctx.globalAlpha = 0.32 + 0.1 * Math.sin(t * 5 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ffd43b'), -u.r * z * 1.9, -u.r * z * 3.3, u.r * z * 3.8, u.r * z * 3.8); ctx.globalAlpha = 1;
@@ -1551,7 +1695,7 @@ const BATTLE = (() => {
     // The clock is battle time: at 2× it runs twice as fast, and says so.
     clock.innerHTML = `${fmt(time)}${run.speed > 1 ? ' <small>2×</small>' : ''}`;
     run.screen.querySelector('#bt-star').innerHTML = `<span class="${under ? 'bt-gold' : 'bt-dim'}">★ under ${fmt(b.level.starTime)}</span>`;
-    run.screen.querySelector('#bt-count').textContent = `${b.yours.length}/${BE.MAX_YOURS} on the field`;
+    run.screen.querySelector('#bt-count').textContent = `${b.yours.length}/${b.maxYours} on the field`;
     const now = performance.now();
     run.screen.querySelector('#bt-tip').classList.toggle('on', now < run.tipUntil || now < run.toastUntil);
     run.cardEls.forEach((btn, i) => {
@@ -1560,8 +1704,8 @@ const BATTLE = (() => {
       const frac = left / c.cooldown;
       btn.style.setProperty('--cd', `${(frac * 360).toFixed(0)}deg`);
       btn.querySelector('.bt-cd-n').textContent = left > 0 ? Math.ceil(left) : '';
-      btn.classList.toggle('ready', left <= 0 && b.yours.length < BE.MAX_YOURS && !b.result && run.countdown <= 0);
-      btn.classList.toggle('full', b.yours.length >= BE.MAX_YOURS);
+      btn.classList.toggle('ready', left <= 0 && b.yours.length < b.maxYours && !b.result && run.countdown <= 0);
+      btn.classList.toggle('full', b.yours.length >= b.maxYours);
     });
   }
 
@@ -1608,7 +1752,7 @@ const BATTLE = (() => {
       if (battle.piles.you >= battle.pileMax.you) b.flawless = (b.flawless || 0) + 1;
       if (!b.fastest || time < b.fastest) b.fastest = Math.round(time);
       if (level.boss && battle.maxTierUsed <= 8) b.underdog = true;
-      if (level.n >= 10 && battle.maxTierUsed <= 3) b.lowTierWin = true;
+      if (level.n >= 5 && battle.maxTierUsed <= 3) b.lowTierWin = true;
       if (first) {
         const cps = typeof calculateTotalCps === 'function' ? calculateTotalCps() : 0;
         const ess = Math.max(150 * level.n * level.world * level.world, cps * 60 * D.clearMinutes(level.world, level.n));
@@ -1630,14 +1774,14 @@ const BATTLE = (() => {
     if (legends.length && typeof renderBeastopedia === 'function') { try { renderBeastopedia(); } catch (e) { console.error(e); } }
     saveGame();
     if (typeof updateHUD === 'function') updateHUD();
-    if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.sting(won);
+    if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.sting(won, D.WORLDS[level.world - 1].system);
     const w = D.WORLDS[level.world - 1];
     const next = level.n < w.levels ? level.n + 1 : null;
     const m = el(`<div class="bt-modal"><div class="bt-panel ${won ? 'won' : 'lost'}">
       <h2>${won ? 'Victory!' : r.retreated ? 'Retreated' : 'Defeat'}</h2>
       <div class="bt-result-star ${starNow ? 'on' : ''}">★</div>
       <div class="bt-dim">${won ? `Won in ${fmt(time)}` : battle.piles.you <= 0 ? 'They took your coin pile.' : 'You retreated.'} · star under ${fmt(level.starTime)}${starNow ? (newStar ? ': earned!' : '') : ''}</div>
-      ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}, won for: ${D.LEGENDS[id].how.toLowerCase()}. It battles in every world.</span></div></div>`).join('')}
+      ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}, ${D.LEGENDS[id].title}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}, won for: ${D.LEGENDS[id].how.toLowerCase()}. It battles in every world.</span></div></div>`).join('')}
       ${rewards.length ? `<div class="bt-rewards"><div class="bt-rw-head">${won ? 'Level rewards' : 'Rewards'}</div>${rewards.map((x) => `<div>${x}</div>`).join('')}</div>` : ''}
       ${ach.length ? `<div class="bt-rewards ach">${ach.map((a) => `<div><b>🏆 ${a.name}</b>${a.notes.length ? `<span>${a.notes.join(' · ')}</span>` : ''}</div>`).join('')}</div>` : ''}
       ${newPerks.length ? `<div class="bt-rewards perk">${newPerks.map((p) => `<div><b>${PERK_LOOK[p.id].icon} New perk: ${p.name}</b><span>${PERK_LOOK[p.id].short}. Choose it on a level's screen.</span></div>`).join('')}</div>` : ''}
@@ -1861,6 +2005,7 @@ const BATTLE = (() => {
         return `<button class="bt-legend ${got ? 'got' : ''}" data-id="${l.id}" style="--rc:${RARITIES[l.rarity].color}">
           <img data-legend="${l.id}" alt="">
           <b>${got ? l.name : '???'}</b>
+          ${got ? `<i class="bt-legend-title">${l.title}</i>` : ''}
           <span>${got ? `Tier ${l.tier} ${RARITIES[l.rarity].name}` : l.how}</span>
           ${got ? '' : `<em>${D.legendProgress(l.id, t)}</em>`}
         </button>`;
@@ -1874,6 +2019,7 @@ const BATTLE = (() => {
     const m = el(`<div class="bt-modal"><div class="bt-panel bt-legend-card" style="--rc:${RARITIES[l.rarity].color}">
       <img alt="">
       <h2>${got ? l.name : '???'}</h2>
+      ${got ? `<div class="bt-legend-title big">${l.title[0].toUpperCase() + l.title.slice(1)}</div>` : ''}
       <div style="color:${RARITIES[l.rarity].color};font-weight:800">Tier ${l.tier} ${RARITIES[l.rarity].name} · Folded Legend</div>
       ${got ? `<p>${l.lore}</p><div class="bt-stats">${statChips(D.beastStats(id))}</div><div class="bt-dim">Recharges in ${l.tier} s. Battles in every world.</div>`
         : `<p><b>To win it:</b> ${l.how}.<br><span class="bt-dim">So far ${D.legendProgress(id, totals())}.</span></p>`}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Foe strips</title>
+<style>
+  body { margin: 0; background: #2a2f3a; font: 11px system-ui, sans-serif; color: #dde; }
+  .row { display: flex; align-items: center; gap: 0; border-bottom: 1px solid #3a4250; }
+  .row span { width: 110px; padding-left: 6px; }
+  canvas { background: #56685c; }
+</style>
+</head>
+<body>
+<div id="rows"></div>
+<script src="../beasts.js"></script>
+<script src="../battle_data.js"></script>
+<script src="../enemies.js"></script>
+<script>
+  // tools/foes_strip.html?ids=a,b&pose=walk|atk|heavy&frames=8&size=90: each enemy in a row, frame
+  // by frame through two steps of its walk or one swing (to check the animations).
+  const q = new URLSearchParams(location.search);
+  const ids = (q.get('ids') || '').split(',').filter(Boolean);
+  const frames = Number(q.get('frames') || 8), size = Number(q.get('size') || 90), kind = q.get('pose') || 'walk';
+  for (const id of ids) {
+    const e = BATTLE_DATA.ENEMIES[id];
+    if (!e) continue;
+    const row = document.createElement('div'); row.className = 'row';
+    const label = document.createElement('span'); label.textContent = `${e.name} (${e.role})`;
+    const c = document.createElement('canvas'); c.width = frames * size; c.height = size;
+    row.append(label, c);
+    document.getElementById('rows').appendChild(row);
+    const ctx = c.getContext('2d');
+    for (let f = 0; f < frames; f++) {
+      ctx.setTransform(1, 0, 0, 1, f * size + size / 2, size * 0.92);
+      const k = f / frames;
+      const pose = { t: 1 + k, walk: (k * 2) % 1, walkRaw: k * 2, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 3, capture: false };
+      if (kind !== 'walk') { pose.atk = k; pose.heavy = kind === 'heavy'; pose.walk = 0; pose.walkRaw = 0; }
+      const big = e.look.size || 1;
+      ENEMY_ART.draw(ctx, id, pose, (size * 0.5) / Math.max(1, big * 0.8));
+    }
+  }
+</script>
+</body>
+</html>

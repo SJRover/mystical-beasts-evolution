@@ -7,13 +7,14 @@ if (!fs.existsSync(destDir)) {
   fs.mkdirSync(destDir, { recursive: true });
 }
 
-// 1.4: the battle music files at the root (any MP3 with "battle" in its name), listed for
-// battle_audio.js by solar system and kind: Low Gravity if the name says so, a boss track if it
-// says boss, victory and defeat stings; everything else is a Prime battle track.
+// 1.4: the battle music files at the root (any MP3 with "battle", "victory" or "defeat" in its
+// name), listed for battle_audio.js by solar system and kind: Low Gravity if the name says so, a
+// boss track if it says boss, victory and defeat music for the end of a battle; everything else
+// is a Prime battle track.
 const music = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, victory: [], defeat: [] };
 for (const f of fs.readdirSync(__dirname).sort()) {
   const n = f.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (!f.toLowerCase().endsWith('.mp3') || !n.includes('battle')) continue;
+  if (!f.toLowerCase().endsWith('.mp3') || !(n.includes('battle') || n.includes('victory') || n.includes('defeat'))) continue;
   if (n.includes('victory') || n.includes('win')) { music.victory.push(f); continue; }
   if (n.includes('defeat') || n.includes('lose')) { music.defeat.push(f); continue; }
   const sys = n.includes('lowgravity') ? 'low_gravity' : 'prime';

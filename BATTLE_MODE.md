@@ -67,9 +67,13 @@ across the map or hit from the other end of it.
 - Your six cards sit along the bottom, each with its four stats underneath when the screen is tall
   enough. Tap a spot in your blue zone, then tap a card: the beast comes out at that spot and walks
   up. Or drag a card onto the zone. Each card then recharges for as many seconds as its tier
-  (Tier 1, 1 s; Tier 20, 20 s). At most ten of your beasts on the field; trying for an eleventh
-  says so, as does a card that is still recharging.
-- Enemies appear at the top on the level's schedule (its pattern, below) and walk down.
+  (Tier 1, 1 s; Tier 20, 20 s). At most ten of your beasts on the field (five under the Small
+  band rule); trying for one more says so, as does a card that is still recharging. Each card and
+  its four stats sit framed together as one tile, with a gap between tiles.
+- Enemies appear at the top on the level's schedule (its pattern, below) and walk down. There is
+  no longer a cap of about ten of them on the field (Sam, 18 Nov: "there can be more leeway
+  there"): from six on the first level to twelve or so by the end of a world, more where they come
+  in crowds, up to 28 in a late horde.
 - Everyone has a body: nobody stands inside anybody else, beast or enemy. A unit fighting or taking
   coins holds its ground and the other is moved.
 - Anything that has an enemy within its range stops and fights the nearest one, one target at a
@@ -87,14 +91,34 @@ across the map or hit from the other end of it.
   shot. Beasts shoot by element (a fireball, a bubble, a gust, a rock, a beam of light, a void
   orb, a spinning star, a holy orb); enemies by weapon (arrows, crossbow bolts, bullets, a laser,
   a cannonball, a sling stone, a thrown potion, music notes, magic).
-- Attacks by kind. Beasts up close: sluggers rise and slam down, quick ones and hoppers pounce,
-  tough ones lean back and ram, fliers swoop, swimmers roll in; ranged beasts rise as their shot
-  gathers and kick back as it goes. Enemies by weapon: blades slash with a swoosh, heavy tools
-  come down from overhead, spears lunge, daggers jab twice, claws rake, bows are drawn and loosed,
-  guns kick with a muzzle flash, staffs are raised over a glowing ring and swung forward, slings
-  whirl, potions are thrown, instruments are played. Enemies walk by their part: runners stride
-  and pump their arms, heavies stomp and sway, casters glide, swarms scurry. Hits look like the
-  attacker (embers, splashes, rock chips, sparkles, slash marks, claw marks, dust rings).
+- How beasts move (18 Nov, fourth round: "unique and varied ... depending on their stats or who
+  they are"). Walkers by their best stat: quick ones trot up on their toes, tough ones waddle
+  side to side with a thud of dust each step, strong ones stride with a nod. Hoppers bound,
+  squashing on landing; fliers beat their wings; floaters drift with sparkles; swimmers undulate
+  with a bubble now and then; the higher one is, the smaller its shadow. Up close, by how it moves,
+  its best stat and a fixed pick of its own (so two alike still differ): sluggers slam down or
+  chomp twice, quick ones pounce or strike three times in a flurry, tough ones ram or rear up and
+  stomp a ring into the ground, fliers swoop, floaters swoop or twirl, swimmers roll. Ranged beasts
+  whose best stat is Range rise over a glowing ring to channel the shot; the rest rise and kick back.
+- How enemies move. Each person walks by who it is: thieves, ninjas and cloakers sneak low with
+  their arms swept back; soldiers, knights and guards march with high knees and stiff arms;
+  pirates, vikings and gladiators swagger with a rolling sway; scarecrows, farmers and grave
+  diggers shamble, dragging a leg with the head lolling; robots clank in steps with a twitching
+  head; jesters, imps and goblins skip; the Moon Hollows' people bound in low gravity, legs tucked
+  at the top of each leap; the big and heavy stomp; other runners sprint; casters glide; swarms
+  scurry. Each steps at its own pace, so a crowd is not in step. Hounds gallop, crawlers skitter,
+  serpents slither, blobs travel in squashy hops.
+- How enemies attack: by weapon (blades slash with a swoosh, heavy tools come down from overhead,
+  spears lunge, daggers jab twice, claws rake, bows are drawn and loosed, guns kick with a muzzle
+  flash, staffs are raised over a glowing ring, slings whirl, potions are thrown, instruments are
+  played), and on top of that by who they are: runners leap in at their target; quick blades
+  slash and backhand; spinning weapons (double axes, mantis blades, scythes, laser swords) whirl
+  the whole body on a heavy blow; the heavy jump and pound a ring of dust into the ground; shield
+  bearers shove with the shield on light blows; marksmen kneel to shoot; staffs with orbs spin
+  them up before they fly; bosses roar with their arms flung wide before a heavy blow. Hounds
+  pounce, or shake a bite on a heavy blow; crawlers rear up and strike down, spitters spit;
+  serpents coil back and strike; blobs stretch tall and slam flat. Hits look like the attacker
+  (embers, splashes, rock chips, sparkles, slash marks, claw marks, dust rings).
 - Light and heavy attacks, getting hit, dying and taking coins all have their own sound, chosen by
   what the beast or enemy looks like (a stone thud, a fire whoosh, a sword clang, a zap).
 - The clock is battle time: at 2× it runs twice as fast, and says "2×" beside it. Star times are
@@ -144,7 +168,10 @@ won, with a star beside it when the star is earned. Won levels can always be pla
 ### How enemies come (patterns, 18 Nov)
 
 Sam: levels "seem to just add one more enemy per level", and "like Battle Cats, they could all
-spawn at once". Each level now has a pattern, never the same as the level before it:
+spawn at once"; then (fourth round) "some levels may be only 1 or 2 enemies but they're buffed
+or there's a lot of them at once". Each level has one of ten patterns, dealt from level 4 like
+cards from a shuffled pack (a fresh pack every ten, so each world gets every pattern three or four
+times), never the same twice running:
 
 | Pattern | What comes |
 |---|---|
@@ -153,11 +180,17 @@ spawn at once". Each level now has a pattern, never the same as the level before
 | Waves | quiet, then a wave; each wave bigger |
 | Ambush | a trickle of ones, then a crowd from both edges at once |
 | Flanks | pairs down both edges, the middle left open |
-| Escort | a tough one in front with shooters walking behind it |
+| Escort | a tough one in front with shooters walking behind it (up to three) |
+| Champion 👑 | one huge enemy (two side by side from level 15) and nothing else for over a minute; a champion has three times the stats (2.3 times when there are two), stands half as big again, hits two at once, glows red-gold with a ring round it and a crown on its heart; the same one or two kinds all level, and they are its only defenders |
+| Horde 👥 | a crowd of 8 to 22 weak enemies at once in rows across the whole width (each a little under half as strong), a lull, then a bigger crowd |
+| Fortress 🏰 | a quiet trickle, but when your beasts touch their pile its whole garrison comes out at once (5 to 14, with a champion from level 15) |
+| Rising tide 🌊 | slow at first, then faster and faster in bigger groups |
 | Boss | a thin stream, the boss at 20 s with a guard either side |
 
-Levels 1 and 2 are patrols and level 3 a small rush. Rushes, waves and ambushes are called out
-across the top of the field. From level 6, now and then an enemy comes as an elite: a size up,
+Levels 1 and 2 are patrols and level 3 a small rush. Rushes, waves, ambushes, champions, hordes,
+garrisons and the tide are called out across the top of the field (a champion's in red with a
+crown either side). The four unlike the rest have a badge on their level's tile, with a key under
+the grid. From level 6, now and then an enemy comes as an elite: a size up,
 1.8 times the health, 1.4 times the hit, with a gold glow and a gold rim on its heart.
 
 ### Rule levels and themed waves (17 Nov)
@@ -166,7 +199,11 @@ So the strongest six does not win everything: every tenth level from 4 allows on
 (recharging in half the tier a player would have by then); every tenth from 7 sets, in turn, a
 long reach (Range at least the third best of the expected collection), swift (Speed, likewise),
 plain stock (Commons and Rares) or three beasts only. Where a rule could not bite yet it becomes
-three only. Every tenth level from 5 is themed: snipers, a swarm, runners or heavies.
+three only. From level 12, every tenth level from 2 sets, in turn, slow orders (every card
+recharges twice as long), a small band (five of yours on the field at most) or thick skin (Health
+at least the third best of the expected collection). Slow orders and a small band change the
+battle, not your six, so they use your usual six. Every tenth level from 5 is themed: snipers, a
+swarm, runners or heavies.
 
 ## Foe wiki
 
@@ -178,16 +215,29 @@ show as silhouettes. Pictures are drawn at twice the size they show, five or mor
 
 Sam: "whole new looking beasts ... unlock as a reward for certain achievements ... really rogue
 stats ... scale so not OP ... add them to the Beastopedia ... can't get them from spins or premium
-loot boxes". Fifteen paper animals of folded facets (`legends_art.js`), nothing like the meadow's
-round beasts. Their stats add up to what any beast of their tier and rarity has (tier + 3 + the
-rarity bonus), but lopsided. They battle in every world, Prime and Low Gravity (Sam to agree).
+loot boxes". Fifteen paper characters of folded facets (`legends_art.js`), nothing like the
+meadow's round beasts. Sam (fourth round): "so they actually look like origami characters, like
+they're supposed to be someone or something". Each is a character with a face, an outfit and a
+prop: the crane a courier (red cap and sash, a sealed letter in its beak), the fox a scout (a blue
+scarf streaming), the frog a samurai (helmet with a gold crest, a sword), the turtle an old sage
+(straw hat, beard, a bundle), the ray a sky pilot (goggles, ribbons, a kite tail with bows), the
+tiger a brawler (red headband, a roar), the koi a lantern bearer, the stag a shrine guardian
+(sacred rope and paper streamers), the bat a night count (cape lined red, collar, bow tie, fangs),
+the serpent a scholar (its body a written scroll, a scholar's hat, a brush), the owl a professor
+(spectacles, mortarboard, a book), the dragon a warlord (gold horns, fire), the phoenix a firebird
+(flame plumes with eyes, a crest), the Thousand Cranes a crowned crane queen with her flock and
+strings of cranes, the Kirin a dark sovereign (black paper edged pink, flame mane, brow gem, on
+clouds). Folded paper with prints (dots, waves, scales, brush writing), light from above and a
+bright fold on each facet. `tools/legends.html` shows them all. Their stats add up to what any
+beast of their tier and rarity has (tier + 3 + the rarity bonus), but lopsided. They battle in
+every world, Prime and Low Gravity (Sam agreed, 18 Nov).
 
 | Legend | Tier, rarity | ATK/HP/SPD/RNG | Won by |
 |---|---|---|---|
 | Paper Crane | 4 Rare | 1/1/2/4 | 10 stars |
 | Fold Fox | 5 Rare | 2/1/5/1 | 15 levels won |
 | Origami Frog | 3 Super Rare | 4/2/1/1 | 150 swarm enemies defeated |
-| Origami Turtle | 6 Super Rare | 1/8/1/1 | a win from level 10 on with no beast above Tier 3 |
+| Origami Turtle | 6 Super Rare | 1/8/1/1 | a win from level 5 on with no beast above Tier 3 (level 10 until the harder curve made that impossible) |
 | Kite Ray | 7 Ultra Rare | 2/2/5/4 | 5 wins with your pile full |
 | Paper Tiger | 8 Super Rare | 9/1/2/1 | 3 bosses |
 | Lantern Koi | 9 Ultra Rare | 3/2/2/8 | 75 kinds of enemy met |
@@ -211,16 +261,16 @@ medal that stays a dark silhouette until earned, a progress bar, and its reward 
 
 ## Music (Sam's to make)
 
-Put the MP3s at the root of the project, beside the solar system music, with "Battle" in the
-name; build.js lists them in `battle_music.json` (also run `node build.js` after adding one while
-testing in the browser). It sorts them by the words in the name:
+Put the MP3s at the root of the project, beside the solar system music, with "Battle",
+"Victory" or "Defeat" in the name; build.js lists them in `battle_music.json` (also run `node
+build.js` after adding one while testing in the browser). It sorts them by the words in the name:
 
 - "LowGravity" (or "Low Gravity") anywhere in the name: a Low Gravity battle track; otherwise Prime.
 - "Boss": a boss level's track; otherwise a casual track for the other levels (several are
   played in turn: `...Variant1`, `...Variant2` and so on).
-- "Victory" or "Defeat": the music at the end of a battle (optional), for example
-  `BattleVictoryMusic.mp3` and `BattleDefeatMusic.mp3` (the name needs "Battle" too). Several of
-  each are picked at random.
+- "Victory" or "Defeat": the music at the end of a battle, for example
+  `PrimeSolarSystemVictoryMusic.mp3`. A battle picks one from its own solar system ("LowGravity"
+  in the name for the Low Gravity worlds) at random, or any if its system has none.
 
 When a battle ends its music fades out over a second and a half while the victory or defeat music
 comes in. Until there are files for those, the game plays its own: a five-second brass fanfare
@@ -228,7 +278,11 @@ rising to a held chord with a drum roll and a cymbal, or a slow minor fall to a 
 The solar system's music comes back when you leave the results.
 
 Sam's first two (17 Nov): `PrimeSolarSystemCasualBattleMusicVariant1.mp3` (Prime levels) and
-`LowGravityBattleBossLevelMusic.mp3` (Low Gravity boss levels, for when those worlds come). A
+`LowGravityBattleBossLevelMusic.mp3` (Low Gravity boss levels). Then (18 Nov) Prime casual
+variants 2 to 4 and `PrimeSolarSystemVictoryMusic.mp3` and `PrimeSolarSystemDefeatMusic.mp3`
+(the list first needed "Battle" in a name; it now takes "Victory" or "Defeat" alone too). Still
+to come if Sam wants them: Low Gravity casual tracks, a Prime boss track, Low Gravity victory and
+defeat music (until then those use the Prime ones). A
 Prime boss track would be, for example, `PrimeSolarSystemBattleBossLevelMusic.mp3`; until there
 is one, Prime boss levels play the casual tracks. With no battle music at all, a battle keeps the
 solar system's own music.
@@ -246,7 +300,7 @@ solar system's own music.
    must be winnable and the curve must climb. Then reviewers play it in the browser on the phone
    layout.
 
-## Rules added in testing (Sam to agree or not)
+## Rules added in testing (Sam agreed, 18 Nov: "yes but keep testing")
 
 Your brief had units walk dead straight and fight only what comes into reach. Played that way
 by a bot, a swarm of Tier 1 Sparkys (one second's rest each, ten at once) slipped down an empty
@@ -272,13 +326,38 @@ lane and emptied the enemy pile in two seconds, at every level: strength never m
 ## Balance (tools/battle_sim.mjs)
 
 `node tools/battle_sim.mjs --calibrate` plays every level with five ways of playing and the deck
-a player would have by then (`progress` in the tool: Tier 1 at World 1 level 1 to Tier 13 or so
-by its end before any prestige, Tier 20 by the middle of World 2, then prestige), finds the
-strongest enemies that deck can beat, smooths that along each world, sets each level a little
-below it (kind early on, tough on boss levels), checks three of the five ways still win (or eases
-the level), and writes `battle_levels.js` (each level's enemy points and star time). Without
-`--calibrate` it plays each level with that deck and one three tiers weaker. Change the progress
-model there if the assumed collection is wrong; re-run after any change to the rules or numbers.
+a player would have by then, finds the strongest enemies that deck can beat, smooths that along
+each world, sets each level a little below it (kind early on, tough on boss levels), checks three
+of the five ways still win (or eases the level), and writes `battle_levels.js` (each level's enemy
+points and star time). Without `--calibrate` it plays each level with that deck and one three
+tiers weaker. Re-run after any change to the rules or numbers (`--calibrate N` for each world in
+parallel, logs kept out of tools/calib, then `--merge`; about half an hour).
+
+The deck a player would have (`expect` in battle_data.js). Sam (fourth round): "a bit harder,
+like tier 10 beasts by level 10". So a tier a level up to Tier 10 at level 10, then a fifth of a
+tier a level: Tier 16 at the end of World 1 before any prestige, Tier 20 by the middle of World 2,
+then a prestige every six levels. Rarities come a little sooner (Super Rare from level 8, Ultra
+Rare from 20, Legendary from 35). It was Tier 4 at level 10 and Tier 13 at the end of World 1.
+The Low Gravity worlds climb the same way from Tier 1.
+
+Each pattern is harder or easier at the same points (a champion's stats are three times the
+level's, a horde's under half), so the smoothing takes out each pattern's own lean, measured per
+world, and puts it back after: champions came out at 0.54 to 0.91 of the climb, hordes at 1.0 to
+1.6, rushes 0.9 to 1.3. Levels with a rule are left out of the smoothing and kept at or under what
+their own six can beat. Margins under the most the deck beats: 0.55 on levels 1 to 3, 0.75 to
+level 8, then 0.82 rising to 0.9, bosses 0.92 (they were 0.5, 0.7, 0.78 to 0.86 and 0.9). The
+search for the most starts just under the level before's.
+
+What that gives in World 1 (the bot, playing simply): the expected deck wins every level in at
+least three of five ways (World 1 level 37, three only, is lost one way of five); a deck three
+tiers weaker wins 21 of 40, slowly, and stalls on most of the rest (it was 33 of 40 before). A
+Tier 3 deck can still win level 5 (so the Origami Turtle's challenge moved there) but nothing from
+level 10. A Tier 8 deck beats the bosses of levels 10, 20 and 30 (Underdog stays possible). Many
+star times reach the four-minute cap on champion, fortress and horde levels, where the bot is slow.
+
+Stalemates: a deck that is too weak often neither wins nor loses (the bot holds its half and never
+breaks through). An overtime rule was tried and taken out (see Bugs found); a person can change
+their six, their lanes, or retreat.
 
 Health is 60 a point (it was 24: fights were over in two seconds). Speed and Range take half
 their share of a beast's extra points, Attack and Health the rest (a Tier 13 cosmic beast had
@@ -299,8 +378,8 @@ Worlds 4 to 6 (Moon Hollows, Ring Pirates, Eclipse Court), 40 levels each, 24 ne
 star mages and dark seraphs. Low Gravity beasts only, the same climb as Worlds 1 to 3 starting
 from Tier 1 again. World 4 opens once you have reached the Low Gravity system (its warp opens at
 Prime prestige 9) and won World 1, not after World 3: waiting for World 3's end would keep most
-players out (Sam to confirm). Achievements for clearing them, all 240 levels, all 24 bosses and
-meeting every enemy.
+players out (Sam agreed, 18 Nov). Achievements for clearing them, all 240 levels, all 24 bosses
+and meeting every enemy.
 
 ## Log
 
@@ -327,6 +406,16 @@ meeting every enemy.
   every achievement; opening on the whole field; "Ready to Ascend!" opens the prestige screen; the
   free spin button; "up to Dark Matter" on the wheel; stats under the battle cards; premium crates
   fixed and capped. All six worlds recalibrated after the patterns.
+- 18 Nov (fourth round, Sam's notes): harder (Tier 10 by level 10); three more rules (slow
+  orders, small band, thick skin); four more patterns (champion, horde, fortress, rising tide)
+  dealt from a shuffled pack; many more enemies allowed on the field; card and stats framed as one
+  tile; the Folded Legends redrawn as origami characters; walks by who an enemy is (sneak, march,
+  swagger, shamble, clank, skip, bound, stomp) and attacks by who it is (leap, double slash, whirl,
+  pound, shield bash, kneel, roar, orbs); hounds, crawlers, serpents and blobs given their own
+  moves; beasts given walks and attacks by stat and a pick of their own (trot, waddle, stride;
+  flurry, chomp, stomp, twirl; channelling over a ring). The Origami Turtle's challenge moved to
+  level 5. Sam agreed to the rules added in testing, legends in the Low Gravity worlds and World
+  4's unlock. All six worlds recalibrated.
 
 ## Reviewer playtest 1 (17 Nov, a new player with Tier 1 to 3 beasts, 375 by 812)
 
@@ -380,9 +469,8 @@ like a fight. No game errors. What it found, and what was done:
   to the stat the beast's look leans to (only an all-equal beast is random). Terrapin is 2/4/2/1.
   Aeris (a bird) with Health 6 is the rule as written (its rarity bonus goes to its highest
   stat, Health), so left.
-- Too easy for a Tier 8 player: World 1 is balanced for the collection a player would have by
-  then (Tier 3 to 4 at level 10, Tier 17 at its end), so a player far ahead of that walks through
-  it. Not changed; Sam to decide (see the report).
+- Too easy for a Tier 8 player: World 1 was balanced for Tier 3 to 4 at level 10. Sam decided
+  (fourth round): "a bit harder, like tier 10 beasts by level 10". Done; see Balance.
 
 ## Bugs found
 
@@ -406,6 +494,15 @@ like a fight. No game errors. What it found, and what was done:
   at the weakest enemies. No real player meets it that way (World 4 needs World 1 won, which
   earns several Folded Legends that battle there), so it is left; watch it in playtests.
 - The battle's pile seconds sat on top of the spawn marker's first spot: the marker starts higher.
+- A champion level listed six kinds of enemy (each champion picked afresh, and three defenders
+  besides): now the same one or two kinds all level, and they are its only defenders.
+- A Folded Legend floated a little above its shadow in battle (its picture stands on a higher
+  line than a beast's): drawn on its own line.
+- Tried and taken out: an overtime at three minutes (cards and their schedule twice as fast) to
+  end stalemates where neither side breaks through. Their doubled schedule outweighed your doubled
+  cards (you are capped at ten on the field), so the reference decks won fewer levels, not more.
+  A stalled battle is left to the player to break (or retreat), as in Battle Cats.
+- Pattern picks by chance gave World 1 five fortresses and no flanks: dealt from a shuffled pack.
 
 ## To do
 
@@ -457,6 +554,23 @@ like a fight. No game errors. What it found, and what was done:
 - [x] The wheel says "up to Dark Matter", not "up to Godly/Dark Matter".
 - [x] Each card in battle shows its beast's stats underneath when there is room.
 - [x] Premium crates earned in battle could not be used; early ones are capped at Tier 15.
+
+### Sam's notes of 18 Nov (fourth round)
+
+- [x] A bit harder: Tier 10 beasts by level 10, remembering strategy matters (more rules that keep
+  the strongest six from always working: slow orders, a small band, thick skin).
+- [x] Rules added in testing: agreed; keep testing.
+- [x] Legends in the Low Gravity worlds: agreed.
+- [x] World 4's unlock: agreed.
+- [x] Not merged to main yet: keep testing.
+- [x] More detail and better animation on the enemies; more variety in battles.
+- [x] More than about ten enemies on the field when a level calls for it.
+- [x] Not one more enemy each level: champion levels (one or two, much stronger), hordes (a crowd
+  at once), fortresses (a garrison when you touch their pile), a rising tide.
+- [x] The stats under each battle card bordered off from the next card's.
+- [x] Folded Legends that look like origami characters, someone or something, not just folded paper.
+- [x] Better walking and running animations, and attacks unique to an enemy's stats or who it is.
+- [x] The same for beasts.
 
 ## Ideas for later
 

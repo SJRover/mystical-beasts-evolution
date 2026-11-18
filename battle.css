@@ -68,6 +68,8 @@
 .bt-level .bt-level-n { position: absolute; left: 3px; top: 2px; min-width: 18px; height: 18px; padding: 0 3px; border-radius: 9px; background: rgba(0,0,0,0.55); font-size: 11px; line-height: 18px; box-sizing: border-box; }
 .bt-level-boss { position: absolute; left: 0; right: 0; bottom: 2px; font-size: 9px; font-weight: 800; letter-spacing: 0.05em; color: #ffb0b0; text-shadow: 0 1px 2px #000; }
 .bt-level-rule { position: absolute; left: 3px; bottom: 3px; width: 18px; height: 18px; border-radius: 6px; background: rgba(30,40,90,0.9); border: 1px solid var(--bt-line); font-size: 10px; line-height: 16px; }
+.bt-level-pat { position: absolute; right: 3px; bottom: 3px; width: 18px; height: 18px; border-radius: 6px; background: rgba(90,30,10,0.9); border: 1px solid #ff9a5a; font-size: 10px; line-height: 16px; }
+.bt-level.boss .bt-level-pat { display: none; }
 .bt-level-done { position: absolute; right: 2px; top: 2px; display: flex; align-items: center; gap: 1px; padding: 0 4px; height: 18px; border-radius: 9px; background: #23a85a; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 .bt-level-done i { font-style: normal; font-size: 12px; font-weight: 900; color: #fff; }
 .bt-level-done em { font-style: normal; font-size: 12px; color: #ffe066; text-shadow: 0 0 4px rgba(255,212,59,0.8); }
@@ -145,8 +147,10 @@ body.bt-in-battle .modal-overlay { z-index: 6000; }
 .bt-tip.on { opacity: 1; }
 .bt-deck { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 8px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(0deg, rgba(8,10,24,0.95), rgba(8,10,24,0.75)); border-top: 2px solid var(--bt-line); }
 .bt-deck-info { display: flex; justify-content: space-between; font-size: 12px; color: #c4cbe0; padding: 0 4px 5px; }
-.bt-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
-.bt-cardcell { min-width: 0; }
+.bt-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
+/* Each beast's card and its stats framed together as one tile (Sam, 18 Nov: the stats read as one
+   long row of numbers), with a clear gap between tiles. */
+.bt-cardcell { min-width: 0; padding: 3px; border-radius: 14px; background: linear-gradient(180deg, rgba(120,140,220,0.22), rgba(40,50,100,0.35)); border: 1.5px solid rgba(190,205,255,0.45); box-shadow: 0 3px 8px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.15); }
 .bt-cardbtn { position: relative; width: 100%; aspect-ratio: 0.82; border-radius: 12px; border: 3px solid var(--rc, #fff); background: linear-gradient(180deg, #2a3a6a, #141c3a); padding: 0; overflow: hidden; cursor: pointer; touch-action: none; }
 .bt-cardbtn img { position: absolute; inset: 6% 4% 14%; width: 92%; height: 80%; object-fit: contain; pointer-events: none; }
 .bt-cardbtn b { position: absolute; left: 0; right: 0; bottom: 2px; font-size: 11px; color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }
@@ -155,8 +159,8 @@ body.bt-in-battle .modal-overlay { z-index: 6000; }
 .bt-cardbtn.ready { box-shadow: 0 0 12px var(--rc, #fff); }
 .bt-cardbtn:not(.ready) img { filter: grayscale(0.6) brightness(0.8); }
 .bt-cardbtn.full { border-style: dashed; }
-.bt-cs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 2px; margin: 3px 1px 0; padding: 2px; border-radius: 6px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); }
-.bt-cs i { font-style: normal; font-size: 9.5px; line-height: 1.25; font-weight: 800; text-align: center; border-radius: 3px; background: rgba(0,0,0,0.4); }
+.bt-cs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 3px 0 0; padding: 0; }
+.bt-cs i { font-style: normal; font-size: 9.5px; line-height: 1.35; font-weight: 800; text-align: center; border-radius: 4px; background: rgba(0,0,0,0.55); }
 .bt-cs i.atk { color: #ff8a6a; } .bt-cs i.hp { color: #ff6a8a; } .bt-cs i.spd { color: #7ae0ff; } .bt-cs i.rng { color: #c8a0ff; }
 @media (max-height: 700px) { .bt-cs { display: none; } }
 .bt-hud-btn.fast { background: var(--bt-gold); color: #2a1a00; }
@@ -266,3 +270,7 @@ body.bt-in-battle #toast-container { display: none !important; }
 .bt-perk.on { border-color: var(--bt-gold); background: rgba(255,212,59,0.14); box-shadow: 0 0 10px rgba(255,212,59,0.35); }
 .bt-perk.on span:last-child { color: #ffe9a0; }
 .bt-perk.locked { opacity: 0.55; }
+
+/* A Folded Legend's title (the Courier, the Samurai...) under its name. */
+.bt-legend-title { display: block; font-style: italic; font-size: 11px; font-weight: 700; color: #ffe6a8; margin-top: -2px; }
+.bt-legend-title.big { font-size: 15px; margin: -4px 0 4px; }

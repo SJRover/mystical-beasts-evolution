@@ -88,21 +88,21 @@ const BATTLE_DATA = (() => {
    * world, and do not grow with prestige. legends_art.js draws them.
    */
   const LEGEND_LIST = [
-    { id: 'paper_crane', name: 'Paper Crane', tier: 4, rarity: 'RARE', element: 'WIND', motion: 'fly', stats: { atk: 1, hp: 1, spd: 2, rng: 4 }, need: { stars: 10 }, how: 'Earn 10 stars', lore: 'Folded from a winning ticket. Hits from far off and crumples at the first touch.' },
-    { id: 'fold_fox', name: 'Fold Fox', tier: 5, rarity: 'RARE', element: 'FIRE', motion: 'walk', stats: { atk: 2, hp: 1, spd: 5, rng: 1 }, need: { clears: 15 }, how: 'Win 15 levels', lore: 'Quick as a page turning. Gets to a coin pile before anyone has noticed it go.' },
-    { id: 'origami_frog', name: 'Origami Frog', tier: 3, rarity: 'SUPER_RARE', element: 'WATER', motion: 'hop', stats: { atk: 4, hp: 2, spd: 1, rng: 1 }, need: { role: 'swarm', kills: 150 }, how: 'Defeat 150 swarm enemies', lore: 'A small frog with a big kick, ready again in three seconds.' },
-    { id: 'origami_turtle', name: 'Origami Turtle', tier: 6, rarity: 'SUPER_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 1, hp: 8, spd: 1, rng: 1 }, need: { lowTierWin: true }, how: 'Win a level from level 10 on with no beast above Tier 3', lore: 'Barely hits at all. Barely gets hurt at all. Holds a lane for ages.' },
-    { id: 'kite_ray', name: 'Kite Ray', tier: 7, rarity: 'ULTRA_RARE', element: 'WIND', motion: 'fly', stats: { atk: 2, hp: 2, spd: 5, rng: 4 }, need: { flawless: 5 }, how: 'Win 5 battles with your coin pile full', lore: 'Flies on a string nobody holds, darting in and out.' },
-    { id: 'paper_tiger', name: 'Paper Tiger', tier: 8, rarity: 'SUPER_RARE', element: 'FIRE', motion: 'walk', stats: { atk: 9, hp: 1, spd: 2, rng: 1 }, need: { bosses: 3 }, how: 'Beat 3 bosses', lore: 'Its bite is far worse than its bark. One good poke and it tears.' },
-    { id: 'lantern_koi', name: 'Lantern Koi', tier: 9, rarity: 'ULTRA_RARE', element: 'LIGHT', motion: 'swim', stats: { atk: 3, hp: 2, spd: 2, rng: 8 }, need: { seen: 75 }, how: 'Meet 75 kinds of enemy', lore: 'A paper lantern that swims through the air, throwing its light a long way.' },
-    { id: 'folded_stag', name: 'Folded Stag', tier: 10, rarity: 'ULTRA_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 6, hp: 8, spd: 1, rng: 1 }, need: { world: 1, kills: 400 }, how: 'Defeat 400 shadow folk (World 1)', lore: 'Slow and proud, with antlers creased sharp enough to cut.' },
-    { id: 'paper_bat', name: 'Paper Bat', tier: 11, rarity: 'LEGENDARY', element: 'VOID', motion: 'fly', stats: { atk: 5, hp: 3, spd: 8, rng: 2 }, need: { world: 3, kills: 400 }, how: 'Defeat 400 invaders (World 3)', lore: 'Flaps out of the dark faster than anything on the field.' },
-    { id: 'scroll_serpent', name: 'Scroll Serpent', tier: 12, rarity: 'LEGENDARY', element: 'COSMIC', motion: 'swim', stats: { atk: 5, hp: 1, spd: 2, rng: 11 }, need: { stars: 40 }, how: 'Earn 40 stars', lore: 'An unrolled scroll that strikes from the far side of the field. Keep it behind your front.' },
-    { id: 'paper_owl', name: 'Paper Owl', tier: 13, rarity: 'LEGENDARY', element: 'LIGHT', motion: 'fly', stats: { atk: 6, hp: 5, spd: 3, rng: 6 }, need: { foe: 'shade_king', kills: 3 }, how: 'Defeat the Shade King 3 times', lore: 'Sees in the dark the Shade King left behind, and does not miss.' },
-    { id: 'origami_dragon', name: 'Origami Dragon', tier: 16, rarity: 'GODLY', element: 'FIRE', motion: 'fly', stats: { atk: 9, hp: 5, spd: 2, rng: 8 }, need: { bosses: 12 }, how: 'Beat 12 bosses', lore: 'A thousand folds and every one of them a claw.' },
-    { id: 'fold_phoenix', name: 'Fold Phoenix', tier: 18, rarity: 'GODLY', element: 'FIRE', motion: 'fly', stats: { atk: 10, hp: 4, spd: 9, rng: 3 }, need: { clears: 120 }, how: 'Win 120 levels', lore: 'Burns, and folds itself again from the ashes.' },
-    { id: 'paper_kirin', name: 'The Paper Kirin', tier: 20, rarity: 'DARK_MATTER', element: 'DEITY', motion: 'walk', stats: { atk: 9, hp: 9, spd: 5, rng: 6 }, need: { allAch: true }, how: 'Earn every other battle achievement', lore: 'Folded from every medal you have won. Nothing in either universe stands up to it for long.' },
-    { id: 'thousand_cranes', name: 'The Thousand Cranes', tier: 20, rarity: 'DARK_MATTER', element: 'DEITY', motion: 'fly', stats: { atk: 8, hp: 4, spd: 5, rng: 12 }, need: { stars: 200 }, how: 'Earn 200 stars', lore: 'A wish folded a thousand times over. Strikes from further than anything else in either universe.' },
+    { id: 'paper_crane', name: 'Paper Crane', tier: 4, rarity: 'RARE', element: 'WIND', motion: 'fly', stats: { atk: 1, hp: 1, spd: 2, rng: 4 }, need: { stars: 10 }, how: 'Earn 10 stars', title: 'the Courier', lore: 'Folded from a winning ticket, it carries the letters nobody else will. It hits from far off and crumples at the first touch.' },
+    { id: 'fold_fox', name: 'Fold Fox', tier: 5, rarity: 'RARE', element: 'FIRE', motion: 'walk', stats: { atk: 2, hp: 1, spd: 5, rng: 1 }, need: { clears: 15 }, how: 'Win 15 levels', title: 'the Scout', lore: 'Quick as a page turning, its scarf streaming behind it. It gets to a coin pile before anyone has noticed it go.' },
+    { id: 'origami_frog', name: 'Origami Frog', tier: 3, rarity: 'SUPER_RARE', element: 'WATER', motion: 'hop', stats: { atk: 4, hp: 2, spd: 1, rng: 1 }, need: { role: 'swarm', kills: 150 }, how: 'Defeat 150 swarm enemies', title: 'the Samurai', lore: 'A small frog with a sharp sword and a big kick, ready again in three seconds.' },
+    { id: 'origami_turtle', name: 'Origami Turtle', tier: 6, rarity: 'SUPER_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 1, hp: 8, spd: 1, rng: 1 }, need: { lowTierWin: true }, how: 'Win a level from level 5 on with no beast above Tier 3', title: 'the Old Sage', lore: 'It has walked every road under that straw hat. It barely hits at all and barely gets hurt at all, so it holds a lane for ages.' },
+    { id: 'kite_ray', name: 'Kite Ray', tier: 7, rarity: 'ULTRA_RARE', element: 'WIND', motion: 'fly', stats: { atk: 2, hp: 2, spd: 5, rng: 4 }, need: { flawless: 5 }, how: 'Win 5 battles with your coin pile full', title: 'the Sky Pilot', lore: 'Goggles on and ribbons flying, it flies on a string nobody holds, darting in and out.' },
+    { id: 'paper_tiger', name: 'Paper Tiger', tier: 8, rarity: 'SUPER_RARE', element: 'FIRE', motion: 'walk', stats: { atk: 9, hp: 1, spd: 2, rng: 1 }, need: { bosses: 3 }, how: 'Beat 3 bosses', title: 'the Brawler', lore: 'It ties on its headband and roars. Its bite is far worse than its bark, but one good poke and it tears.' },
+    { id: 'lantern_koi', name: 'Lantern Koi', tier: 9, rarity: 'ULTRA_RARE', element: 'LIGHT', motion: 'swim', stats: { atk: 3, hp: 2, spd: 2, rng: 8 }, need: { seen: 75 }, how: 'Meet 75 kinds of enemy', title: 'the Lantern Bearer', lore: 'It swims through the air with its lantern held high, throwing its light a long way.' },
+    { id: 'folded_stag', name: 'Folded Stag', tier: 10, rarity: 'ULTRA_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 6, hp: 8, spd: 1, rng: 1 }, need: { world: 1, kills: 400 }, how: 'Defeat 400 shadow folk (World 1)', title: 'the Shrine Guardian', lore: 'The keeper of the forest shrine, with sacred rope and paper streamers at its neck. It is slow and proud, with antlers creased sharp enough to cut.' },
+    { id: 'paper_bat', name: 'Paper Bat', tier: 11, rarity: 'LEGENDARY', element: 'VOID', motion: 'fly', stats: { atk: 5, hp: 3, spd: 8, rng: 2 }, need: { world: 3, kills: 400 }, how: 'Defeat 400 invaders (World 3)', title: 'the Night Count', lore: 'It bows, smiles and is gone, flapping out of the dark faster than anything on the field.' },
+    { id: 'scroll_serpent', name: 'Scroll Serpent', tier: 12, rarity: 'LEGENDARY', element: 'COSMIC', motion: 'swim', stats: { atk: 5, hp: 1, spd: 2, rng: 11 }, need: { stars: 40 }, how: 'Earn 40 stars', title: 'the Scholar', lore: 'It writes its own story as it goes and strikes from the far side of the field. Keep it behind your front.' },
+    { id: 'paper_owl', name: 'Paper Owl', tier: 13, rarity: 'LEGENDARY', element: 'LIGHT', motion: 'fly', stats: { atk: 6, hp: 5, spd: 3, rng: 6 }, need: { foe: 'shade_king', kills: 3 }, how: 'Defeat the Shade King 3 times', title: 'the Professor', lore: 'It has read every book there is on the Shade King, sees in the dark he left behind, and does not miss.' },
+    { id: 'origami_dragon', name: 'Origami Dragon', tier: 16, rarity: 'GODLY', element: 'FIRE', motion: 'fly', stats: { atk: 9, hp: 5, spd: 2, rng: 8 }, need: { bosses: 12 }, how: 'Beat 12 bosses', title: 'the Warlord', lore: 'A thousand folds, and every one of them a claw.' },
+    { id: 'fold_phoenix', name: 'Fold Phoenix', tier: 18, rarity: 'GODLY', element: 'FIRE', motion: 'fly', stats: { atk: 10, hp: 4, spd: 9, rng: 3 }, need: { clears: 120 }, how: 'Win 120 levels', title: 'the Firebird', lore: 'It burns, and folds itself again from the ashes.' },
+    { id: 'paper_kirin', name: 'The Paper Kirin', tier: 20, rarity: 'DARK_MATTER', element: 'DEITY', motion: 'walk', stats: { atk: 9, hp: 9, spd: 5, rng: 6 }, need: { allAch: true }, how: 'Earn every other battle achievement', title: 'the Dark Sovereign', lore: 'Folded from every medal you have won, it walks on clouds. Nothing in either universe stands up to it for long.' },
+    { id: 'thousand_cranes', name: 'The Thousand Cranes', tier: 20, rarity: 'DARK_MATTER', element: 'DEITY', motion: 'fly', stats: { atk: 8, hp: 4, spd: 5, rng: 12 }, need: { stars: 200 }, how: 'Earn 200 stars', title: 'the Crane Queen', lore: 'A wish folded a thousand times over, her flock always about her. She strikes from further than anything else in either universe.' },
   ];
   const LEGENDS = {};
   for (const l of LEGEND_LIST) LEGENDS[l.id] = { ...l, legend: true, system: 'any', svgParams: {} };
@@ -450,14 +450,16 @@ const BATTLE_DATA = (() => {
 
   /**
    * The collection a player is expected to have reached a level with (the balance tool calibrates
-   * against it, and the rules below scale with it): one climb over 120 levels, Tier 1 at the start
-   * to about Tier 13 by the end of the first world (before any prestige), Tier 20 by the middle of
-   * the second, then prestige. Worlds 4 to 6 climb the same way with Low Gravity beasts.
+   * against it, and the rules below scale with it): one climb over 120 levels. Sam (18 Nov): "a bit
+   * harder, like tier 10 beasts by level 10". So a tier a level up to Tier 10 at level 10, then a
+   * fifth of a tier a level: Tier 16 by the end of the first world (before any prestige), Tier 20
+   * by the middle of the second, then prestige. Worlds 4 to 6 climb the same way with Low Gravity
+   * beasts.
    */
   function expect(world, n) {
     const i = (stage(world) - 1) * 40 + n;
-    const rarity = i < 10 ? 'RARE' : i < 25 ? 'SUPER_RARE' : i < 40 ? 'ULTRA_RARE' : i < 60 ? 'LEGENDARY' : i < 95 ? 'GODLY' : 'DARK_MATTER';
-    return { tier: Math.min(20, 1 + (i - 1) * 0.31), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
+    const rarity = i < 8 ? 'RARE' : i < 20 ? 'SUPER_RARE' : i < 35 ? 'ULTRA_RARE' : i < 55 ? 'LEGENDARY' : i < 90 ? 'GODLY' : 'DARK_MATTER';
+    return { tier: Math.min(20, i <= 10 ? i : 10 + (i - 10) * 0.2), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
   }
 
   /**
@@ -470,7 +472,12 @@ const BATTLE_DATA = (() => {
     speed: { name: 'Swift', short: (v) => `Speed ${v} or more` },
     rarity: { name: 'Plain stock', short: () => 'Commons and Rares only' },
     three: { name: 'Three only', short: () => 'three beasts at most' },
+    slow: { name: 'Slow orders', short: () => 'cards recharge twice as long' },
+    few: { name: 'Small band', short: () => 'five on the field at most' },
+    tough: { name: 'Thick skin', short: (v) => `Health ${v} or more` },
   };
+  /** Rules that limit which beasts you bring (the others change how the battle goes). */
+  const DECK_RULES = ['quick', 'range', 'speed', 'rarity', 'three', 'tough'];
   /** Whether a beast with stats `s` may join under a level's rule. */
   function ruleAllows(rule, id, s) {
     if (!rule) return true;
@@ -479,6 +486,7 @@ const BATTLE_DATA = (() => {
     if (rule.kind === 'range') return s.rng >= rule.value;
     if (rule.kind === 'speed') return s.spd >= rule.value;
     if (rule.kind === 'rarity') return t.rarity === 'COMMON' || t.rarity === 'RARE';
+    if (rule.kind === 'tough') return s.hp >= rule.value;
     return true;
   }
   /** Waves of one kind: snipers at the back, swarms, runners, or tanks and brutes. */
@@ -508,22 +516,34 @@ const BATTLE_DATA = (() => {
     ambush: { name: 'Ambush', tip: 'A few, then a crowd from both edges at once.' },
     flanks: { name: 'Flanks', tip: 'They come down both edges. Cover each side.' },
     escort: { name: 'Escort', tip: 'Shooters walk behind a tough one. Get past the front.' },
+    champion: { name: 'Champion', tip: 'Only one or two come at a time, but each is huge and strong. Gang up on it.' },
+    horde: { name: 'Horde', tip: 'A crowd of weak enemies all at once, across the whole field. Many quick cards keep up.' },
+    fortress: { name: 'Fortress', tip: 'Quiet at first, but touch their pile and its whole garrison comes out. Go in strong.' },
+    tide: { name: 'Rising tide', tip: 'Slow at first, then faster and faster. Push before it builds.' },
     boss: { name: 'Boss', tip: 'A boss comes out at twenty seconds with a guard either side.' },
   };
+  const PATTERN_ORDER = {};
   function patternOf(world, n) {
     if (n % BOSS_EVERY === 0) return 'boss';
     if (n <= 2) return 'stream';
     if (n === 3) return 'rush';
-    const list = ['stream', 'rush', 'waves', 'ambush', 'flanks', 'escort'];
-    // Walk up from level 4, so each level knows what the one before it really was.
-    let prev = 1, cur = 1;
-    for (let m = 4; m <= n; m++) {
-      if (m % BOSS_EVERY === 0) { prev = -1; continue; }
-      cur = Math.floor(seeded(hash(`pattern|${world}|${m}`))() * list.length);
-      if (cur === prev) cur = (cur + 1) % list.length;
-      prev = cur;
+    // From level 4, the ten patterns dealt out like cards from a shuffled pack, a fresh pack every
+    // ten, so every world gets each of them three or four times; never the same twice running.
+    if (!PATTERN_ORDER[world]) {
+      const list = ['stream', 'rush', 'waves', 'ambush', 'flanks', 'escort', 'champion', 'horde', 'fortress', 'tide'];
+      const r = seeded(hash(`patterns|${world}`));
+      const seq = [];
+      while (seq.length < 60) {
+        const pack = list.slice();
+        for (let i = pack.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [pack[i], pack[j]] = [pack[j], pack[i]]; }
+        if (seq.length && pack[0] === seq[seq.length - 1]) pack.push(pack.shift());
+        seq.push(...pack);
+      }
+      PATTERN_ORDER[world] = seq;
     }
-    return list[cur];
+    let k = 0;
+    for (let m = 4; m < n; m++) if (m % BOSS_EVERY) k++;
+    return PATTERN_ORDER[world][k];
   }
 
   /**
@@ -559,6 +579,17 @@ const BATTLE_DATA = (() => {
       if (kind === 'rarity' && RANKS.indexOf(ex.rarity) <= 1) kind = 'three';
       rule = { kind, value };
     }
+    if (n >= 12 && k10 === 2) {
+      let kind = ['slow', 'few', 'tough'][round % 3], value = 0;
+      if (kind === 'tough') {
+        const ex = expect(world, n);
+        const vals = Object.keys(BEAST_TEMPLATES).filter((id) => canBattle(id) && systemOf(id) === w.system && BEAST_TEMPLATES[id].tier <= Math.round(ex.tier) && RANKS.indexOf(BEAST_TEMPLATES[id].rarity) <= RANKS.indexOf(ex.rarity))
+          .map((id) => beastStats(id, ex.prestige).hp).sort((a, c) => c - a);
+        value = vals.length >= 3 ? vals[2] : 1;
+        if (value < 3) kind = 'slow';
+      }
+      rule = { kind, value };
+    }
     if (n >= 5 && k10 === 5) theme = ['snipers', 'swarm', 'runners', 'tanks'][(round + world) % 4];
     const themed = (e) => theme && THEMES[theme].roles.includes(e.role);
     const weights = pool.map((e) => (1 + Math.max(0, 6 - (n - e.debut)) * 0.5) * (themed(e) ? 7 : 1));
@@ -566,6 +597,11 @@ const BATTLE_DATA = (() => {
       let x = r() * weights.reduce((a, b) => a + b, 0);
       for (let i = 0; i < pool.length; i++) { x -= weights[i]; if (x <= 0) return pool[i]; }
       return pool[pool.length - 1];
+    };
+    /** One of the given parts (grunts, runners and so on) if the level has any, else anyone. */
+    const pickOf = (roles) => {
+      const some = pool.filter((e) => roles.includes(e.role));
+      return some.length ? some[Math.floor(r() * some.length)] : pick();
     };
     const k = (n - 1) / (w.levels - 1);
     const spawns = [];
@@ -595,10 +631,14 @@ const BATTLE_DATA = (() => {
         t += gap * (0.75 + r() * 0.5);
       }
     };
-    // How many come at once in a rush: three at first, up to nine deep in the later worlds.
-    const rushSize = Math.min(9, 3 + Math.floor(n / 7) + (st - 1));
+    // How many come at once in a rush: three at first, up to twelve in the later worlds (the old
+    // cap of about ten on the field is gone: Sam, 18 Nov, "there can be more leeway there").
+    const rushSize = Math.min(12, 3 + Math.floor(n / 6) + 2 * (st - 1));
+    const hordeSize = Math.min(22, 8 + Math.floor(n / 3) + 2 * (st - 1));
     const pattern = boss ? 'boss' : patternOf(world, n);
-    if (fresh && pattern !== 'rush') add(2, fresh, 0.35 + r() * 0.3);
+    const garrison = [];
+    let onlyRally = null;
+    if (fresh && pattern !== 'rush' && pattern !== 'champion') add(2, fresh, 0.35 + r() * 0.3);
     if (pattern === 'stream') stream(4.5, length, every);
     else if (pattern === 'rush') {
       // Everyone at once, in a line across the field (the newest among them), then a slow trickle
@@ -612,7 +652,7 @@ const BATTLE_DATA = (() => {
       // Quiet, then a wave; quiet, then a bigger one.
       let t = 6, wave = 1;
       while (t < length) {
-        const m = Math.min(9, 3 + Math.floor(n / 9) + (st - 1) + Math.floor(wave / 2));
+        const m = Math.min(12, 3 + Math.floor(n / 8) + 2 * (st - 1) + Math.floor(wave / 2));
         for (let i = 0; i < m; i++) add(t + i * 0.6, pick(), 0.1 + r() * 0.8, i ? {} : { announce: `Wave ${wave}` });
         t += 24 + r() * 6;
         wave++;
@@ -639,9 +679,61 @@ const BATTLE_DATA = (() => {
       while (t < length) {
         const x = 0.2 + r() * 0.6;
         add(t, front.length ? front[Math.floor(r() * front.length)] : pick(), x);
-        const b = Math.min(2, 1 + Math.floor(n / 15));
+        const b = Math.min(3, 1 + Math.floor(n / 15));
         for (let i = 0; i < b; i++) add(t + 1.4 + i * 0.3, back.length ? back[Math.floor(r() * back.length)] : pick(), x + (i - (b - 1) / 2) * 0.1);
         t += every * 1.9 * (0.8 + r() * 0.4);
+      }
+    } else if (pattern === 'champion') {
+      // One huge, strong enemy (two side by side from level 15), and nothing else for a long while:
+      // a champion has three times the stats, stands a size and a half up and hits two at once.
+      const plain = pool.filter((e) => e.role !== 'swarm');
+      const big = theme && plain.some(themed) ? plain.filter(themed) : plain;
+      const one = () => (big.length ? big[Math.floor(r() * big.length)] : pick());
+      const two = n >= 15;
+      // The same one or two kinds all level, and they are its only defenders too.
+      const a = fresh && fresh.role !== 'swarm' ? fresh : one();
+      let b = one();
+      for (let i = 0; i < 4 && b === a && big.length > 1; i++) b = one();
+      const champs = (t, text) => {
+        add(t, a, two ? 0.32 : 0.5, { champ: true, mul: two ? 2.3 : 3, elite: false, announce: text });
+        if (two) add(t + 0.5, b, 0.68, { champ: true, mul: 2.3, elite: false });
+      };
+      champs(5, two ? 'Two champions!' : 'A champion!');
+      champs(75, two ? 'Two more champions!' : 'Another champion!');
+      champs(145, two ? 'Two more champions!' : 'Another champion!');
+      onlyRally = two ? [a.id, b.id] : [a.id];
+    } else if (pattern === 'horde') {
+      // A crowd of weak ones all at once, in rows across the whole width; a lull with a few, then a
+      // bigger crowd. Each is a little under half as strong as usual.
+      const crowd = (t, m, text) => {
+        for (let i = 0; i < m; i++) {
+          const row = Math.floor(i / 8), col = i % 8;
+          add(t + row * 0.6 + col * 0.04, pickOf(['swarm', 'grunt', 'runner']), 0.08 + (0.84 * col) / 7 + (row % 2 ? 0.05 : 0), { mul: 0.45, wide: true, row, elite: false, ...(i ? {} : { announce: text }) });
+        }
+      };
+      crowd(4, hordeSize, 'A horde!');
+      stream(28, 62, every * 2);
+      crowd(68, Math.min(24, hordeSize + 3), 'Another horde!');
+      stream(92, 126, every * 2);
+      crowd(132, Math.min(26, hordeSize + 6), 'A bigger horde!');
+    } else if (pattern === 'fortress') {
+      // A quiet camp, until your beasts touch their pile: then its whole garrison comes out at once
+      // (a champion with it from level 15).
+      stream(5, length, every * 2.4);
+      const m = Math.min(14, 5 + Math.floor(n / 5) + 2 * (st - 1));
+      for (let i = 0; i < m; i++) garrison.push({ foe: pick().id, x: 0.1 + (0.8 * (i % 7)) / 6, row: Math.floor(i / 7), wide: true });
+      if (n >= 15) {
+        const big = pool.filter((e) => e.role !== 'swarm');
+        garrison.push({ foe: (big.length ? big[Math.floor(r() * big.length)] : pick()).id, x: 0.5, row: 2, wide: true, champ: true, mul: 2.3 });
+      }
+    } else if (pattern === 'tide') {
+      // Slow at first, then faster and faster, in bigger groups.
+      let t = 5, called = false;
+      while (t < length) {
+        const f = t / length;
+        group(t, Math.min(4, 1 + Math.floor(f * 3 + r() * 0.8)), 0.15 + r() * 0.7);
+        if (!called && t > 70) { spawns[spawns.length - 1].announce = 'The tide is rising!'; called = true; }
+        t += every * (2.2 - 1.75 * f) * (0.8 + r() * 0.4);
       }
     } else {
       // A boss level: a thin stream, the boss at 20 s with a guard either side, then more.
@@ -652,11 +744,15 @@ const BATTLE_DATA = (() => {
     }
     spawns.sort((a, b) => a.t - b.t);
     // Defenders who come out when their coin pile is being emptied (at 10 s and at 5 s left).
-    const rally = n < 2 ? [pick().id] : [pick().id, pick().id, n > 10 ? pick().id : null, n > 25 ? pick().id : null].filter(Boolean);
+    const rally = onlyRally || (n < 2 ? [pick().id] : [pick().id, pick().id, n > 10 ? pick().id : null, n > 25 ? pick().id : null].filter(Boolean));
     const p = LEVEL_POINTS[`${world}-${n}`];
+    // How many of them can be on the field at once: more than before (it was about ten at most),
+    // and most on the levels where they come in crowds.
+    const room = 6 + Math.floor(n / 6) + 2 * (st - 1);
+    const crowded = { rush: rushSize + 3, ambush: rushSize + 3, waves: rushSize + 4, horde: hordeSize + 6, tide: room + 4 }[pattern] || 0;
     return {
-      id: `${world}-${n}`, world, n, boss, points: p || points, spawns, rally, rule, theme,
-      maxEnemies: Math.min(14, Math.max(5 + Math.floor(n / 8) + (st - 1), ['rush', 'ambush', 'waves'].includes(pattern) ? rushSize + 2 : 0)),
+      id: `${world}-${n}`, world, n, boss, points: p || points, spawns, rally, garrison, rule, theme,
+      maxEnemies: Math.min(28, Math.max(room, crowded)),
       pattern,
       pile: 15,
       starTime: STAR_TIMES[`${world}-${n}`] || 90 + Math.round(k * 60),
@@ -730,7 +826,7 @@ const BATTLE_DATA = (() => {
   ];
 
   return {
-    PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
+    PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, DECK_RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
     STATS, STAT_NAMES, RARITY_BONUS, ROLES, ENEMIES, ENEMY_LIST: E, WORLDS, BOSS_EVERY, ACHIEVEMENTS, STAR_TIMES, LEVEL_POINTS,
     hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, beastRadius,
     enemyStats, enemyRadius, level, levelPoints, difficulty, clearMinutes,

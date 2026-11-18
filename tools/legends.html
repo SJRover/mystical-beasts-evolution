@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Folded Legends</title>
+<style>
+  body { margin: 0; background: #1a2040; font: 12px system-ui, sans-serif; color: #dde; }
+  #grid { display: grid; grid-template-columns: repeat(var(--cols, 5), 1fr); gap: 6px; padding: 6px; }
+  .cell { background: radial-gradient(circle at 50% 40%, #34468a, #18224a 75%); border-radius: 10px; text-align: center; padding: 4px 0; }
+  img { display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div id="grid"></div>
+<script src="../beasts.js"></script>
+<script src="../battle_data.js"></script>
+<script src="../legends_art.js"></script>
+<script>
+  // tools/legends.html?size=240&cols=5&locked=1: every Folded Legend, drawn as in the game.
+  const q = new URLSearchParams(location.search);
+  const size = Number(q.get('size') || 240);
+  document.documentElement.style.setProperty('--cols', q.get('cols') || 5);
+  for (const id of LEGEND_ART.LIST) {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    const img = document.createElement('img');
+    img.width = img.height = size;
+    LEGEND_ART.picture(id, size * 2, q.get('locked') === '1').then((u) => { img.src = u; });
+    d.append(img, document.createTextNode(BATTLE_DATA.LEGENDS[id] ? BATTLE_DATA.LEGENDS[id].name : id));
+    document.getElementById('grid').appendChild(d);
+  }
+</script>
+</body>
+</html>

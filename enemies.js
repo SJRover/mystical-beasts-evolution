@@ -422,6 +422,69 @@ const ENEMY_ART = (() => {
   const styleOf = (w) => STYLE[w || 'none'] || 'punch';
   const lerp = (a, b, k) => a + (b - a) * k;
 
+  /**
+   * How a person walks (Sam, 18 Nov: "improved walking or running animation ... depending on
+   * their stats or who they are"). Thieves and ninjas sneak low and quick with their arms swept
+   * back; soldiers and knights march with high knees and stiff arms; pirates and vikings swagger
+   * with a rolling sway; scarecrows and grave diggers shamble, dragging a leg with the head lolling;
+   * robots clank in steps, never bobbing, the head twitching; jesters, imps and goblins skip; the
+   * moon's people bound in its low gravity, legs tucked at the top of each leap; the big and heavy
+   * stomp; runners sprint; casters glide; swarms scurry. `cad` is how quickly the steps come.
+   */
+  const GAITS = {
+    walk: { stride: 5, bob: 1.6, arms: 0.3, sway: 0.025, cad: 1 },
+    sprint: { stride: 7.5, bob: 2.4, arms: 0.7, sway: 0.02, cad: 1.15 },
+    sneak: { stride: 7, bob: 1.1, arms: 0.12, sway: 0.01, cad: 1.3, crouch: 5, swept: true, weave: 2.5 },
+    march: { stride: 5, bob: 1.1, arms: 0.6, sway: 0, cad: 1, knee: 2.2 },
+    stomp: { stride: 4.5, bob: 3.2, arms: 0.22, sway: 0.07, cad: 0.85 },
+    swagger: { stride: 5, bob: 1.8, arms: 0.45, sway: 0.1, cad: 0.9, wide: 0.3 },
+    shamble: { stride: 4, bob: 1.3, arms: 0.1, sway: 0.09, cad: 0.7, drag: true, loll: true },
+    mech: { stride: 4.5, bob: 0, arms: 0.1, sway: 0, cad: 0.9, steps: true },
+    bound: { stride: 6, bob: 9, arms: 0.5, sway: 0.02, cad: 0.55, tuck: true, balance: true },
+    skip: { stride: 5, bob: 4.5, arms: 0.65, sway: 0.05, cad: 1.1, tuck: true },
+    glide: { stride: 1.6, bob: 0.5, arms: 0.1, sway: 0, hover: 2.5, cad: 1 },
+    scurry: { stride: 4, bob: 1.9, arms: 0.4, sway: 0.03, cad: 1.45 },
+  };
+  const GAIT_WORDS = [
+    ['sneak', /thief|ninja|cloak|smuggl|night_blade|jet_scav|cultist/],
+    ['swagger', /pirate|deckhand|corsair|first_mate|quartermaster|gunner|bounty|viking|gladiator|captain_comet|berserker/],
+    ['march', /knight|guard|militia|pike|trooper|paladin|herald|commander|captain|royal|crossbow|archer|samurai/],
+    ['shamble', /scarecrow|grave|puppet|peasant|mummy|zombie|ghoul|farmer/],
+    ['mech', /robot|cyborg|command_bot|droid/],
+    ['skip', /jester|satyr|bard|imp|goblin|powder_monkey/],
+  ];
+  const gaits = new Map();
+  /** An enemy's walk: from its name, its world (the moon's low gravity) or its part in a fight. */
+  function gaitOf(e) {
+    if (gaits.has(e.id)) return gaits.get(e.id);
+    let g = null;
+    for (const [k, re] of GAIT_WORDS) if (re.test(e.id)) { g = k; break; }
+    if (!g && e.world === 4 && e.role !== 'caster' && e.role !== 'boss') g = 'bound';
+    if (!g) g = e.role === 'runner' ? 'sprint' : e.role === 'caster' ? 'glide' : e.role === 'swarm' ? 'scurry'
+      : e.role === 'tank' || e.role === 'brute' || e.role === 'boss' || e.look.build === 'heavy' ? 'stomp' : 'walk';
+    gaits.set(e.id, g);
+    return g;
+  }
+  /**
+   * How a person attacks besides its weapon's own swing, from who it is and its part (so its
+   * stats): runners leap in; quick blades slash twice; spinning weapons spin on a heavy blow; the
+   * heavy jump and pound the ground; shield bearers bash with the shield; marksmen kneel to shoot;
+   * bosses roar with their arms flung wide before a heavy blow; staffs with orbs spin them up.
+   */
+  function flairOf(e, style, heavy) {
+    const w = e.look.weapon || 'none';
+    const melee = ['slash', 'smash', 'thrust', 'stab', 'claw', 'punch'].includes(style);
+    if (e.role === 'boss' && heavy) return 'roar';
+    if (heavy && ['dual_axe', 'blades', 'scythe', 'dual', 'laser_sword'].includes(w)) return 'spin';
+    if (heavy && style === 'smash' && (e.look.build === 'heavy' || e.role === 'brute' || e.role === 'tank')) return 'pound';
+    if (e.look.shield && melee && !heavy) return 'bash';
+    if (style === 'slash' && (e.role === 'runner' || e.role === 'swarm')) return 'double';
+    if (melee && (e.role === 'runner' || gaitOf(e) === 'sneak' || gaitOf(e) === 'skip')) return 'leap';
+    if ((style === 'gun' || style === 'bow') && (/long_|sniper|crossbow|longbow/.test(w + e.id))) return 'kneel';
+    if (w === 'orb_staff') return 'orbs';
+    return null;
+  }
+
   // ------------------------------------------------------------------ body plans
   /**
    * A person standing up (and shadow folk, robots, aliens on two legs). How it walks comes from its
@@ -436,16 +499,22 @@ const ENEMY_ART = (() => {
     const role = pose.role || 'grunt';
     const w = look.weapon || 'none';
     const style = styleOf(w);
-    const gait = role === 'runner' ? { stride: 7.5, bob: 2.4, arms: 0.7, sway: 0.02 }
-      : role === 'tank' || role === 'brute' || role === 'boss' || heavy ? { stride: 4.5, bob: 3.2, arms: 0.22, sway: 0.07 }
-      : role === 'caster' ? { stride: 1.6, bob: 0.5, arms: 0.1, sway: 0, hover: 2.5 }
-      : role === 'swarm' ? { stride: 4, bob: 1.9, arms: 0.4, sway: 0.03 }
-      : { stride: 5, bob: 1.6, arms: 0.3, sway: 0.025 };
+    const gName = pose.gait || (role === 'runner' ? 'sprint' : role === 'caster' ? 'glide' : role === 'swarm' ? 'scurry' : role === 'tank' || role === 'brute' || role === 'boss' || heavy ? 'stomp' : 'walk');
+    const gait = GAITS[gName] || GAITS.walk;
     const walking = pose.atk < 0 && !pose.capture;
-    const step = Math.sin(pose.walk * TAU);
-    const bob = Math.abs(Math.cos(pose.walk * TAU)) * gait.bob + (gait.hover ? gait.hover + Math.sin(pose.t * 3) * 1.2 : 0);
+    // The walk's phase: from the distance walked, at the gait's own pace (each enemy a little
+    // different, so a crowd does not step in time).
+    const W = (pose.walkRaw != null ? pose.walkRaw : pose.walk) * gait.cad * (0.92 + ((pose.seed || 0) % 7) * 0.025);
+    let step = Math.sin(W * TAU);
+    if (gait.steps) step = Math.round(step * 2) / 2;
+    // A leap (bound, skip) rises the whole way up and down each step; a walk bobs.
+    const air = gait.tuck && walking ? Math.abs(Math.sin(W * TAU)) : 0;
+    let bob = gait.tuck ? (walking ? air * gait.bob : 0) : Math.abs(Math.cos(W * TAU)) * gait.bob;
+    bob += gait.hover ? gait.hover + Math.sin(pose.t * 3) * 1.2 : 0;
+    if (!walking && !gait.hover) bob *= 0.3;
     const atk = pose.atk;
     const hv = pose.heavy ? 1.45 : 1;
+    const flair = atk >= 0 ? pose.flair || null : null;
     // An attack: a wind-up (atk 0 to 0.45), then the blow (p 0 to 1): fast in, slower back.
     const wind = atk < 0 ? 0 : atk < 0.45 ? ease(atk / 0.45) : 0;
     const p = atk < 0.45 ? -1 : (atk - 0.45) / 0.55;
@@ -457,6 +526,17 @@ const ENEMY_ART = (() => {
     let aim = 1.3 - step * gait.arms, reach = 13, offA = 1.95 + step * gait.arms, offReach = 12;
     let wAng = null, lean = step * gait.sway, lunge = 0, squash = 1;
     let swoosh = null, glyph = 0, charge = 0, flash = 0, string = 0, hideWeapon = false, offWeapon = null;
+    let lift = 0, spin = 1, kneel = 0, crouch = walking ? gait.crouch || 0 : 0, weave = 0, headTilt = 0, ring = 0, orbs = 0;
+    if (walking) {
+      // Arms by gait: swept back low (sneak), held out for balance in the air (bound), stiff and
+      // high (march), out wide (swagger), hanging limp (shamble).
+      if (gait.swept) { aim = 0.75 - step * 0.12; offA = Math.PI - 0.75 - step * 0.12; reach = 14; offReach = 13; }
+      if (gait.balance) { const k = air; aim = lerp(aim, 0.15, k); offA = lerp(offA, Math.PI - 0.15, k); }
+      if (gait.wide) { aim -= gait.wide; offA += gait.wide; }
+      if (gait.weave) weave = Math.sin(W * TAU * 0.5) * gait.weave;
+      if (gait.loll) { headTilt = 0.22 + Math.sin(W * TAU * 0.5) * 0.12; lean += Math.sin(W * TAU * 0.5) * 0.05; }
+      if (gait.steps) headTilt = Math.floor(pose.t * 1.7 + (pose.seed || 0)) % 4 === 0 ? 0.14 : 0;
+    }
     const restRanged = 0.9;
     if (atk >= 0) {
       switch (style) {
@@ -559,20 +639,73 @@ const ENEMY_ART = (() => {
     } else if (['bow', 'gun', 'magic', 'throw', 'music'].includes(style)) {
       aim = style === 'magic' ? 1.2 - step * 0.1 : restRanged - step * 0.12;
     }
-    const hipY = -22 - bob;
+    if (flair) {
+      switch (flair) {
+        case 'leap': // a hop in at the target: crouch, spring up and forward, land
+          if (p < 0) { crouch = 4 * wind; squash = 1 - 0.06 * wind; }
+          else { lift = Math.sin(Math.min(1, p / 0.7) * Math.PI) * 9 * hv; lunge += 3 * hit; }
+          break;
+        case 'double': { // a slash, then a backhand on the way back
+          if (p >= 0.5) {
+            const q = (p - 0.5) / 0.5;
+            aim = lerp(2.35, -0.5, ease(Math.min(1, q / 0.6)));
+            lean = -0.12 * Math.sin(q * Math.PI);
+            swoosh = q < 0.6 ? { from: 2.35, to: aim, a: (1 - q / 0.6) * 0.55 } : null;
+          }
+          break;
+        }
+        case 'spin': // a whirl: the whole body turns once with the blow
+          if (p >= 0) { spin = Math.cos(Math.min(1, p / 0.75) * TAU); lift = Math.sin(Math.min(1, p / 0.75) * Math.PI) * 3; }
+          break;
+        case 'pound': // up into the air on the wind-up, down on the ground with a ring of dust
+          if (p < 0) lift = 7 * wind;
+          else { lift = p < 0.15 ? 7 * (1 - p / 0.15) : 0; ring = p >= 0.15 && p < 0.75 ? (p - 0.15) / 0.6 : 0; }
+          break;
+        case 'bash': // the shield shoved out in front
+          offA = p < 0 ? lerp(1.95, 2.6, wind) : lerp(2.6, 0.9, hitIn) * (1 - back) + 1.95 * back;
+          offReach = p < 0 ? 10 : 12 + 8 * hit;
+          aim = 1.5; lunge = 3.5 * hit; lean = -0.1 * hit;
+          break;
+        case 'kneel': // down on one knee to take aim
+          kneel = p < 0 ? wind : p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
+          break;
+        case 'roar': // arms flung wide and head back, then the blow
+          if (p < 0) { aim = lerp(aim, -0.55, wind); offA = lerp(offA, Math.PI + 0.55, wind); headTilt = -0.25 * wind; lift = 2 * wind; ring = wind > 0.5 ? (wind - 0.5) * 2 : 0; }
+          break;
+        case 'orbs': // orbs circle the staff faster and faster, then fly
+          orbs = p < 0 ? wind : p < 0.25 ? 1 - p / 0.25 : 0;
+          break;
+      }
+    }
+    const hipY = -22 - bob + crouch * 0.8 + kneel * 6 - lift;
     const legs = look.legs || 'legs';
     ctx.save();
+    if (weave) ctx.translate(weave, 0);
+    // A whirl turns the whole figure (drawn as it narrows to edge-on and opens again).
+    if (spin !== 1) ctx.scale(Math.max(0.08, Math.abs(spin)) * Math.sign(spin || 1), 1);
+    // The ground pounded: a ring of dust spreading from the feet.
+    if (ring > 0) {
+      ctx.save();
+      ctx.globalAlpha *= (1 - ring) * 0.8;
+      ctx.strokeStyle = P.shadow ? P.trim : '#e8dcc0'; ctx.lineWidth = 2.4 * (1 - ring) + 0.6;
+      ctx.beginPath(); ctx.ellipse(0, 0, 10 + ring * 34, 3 + ring * 9, 0, 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
     // Stomping heavies squash a little as each foot lands.
     if (squash !== 1 || (walking && gait.bob > 3)) {
-      const k = squash !== 1 ? squash : 1 - 0.025 * Math.max(0, Math.cos(pose.walk * TAU * 2));
+      const k = squash !== 1 ? squash : gait.tuck ? 1 - 0.07 * Math.pow(1 - air, 6) : 1 - 0.025 * Math.max(0, Math.cos(W * TAU * 2));
       ctx.scale(2 - k, k);
     }
     ctx.translate(0, lunge);
     // Legs: a stride, the shin a shade darker than the thigh, and a boot.
     for (const sd of [-1, 1]) {
-      const sw = (walking ? step : 0) * sd * gait.stride;
-      const fx = sd * (bw * 0.45) + sw * 0.4, fy = -2 + Math.max(0, sw) * -0.55;
-      const kx = sd * bw * 0.42 + sw * 0.25, ky = (hipY + 4 + fy) / 2 - Math.max(0, sw) * 0.4;
+      const dragged = gait.drag && sd < 0;
+      const sw = (walking ? step : 0) * sd * gait.stride * (dragged ? 0.35 : 1);
+      let fx = sd * (bw * 0.45 + crouch * 0.5) + sw * 0.4, fy = -2 + (dragged ? 0 : Math.max(0, sw) * -0.55 * (gait.knee || 1)) - lift;
+      let kx = sd * (bw * 0.42 + crouch * 0.9) + sw * 0.25, ky = (hipY + 4 + fy) / 2 - Math.max(0, sw) * 0.4 * (gait.knee || 1);
+      if (air > 0.3) { fy -= (air - 0.3) * 6; ky -= (air - 0.3) * 3; kx += sd * (air - 0.3) * 3; }
+      if (kneel > 0 && sd < 0) { fx = lerp(fx, -bw * 0.2, kneel); fy = lerp(fy, -1, kneel); kx = lerp(kx, -bw * 0.5, kneel); ky = lerp(ky, -2, kneel); }
+      if (kneel > 0 && sd > 0) { kx = lerp(kx, bw * 0.9, kneel); ky = lerp(ky, hipY + 2, kneel); }
       limb(ctx, sd * bw * 0.4, hipY + 4, kx, ky, heavy ? 6.4 : 4.8, P.clothD, L);
       limb(ctx, kx, ky, fx, fy, heavy ? 5.6 : 4.2, P.shadow ? P.clothD : shade(look.cloth, -0.35), L);
       if (legs === 'hooves') ellipse(ctx, fx, fy, 3.2, 2.2, '#2a2018', L, 1);
@@ -625,7 +758,10 @@ const ENEMY_ART = (() => {
     if (look.twin) { ctx.globalAlpha *= 0.55; ellipse(ctx, -bw - 3, top - 6, 7, 7, P.skin, L, 1.2); ctx.globalAlpha /= 0.55; }
     // Head: it nods with a heavy step and dips into a blow.
     const hr = heavy ? 9.5 : thin ? 8 : 9;
-    head(ctx, P, look, 0, top - hr + 2 + Math.sin(pose.t * 2.5) * 0.4 + hit * 1.2, hr, pose);
+    const hy = top - hr + 2 + Math.sin(pose.t * 2.5) * 0.4 + hit * 1.2;
+    if (headTilt) { ctx.save(); ctx.translate(0, hy + hr); ctx.rotate(headTilt); ctx.translate(0, -(hy + hr)); }
+    head(ctx, P, look, 0, hy, hr, pose);
+    if (headTilt) ctx.restore();
     if (look.shield === 'round') ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 8.5, 9.5, P.shadow ? P.cloth : look.trim, L, 1.6), ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 2.6, 2.6, P.metal, L, 1), (!P.shadow && ellipse(ctx, offHand[0] - 0.5, offHand[1] - 6.5, 3, 2, 'rgba(255,255,255,0.3)', null));
     if (look.shield === 'tower') rrect(ctx, offHand[0] - 7, offHand[1] - 16, 15, 24, 4, P.shadow ? P.cloth : look.trim, L, 1.6), rrect(ctx, offHand[0] - 3.5, offHand[1] - 12, 8, 16, 3, P.metal, null);
     if (look.shield === 'energy') { glow(ctx, offHand[0] + 2, offHand[1] - 4, 15, look.trim, 0.45 + 0.15 * Math.sin(pose.t * 5)); ctx.strokeStyle = look.trim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(offHand[0] + 2, offHand[1] - 4, 11, -1.9, 1.9); ctx.stroke(); }
@@ -673,6 +809,15 @@ const ENEMY_ART = (() => {
       glow(ctx, cx, cy, (5 + 11 * charge), look.trim, 0.85);
       for (let i = 0; i < 4; i++) { const a = pose.t * 5 + (i * TAU) / 4; ellipse(ctx, cx + Math.cos(a) * 7 * charge, cy + Math.sin(a) * 7 * charge, 1.1, 1.1, '#ffffff', null); }
     }
+    if (orbs > 0) {
+      const cx = wHand[0] + Math.cos(ang) * 28, cy = wHand[1] + Math.sin(ang) * 28;
+      for (let i = 0; i < 3; i++) {
+        const a = pose.t * (6 + orbs * 14) + (i * TAU) / 3;
+        const rr = 13 - orbs * 7;
+        glow(ctx, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.6, 5, look.trim, 0.8);
+        ellipse(ctx, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.6, 2, 2, '#ffffff', null);
+      }
+    }
     ellipse(ctx, wHand[0], wHand[1], 2.9, 2.9, P.skin, L, 1);
     if (look.glow) glow(ctx, 0, top + 10, bw * 1.6, look.trim, 0.35 + 0.15 * Math.sin(pose.t * 6));
     // A hollow chest: a dark hole with a glow and echoes rippling out of it.
@@ -700,7 +845,37 @@ const ENEMY_ART = (() => {
   }
 
   /** Floating things: wisps, ghosts, drones, eyes, saucers, brains, swarms. */
+  /**
+   * Floating things attack by their part too: swarms dart in with a buzz, fliers swoop down and
+   * across, floating tanks kick back as they fire, and casters and bosses send rings pulsing out.
+   */
   function floater(ctx, P, look, pose) {
+    const atk = pose.atk;
+    if (atk < 0) { floaterBody(ctx, P, look, pose); return; }
+    const wind = atk < 0.45 ? ease(atk / 0.45) : 0;
+    const p = atk < 0.45 ? -1 : (atk - 0.45) / 0.55;
+    const hit = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.6) * Math.PI);
+    const role = pose.role;
+    ctx.save();
+    if (role === 'swarm') ctx.translate(Math.sin(pose.t * 40) * 2.5 * (wind + hit), hit * 10 - wind * 3);
+    else if (role === 'runner') ctx.translate(Math.sin(Math.max(0, p) * Math.PI) * 6, hit * 8 - wind * 5);
+    else if (role === 'tank') ctx.translate(0, -hit * 4 + wind * 2);
+    floaterBody(ctx, P, look, pose);
+    ctx.restore();
+    if ((role === 'caster' || role === 'boss' || pose.ranged) && p >= 0 && p < 0.7) {
+      const cy = -26 + Math.sin(pose.t * 2.6 + pose.seed) * 3;
+      for (let i = 0; i < 2; i++) {
+        const k = p / 0.7 - i * 0.25;
+        if (k <= 0 || k >= 1) continue;
+        ctx.save();
+        ctx.globalAlpha *= (1 - k) * 0.8;
+        ctx.strokeStyle = look.trim; ctx.lineWidth = 2 * (1 - k) + 0.5;
+        ctx.beginPath(); ctx.ellipse(0, cy, 8 + k * 26, 6 + k * 18, 0, 0, TAU); ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+  function floaterBody(ctx, P, look, pose) {
     const L = P.line;
     const hover = -26 + Math.sin(pose.t * 2.6 + pose.seed) * 3;
     const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * (pose.heavy ? 7 : 4) : 0;
@@ -837,12 +1012,25 @@ const ENEMY_ART = (() => {
   function quad(ctx, P, look, pose) {
     const L = P.line;
     const long = look.long ? 1.35 : 1;
-    const step = pose.walk * TAU;
-    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * (pose.heavy ? 6 : 3) : 0;
-    const y = -16 * long;
-    for (const [lx, ph] of [[-11, 0], [11, Math.PI], [-6, Math.PI], [6, 0]]) {
-      const sw = Math.sin(step + ph) * 4;
-      limb(ctx, lx, y + 4, lx + sw * 0.6, -1, 3.4, P.skinD, L);
+    const walking = pose.atk < 0 && !pose.capture;
+    const step = (pose.walkRaw != null ? pose.walkRaw : pose.walk) * 1.2 * TAU;
+    const atk = pose.atk;
+    const wind = atk >= 0 && atk < 0.45 ? ease(atk / 0.45) : 0;
+    const p = atk >= 0.45 ? (atk - 0.45) / 0.55 : -1;
+    const hit = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.7) * Math.PI);
+    // The pounce: down on its haunches, then up and at it.
+    const leap = !pose.heavy && p >= 0 ? hit * 8 : 0;
+    const lunge = atk >= 0 ? (pose.heavy ? hit * 5 : hit * 6) - wind * 2 : 0;
+    const shake = pose.heavy && p >= 0 && p < 0.8 ? Math.sin(p * 40) * 0.35 * (1 - p) : 0;
+    const gallop = walking ? Math.sin(step) : 0;
+    ctx.save();
+    ctx.translate(0, -leap + wind * 3);
+    ctx.rotate(gallop * 0.07 - (p >= 0 ? hit * 0.12 : 0));
+    const y = -16 * long - (walking ? Math.abs(Math.sin(step)) * 2.5 : 0);
+    // Front legs together, then back legs together (a gallop); stretched out in a pounce.
+    for (const [lx, ph] of [[-11, 0], [-6, 0.35], [11, Math.PI], [6, Math.PI + 0.35]]) {
+      const sw = walking ? Math.sin(step + ph) * 5.5 : p >= 0 ? (lx > 0 ? 5 : -5) * hit : 0;
+      limb(ctx, lx, y + 4, lx + sw * 0.7, -1 - Math.max(0, Math.cos(step + ph)) * (walking ? 2 : 0) + leap * 0.4, 3.4, P.skinD, L);
     }
     if (look.tail) limb(ctx, -14, y - 2, -24, y - 10 + Math.sin(pose.t * 5) * 3, 2.6, P.skinD, L);
     path(ctx, P.skin, L, 1.8, () => ctx.ellipse(0, y, 15, 8.5, 0, 0, TAU));
@@ -850,7 +1038,8 @@ const ENEMY_ART = (() => {
     if (look.mane) path(ctx, look.trim, L, 1.2, () => ctx.ellipse(13, y - 6, 9, 9, 0, 0, TAU));
     // A long head low and forward (down the screen: towards you).
     ctx.save();
-    ctx.translate(12 + lunge, y - 4);
+    ctx.translate(12 + lunge, y - 4 + lunge * 0.4);
+    ctx.rotate(shake);
     path(ctx, P.skin, L, 1.6, () => { ctx.ellipse(0, 0, 8, 6.5, 0.2, 0, TAU); });
     path(ctx, P.skinD, L, 1.3, () => { ctx.ellipse(6, 3, 5.5, 3.5, 0.3, 0, TAU); });
     if (pose.atk >= 0) path(ctx, '#2a0a10', null, 0, () => ctx.ellipse(7, 5, 3.5, 1.4 + Math.sin(pose.atk * Math.PI) * 2, 0.3, 0, TAU));
@@ -859,6 +1048,7 @@ const ENEMY_ART = (() => {
     eyes(ctx, P, 0, -1, 5, P.shadow ? 1.4 : 1.6, P.shadow ? 'glow' : 'person');
     ctx.restore();
     if (look.glitch) { ctx.globalAlpha *= 0.3; ctx.translate(Math.sin(pose.t * 37) * 3, 0); path(ctx, look.trim, null, 0, () => ctx.ellipse(0, y, 15, 8.5, 0, 0, TAU)); ctx.translate(-Math.sin(pose.t * 37) * 3, 0); ctx.globalAlpha /= 0.3; }
+    ctx.restore();
   }
 
   /** A horse body with a person on top: a centaur, or a knight on a charger. */
@@ -888,6 +1078,17 @@ const ENEMY_ART = (() => {
   /** Many legs, low and fast: crawlers, mites, the brood mother. */
   function crawler(ctx, P, look, pose) {
     const L = P.line;
+    const atk = pose.atk;
+    const wind = atk >= 0 && atk < 0.45 ? ease(atk / 0.45) : 0;
+    const p = atk >= 0.45 ? (atk - 0.45) / 0.55 : -1;
+    const hit = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.5) * Math.PI);
+    const walking = atk < 0 && !pose.capture;
+    const jitter = walking ? Math.sin(pose.t * 47 + (pose.seed || 0)) * 0.8 : 0;
+    // Rearing: the front lifts on the wind-up and comes down on the strike.
+    const rear = wind * (pose.heavy ? 0.42 : 0.28) - hit * 0.1;
+    ctx.save();
+    ctx.translate(jitter, -wind * 4 + hit * 3);
+    ctx.translate(0, -12); ctx.rotate(-rear); ctx.translate(0, 12);
     const y = -12;
     for (let i = 0; i < 6; i++) {
       const sd = i < 3 ? -1 : 1;
@@ -904,6 +1105,9 @@ const ENEMY_ART = (() => {
     const bite = pose.atk >= 0 ? Math.sin(pose.atk * Math.PI) : 0;
     for (const sd of [-1, 1]) path(ctx, P.shadow ? P.trim : '#f0e8d0', L, 1, () => { ctx.moveTo(sd * 3, y + 7); ctx.quadraticCurveTo(sd * (7 + bite * 3), y + 12, sd * 2, y + 15); ctx.lineTo(sd * 1.5, y + 9); ctx.closePath(); });
     eyes(ctx, P, 0, y + 1, 7, 1.5, 'glow', 3);
+    // A spitter's glob gathering at its mouth.
+    if (pose.ranged && (wind > 0 || (p >= 0 && p < 0.25))) { const k = wind > 0 ? wind : 1 - p / 0.25; glow(ctx, 0, y + 14, 6 + 6 * k, look.trim, 0.8 * k); ellipse(ctx, 0, y + 14, 2.6 * k, 2.6 * k, look.trim, null); }
+    ctx.restore();
   }
 
   /** A serpent (and the gorgon queen's serpent tail): segments in an S that slither. */
@@ -919,7 +1123,11 @@ const ENEMY_ART = (() => {
       if (!P.shadow) ellipse(ctx, sx, sy + 12 + r * 0.35, r * 0.6, r * 0.3, P.skinL, null);
       if (P.shadow && i % 2) { ctx.strokeStyle = P.trim; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(sx, sy + 12, r * 0.8, -2.5, -0.7); ctx.stroke(); }
     }
-    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) * (pose.heavy ? 8 : 4) : 0;
+    const satk = pose.atk;
+    const swind = satk >= 0 && satk < 0.45 ? ease(satk / 0.45) : 0;
+    const sp = satk >= 0.45 ? (satk - 0.45) / 0.55 : -1;
+    const shit = sp < 0 ? 0 : Math.sin(Math.min(1, sp / 0.5) * Math.PI);
+    const lunge = satk >= 0 ? (shit * (pose.heavy ? 14 : 9) - swind * 7) : 0;
     if (look.torso) {
       ctx.save(); ctx.translate(0, -24);
       biped(ctx, P, { ...look, legs: 'none', head: look.head || 'round', weapon: 'bow' }, { ...pose, walk: 0 });
@@ -938,8 +1146,17 @@ const ENEMY_ART = (() => {
   /** Blobs: goo in a suit, the eyestalk, the tentacle thing. */
   function blob(ctx, P, look, pose) {
     const L = P.line;
-    const squish = Math.sin(pose.walk * TAU * 2) * 0.08;
-    const lunge = pose.atk >= 0 ? Math.sin(Math.min(1, pose.atk) * Math.PI) : 0;
+    const walking = pose.atk < 0 && !pose.capture;
+    const hop = walking ? Math.abs(Math.sin((pose.walkRaw != null ? pose.walkRaw : pose.walk) * TAU * 1.5)) : 0;
+    const batk = pose.atk;
+    const bwind = batk >= 0 && batk < 0.45 ? ease(batk / 0.45) : 0;
+    const bp = batk >= 0.45 ? (batk - 0.45) / 0.55 : -1;
+    const flat = bp < 0 ? 0 : Math.sin(Math.min(1, bp / 0.5) * Math.PI);
+    // In the air it stretches; landing and slamming squash it flat.
+    const squish = walking ? (hop > 0.25 ? -0.1 * hop : 0.14 * (1 - hop / 0.25)) : -0.16 * bwind + 0.24 * flat;
+    const lunge = batk >= 0 ? Math.sin(Math.min(1, batk) * Math.PI) : 0;
+    ctx.translate(0, -hop * 7 - bwind * 4);
+    if (flat > 0.3) { ctx.save(); ctx.globalAlpha *= flat * 0.7; ctx.strokeStyle = P.shadow ? P.trim : look.trim || '#e8dcc0'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.ellipse(0, 4 + bwind * 4, 14 + flat * 14, 4 + flat * 3, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
     if (look.tentacles) for (let i = 0; i < 6; i++) {
       const a = Math.PI * (0.15 + i * 0.14);
       const len = 16 + (pose.atk >= 0 && i % 2 ? lunge * 10 : 0);
@@ -1004,7 +1221,7 @@ const ENEMY_ART = (() => {
     const look = e.look;
     const P = palette(look);
     const s = (px / 60) * (look.size || 1);
-    pose = { ...pose, role: e.role };
+    pose = { ...pose, role: e.role, gait: gaitOf(e), flair: pose.atk >= 0 ? flairOf(e, styleOf(look.weapon), pose.heavy) : null };
     ctx.save();
     const d = pose.dying || 0;
     if (d > 0) {

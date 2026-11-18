@@ -71,9 +71,14 @@ function beats(lv, deck, p, need = 2, of = 3) {
   for (let variant = 0; variant < of; variant++) { const r = play({ ...lv, points: p }, deck, { variant }); if (r.result === 'won' && r.pileLeft >= 3) wins++; }
   return wins >= need;
 }
-/** The strongest enemies (level points) the deck still beats: up in steps until it fails twice running. */
-function strongest(lv, deck) {
-  let p = 2, last = 2, fails = 0;
+/**
+ * The strongest enemies (level points) the deck still beats: up in steps until it fails twice
+ * running. It starts from `from` (a little under the level before's), coming down first if needed.
+ */
+function strongest(lv, deck, from = 2) {
+  let p = Math.max(2, from);
+  while (p > 2 && !beats(lv, deck, p)) p = Math.max(2, p / 1.07);
+  let last = p, fails = 0;
   if (!beats(lv, deck, p)) return p;
   while (p < 600 && fails < 2) {
     p *= 1.07;
@@ -83,10 +88,17 @@ function strongest(lv, deck) {
 }
 /** How close to the most the reference deck can beat each level sits: kind first, tough at bosses. */
 function margin(n, boss, levels) {
-  if (boss) return 0.9;
-  if (n <= 3) return 0.5;
-  if (n <= 8) return 0.7;
-  return 0.78 + 0.08 * (n / levels);
+  if (boss) return 0.92;
+  if (n <= 3) return 0.55;
+  if (n <= 8) return 0.75;
+  return 0.82 + 0.08 * (n / levels);
+}
+/** The median of the values at the `k` usable levels nearest to each level. */
+function nearMedian(vals, use, k = 5) {
+  return vals.map((_, i) => {
+    const near = vals.map((v, j) => [Math.abs(j - i), v, j]).filter((x) => use[x[2]]).sort((a, b) => a[0] - b[0]).slice(0, k).map((x) => x[1]).sort((a, b) => a - b);
+    return near[Math.floor(near.length / 2)];
+  });
 }
 
 /** battle_levels.js from every world calibrated so far (tools/calib/world-N.json). */
@@ -115,12 +127,31 @@ if (isMain && calibrate) {
     // The most each level's reference deck beats, then smoothed along the world (a median of five,
     // then never falling more than a little), so the climb is steady.
     const lvls = [], most = [];
-    for (let n = 1; n <= w.levels; n++) { const lv = D.level(w.id, n); lvls.push(lv); most.push(strongest(lv, refDeck(w.id, n))); }
-    const med = most.map((_, i) => { const a = most.slice(Math.max(0, i - 2), i + 3).sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; });
+    let from = 2;
+    for (let n = 1; n <= w.levels; n++) {
+      const lv = D.level(w.id, n);
+      lvls.push(lv);
+      most.push(strongest(lv, refDeck(w.id, n), from * 0.75));
+      if (!lv.rule) from = most[most.length - 1];
+    }
+    // Each pattern is harder or easier at the same points (a champion has three times the stats, a
+    // horde's enemies under half), so the climb is smoothed with each pattern's own lean taken out
+    // and put back after. Levels with a rule (a smaller or weaker six) are left out of the
+    // smoothing and kept at or under what their own six can beat.
+    const use = lvls.map((lv) => !lv.rule);
+    const med0 = nearMedian(most, use);
+    const lean = {};
+    for (const pat of new Set(lvls.map((lv) => lv.pattern))) {
+      const r = lvls.map((lv, i) => [lv, i]).filter(([lv, i]) => use[i] && lv.pattern === pat).map(([, i]) => Math.log(most[i] / med0[i]));
+      lean[pat] = r.length ? Math.exp(r.reduce((a, b) => a + b, 0) / r.length) : 1;
+    }
+    const med = nearMedian(most.map((m, i) => m / lean[lvls[i].pattern]), use);
     for (let i = 1; i < med.length; i++) med[i] = Math.max(med[i], med[i - 1] * 0.97);
+    console.log('pattern lean', Object.entries(lean).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', '));
     for (let i = 0; i < lvls.length; i++) {
       const lv = lvls[i], n = i + 1, deck = refDeck(w.id, n);
-      let p = med[i] * margin(n, lv.boss, w.levels);
+      const aim = med[i] * lean[lv.pattern];
+      let p = (lv.rule ? Math.min(most[i], aim) : aim) * margin(n, lv.boss, w.levels);
       // Every level winnable: three of five ways of playing must win, or it is eased.
       let eased = 0;
       while (!beats(lv, deck, p, 3, 5) && p > 2) { p *= 0.92; eased++; }
@@ -128,7 +159,7 @@ if (isMain && calibrate) {
       points[lv.id] = +p.toFixed(2);
       // At most four minutes: the bot plays far slower than a person, and a star should not take longer.
       stars[lv.id] = Math.min(240, Math.max(30, Math.ceil(((times[Math.floor(times.length / 2)] || 120) * 1.2) / 5) * 5));
-      console.log(`${lv.id.padEnd(5)} most ${most[i].toFixed(1).padStart(6)} smooth ${med[i].toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
+      console.log(`${lv.id.padEnd(5)} ${lv.pattern.padEnd(9)}${(lv.rule ? lv.rule.kind : '').padEnd(7)} most ${most[i].toFixed(1).padStart(6)} smooth ${med[i].toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
     }
   }
   // Each world's numbers to tools/calib/world-N.json; then all of them into battle_levels.js.

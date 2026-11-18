@@ -274,10 +274,14 @@ const BATTLE_SFX = (() => {
       drums: [[0, 'timp'], [3, 'timp'], [5.5, 'timp'], [8.5, 'timp'], [8.75, 'timp'], [9, 'kick', 0.8]],
     });
   }
-  async function sting(won) {
+  /** The end of a battle: Sam's victory or defeat music (his own solar system's if there is one), else ours. */
+  async function sting(won, system = 'prime') {
     const m = await manifest();
-    const pool = won ? m.victory : m.defeat;
-    if (typeof audio !== 'undefined' && audio && audio.musicEnabled && pool && pool.length) {
+    const all = (won ? m.victory : m.defeat) || [];
+    const lg = (f) => f.toLowerCase().replace(/[^a-z0-9]/g, '').includes('lowgravity');
+    const own = all.filter((f) => (system === 'low_gravity') === lg(f));
+    const pool = own.length ? own : all;
+    if (typeof audio !== 'undefined' && audio && audio.musicEnabled && pool.length) {
       stingTrack = new Audio(encodeURI(pool[Math.floor(Math.random() * pool.length)]));
       stingTrack.volume = Math.min(1, (audio.volume || 0.5));
       stingTrack.play().catch(() => {});
