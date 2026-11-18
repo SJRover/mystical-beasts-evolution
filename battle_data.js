@@ -569,7 +569,10 @@ const BATTLE_DATA = (() => {
     };
     const k = (n - 1) / (w.levels - 1);
     const spawns = [];
-    const every = Math.max(3.4, 6.2 - 2.2 * k - (world - 1) * 0.2 + (n <= 3 ? 1.5 : 0));
+    // Crowds and pace by the world's place in its solar system: the Low Gravity worlds start again
+    // from Tier 1, so World 4 is paced like World 1.
+    const st = stage(world);
+    const every = Math.max(3.4, 6.2 - 2.2 * k - (st - 1) * 0.2 + (n <= 3 ? 1.5 : 0));
     const length = 160;
     const lanes = (m) => Array.from({ length: m }, (_, i) => (m === 1 ? 0.5 : 0.1 + (0.8 * i) / (m - 1)));
     const clampX = (x) => Math.min(0.92, Math.max(0.08, x));
@@ -593,7 +596,7 @@ const BATTLE_DATA = (() => {
       }
     };
     // How many come at once in a rush: three at first, up to nine deep in the later worlds.
-    const rushSize = Math.min(9, 3 + Math.floor(n / 7) + (world - 1));
+    const rushSize = Math.min(9, 3 + Math.floor(n / 7) + (st - 1));
     const pattern = boss ? 'boss' : patternOf(world, n);
     if (fresh && pattern !== 'rush') add(2, fresh, 0.35 + r() * 0.3);
     if (pattern === 'stream') stream(4.5, length, every);
@@ -609,7 +612,7 @@ const BATTLE_DATA = (() => {
       // Quiet, then a wave; quiet, then a bigger one.
       let t = 6, wave = 1;
       while (t < length) {
-        const m = Math.min(9, 3 + Math.floor(n / 9) + (world - 1) + Math.floor(wave / 2));
+        const m = Math.min(9, 3 + Math.floor(n / 9) + (st - 1) + Math.floor(wave / 2));
         for (let i = 0; i < m; i++) add(t + i * 0.6, pick(), 0.1 + r() * 0.8, i ? {} : { announce: `Wave ${wave}` });
         t += 24 + r() * 6;
         wave++;
@@ -653,7 +656,7 @@ const BATTLE_DATA = (() => {
     const p = LEVEL_POINTS[`${world}-${n}`];
     return {
       id: `${world}-${n}`, world, n, boss, points: p || points, spawns, rally, rule, theme,
-      maxEnemies: Math.min(14, Math.max(5 + Math.floor(n / 8) + (world - 1), ['rush', 'ambush', 'waves'].includes(pattern) ? rushSize + 2 : 0)),
+      maxEnemies: Math.min(14, Math.max(5 + Math.floor(n / 8) + (st - 1), ['rush', 'ambush', 'waves'].includes(pattern) ? rushSize + 2 : 0)),
       pattern,
       pile: 15,
       starTime: STAR_TIMES[`${world}-${n}`] || 90 + Math.round(k * 60),

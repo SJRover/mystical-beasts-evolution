@@ -364,6 +364,13 @@ errors. What it found, and what was done:
   the world files now.
 - Long star times (the bot took six or seven minutes on some levels): stars are capped at four
   minutes.
+- The Low Gravity worlds were paced as worlds 4 to 6 (bigger crowds, faster spawns) although
+  their players start again from Tier 1: they are now paced by their place in their own system,
+  World 4 like World 1. Recalibrated.
+- Still open: World 4 level 2 is won by the bot only two times in five with a lone Tier 1 beast
+  at the weakest enemies. No real player meets it that way (World 4 needs World 1 won, which
+  earns several Folded Legends that battle there), so it is left; watch it in playtests.
+- The battle's pile seconds sat on top of the spawn marker's first spot: the marker starts higher.
 
 ## To do
 

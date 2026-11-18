@@ -469,7 +469,7 @@ const BATTLE = (() => {
     run = {
       level, battle, screen, canvas, ctx: canvas.getContext('2d'), onDone,
       sprites: {}, whites: {}, cam: { zoom: 1, x: W / 2, y: H / 2 }, fit: 1, max: 2,
-      marker: 0.3, markY: null, speed: 1, paused: false, over: false, last: performance.now(), acc: 0,
+      marker: 0.3, markY: 1720, speed: 1, paused: false, over: false, last: performance.now(), acc: 0,
       fx: [], shots: [], shake: 0, flash: 0, bg: null, dpr: Math.min(2, window.devicePixelRatio || 1),
       cardEls: [...screen.querySelectorAll('.bt-cardbtn')], walk: new Map(), coinsAt: 0, tipUntil: B().tipSeen ? 0 : performance.now() + 9000,
       toastUntil: 0, alarmAt: 0, ended: false,
