@@ -24,21 +24,18 @@ const weaker = args.includes('--weaker') ? Number(args[args.indexOf('--weaker') 
 const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : null;
 
 const RANK = ['COMMON', 'RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
-export function progress(world, n) {
-  // One climb across all 120 Prime levels: Tier 1 at the start to Tier 13 or so by the end of
-  // World 1 (before any prestige), Tier 20 by the middle of World 2, then prestige doing the rest.
-  const i = (world - 1) * 40 + n;
-  const rarity = i < 10 ? 'RARE' : i < 25 ? 'SUPER_RARE' : i < 40 ? 'ULTRA_RARE' : i < 60 ? 'LEGENDARY' : i < 95 ? 'GODLY' : 'DARK_MATTER';
-  return { tier: Math.min(20, 1 + (i - 1) * 0.31), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
-}
+/** The collection a player is expected to have by a level (battle_data.js expect). */
+export const progress = (world, n) => D.expect(world, n);
 
 /** Six different beasts of the world's system, around tier `tier`, no rarer than `rarity`. */
 export function refDeck(world, n, tierShift = 0) {
   const pr = progress(world, n);
   const sys = D.WORLDS[world - 1].system;
+  const rule = D.level(world, n).rule;
   const top = Math.max(1, Math.round(pr.tier) + tierShift);
   const maxRank = RANK.indexOf(pr.rarity);
-  const all = Object.keys(T).filter((id) => D.canBattle(id) && D.systemOf(id) === sys);
+  // Only what the level's rule allows (quick cards, long reach, swift, plain stock, three only).
+  const all = Object.keys(T).filter((id) => D.canBattle(id) && D.systemOf(id) === sys && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
   const deck = [];
   for (const want of [top, top, top - 1, top - 1, top - 2, top - 3]) {
     const tier = Math.max(1, want);
@@ -46,7 +43,7 @@ export function refDeck(world, n, tierShift = 0) {
       .sort((a, b) => T[b].tier - T[a].tier || RANK.indexOf(T[b].rarity) - RANK.indexOf(T[a].rarity));
     if (options.length) deck.push(options[0]);
   }
-  return deck.map((id) => ({ id, prestige: pr.prestige }));
+  return deck.slice(0, rule && rule.kind === 'three' ? 3 : 6).map((id) => ({ id, prestige: pr.prestige }));
 }
 
 /** The bot: plays every ready card, highest tier first, where the most forward enemy is, else across the lanes. */
@@ -92,10 +89,29 @@ function margin(n, boss, levels) {
   return 0.78 + 0.08 * (n / levels);
 }
 
+/** battle_levels.js from every world calibrated so far (tools/calib/world-N.json). */
+function merge() {
+  const dir = path.join(root, 'tools', 'calib');
+  const points = {}, stars = {};
+  for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((x) => /^world-\d+\.json$/.test(x)).sort() : []) {
+    const j = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+    Object.assign(points, j.points); Object.assign(stars, j.stars);
+  }
+  const out = `// Made by tools/battle_sim.mjs --calibrate [world] (then --merge): each level's enemy points
+// and its star time. Do not edit by hand; change the progress model or the margins there and run it again.
+Object.assign(BATTLE_DATA.LEVEL_POINTS, ${JSON.stringify(points)});
+Object.assign(BATTLE_DATA.STAR_TIMES, ${JSON.stringify(stars)});
+`;
+  fs.writeFileSync(path.join(root, 'battle_levels.js'), out);
+  console.log('wrote battle_levels.js:', Object.keys(points).length, 'levels');
+}
+
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain && calibrate) {
   const points = {}, stars = {};
+  const only = Number(process.argv[process.argv.indexOf('--calibrate') + 1]) || 0;
   for (const w of D.WORLDS) {
+    if (only && w.id !== only) continue;
     // The most each level's reference deck beats, then smoothed along the world (a median of five,
     // then never falling more than a little), so the climb is steady.
     const lvls = [], most = [];
@@ -110,17 +126,22 @@ if (isMain && calibrate) {
       while (!beats(lv, deck, p, 3, 5) && p > 2) { p *= 0.92; eased++; }
       const times = [0, 1, 2, 3, 4].map((variant) => play({ ...lv, points: p }, deck, { variant })).filter((r) => r.result === 'won').map((r) => r.time).sort((x, y) => x - y);
       points[lv.id] = +p.toFixed(2);
-      stars[lv.id] = Math.max(30, Math.ceil(((times[Math.floor(times.length / 2)] || 120) * 1.2) / 5) * 5);
+      // At most four minutes: the bot plays far slower than a person, and a star should not take longer.
+      stars[lv.id] = Math.min(240, Math.max(30, Math.ceil(((times[Math.floor(times.length / 2)] || 120) * 1.2) / 5) * 5));
       console.log(`${lv.id.padEnd(5)} most ${most[i].toFixed(1).padStart(6)} smooth ${med[i].toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
     }
   }
-  const out = `// Made by tools/battle_sim.mjs --calibrate: each level's enemy points and its star time.
-// Do not edit by hand; change the progress model or the margins there and run it again.
-Object.assign(BATTLE_DATA.LEVEL_POINTS, ${JSON.stringify(points)});
-Object.assign(BATTLE_DATA.STAR_TIMES, ${JSON.stringify(stars)});
-`;
-  fs.writeFileSync(path.join(root, 'battle_levels.js'), out);
-  console.log('wrote battle_levels.js');
+  // Each world's numbers to tools/calib/world-N.json; then all of them into battle_levels.js.
+  fs.mkdirSync(path.join(root, 'tools', 'calib'), { recursive: true });
+  for (const w of D.WORLDS) {
+    if (only && w.id !== only) continue;
+    const pts = {}, st = {};
+    for (const k of Object.keys(points)) if (k.startsWith(w.id + '-')) { pts[k] = points[k]; st[k] = stars[k]; }
+    fs.writeFileSync(path.join(root, 'tools', 'calib', `world-${w.id}.json`), JSON.stringify({ points: pts, stars: st }));
+  }
+  merge();
+} else if (isMain && process.argv.includes('--merge')) {
+  merge();
 } else if (isMain) {
   const rows = [];
   for (const w of D.WORLDS) {

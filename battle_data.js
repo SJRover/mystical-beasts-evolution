@@ -29,6 +29,7 @@ const BATTLE_DATA = (() => {
   const STATS = ['atk', 'hp', 'spd', 'rng'];
   const STAT_NAMES = { atk: 'Attack', hp: 'Health', spd: 'Speed', rng: 'Range' };
   const RARITY_BONUS = { COMMON: 0, RARE: 1, SUPER_RARE: 2, ULTRA_RARE: 3, LEGENDARY: 4, GODLY: 5, DARK_MATTER: 6 };
+  const RANKS = ['COMMON', 'RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
   /** How a beast's extra points (one a tier) are shared over its stats, best first. */
   const SPLIT = [0.4, 0.3, 0.2, 0.1];
 
@@ -78,12 +79,66 @@ const BATTLE_DATA = (() => {
     return onto;
   }
 
+  // ------------------------------------------------------------------ Folded Legends
+  /**
+   * Beasts you can only earn in battle (never from a crate, the wheel or a merge): paper animals,
+   * folded and faceted, nothing like the meadow's. Each has the points a beast of its tier and
+   * rarity would have (Tier + 3 + the rarity's bonus), shared lopsidedly on purpose: a crane that
+   * hits from far off and folds at a touch, a tiger all teeth and no health. They battle in any
+   * world, and do not grow with prestige. legends_art.js draws them.
+   */
+  const LEGEND_LIST = [
+    { id: 'paper_crane', name: 'Paper Crane', tier: 4, rarity: 'RARE', element: 'WIND', motion: 'fly', stats: { atk: 1, hp: 1, spd: 2, rng: 4 }, need: { stars: 10 }, how: 'Earn 10 stars', lore: 'Folded from a winning ticket. Hits from far off and crumples at the first touch.' },
+    { id: 'fold_fox', name: 'Fold Fox', tier: 5, rarity: 'RARE', element: 'FIRE', motion: 'walk', stats: { atk: 2, hp: 1, spd: 5, rng: 1 }, need: { clears: 15 }, how: 'Win 15 levels', lore: 'Quick as a page turning. Gets to a coin pile before anyone has noticed it go.' },
+    { id: 'origami_frog', name: 'Origami Frog', tier: 3, rarity: 'SUPER_RARE', element: 'WATER', motion: 'hop', stats: { atk: 4, hp: 2, spd: 1, rng: 1 }, need: { role: 'swarm', kills: 150 }, how: 'Defeat 150 swarm enemies', lore: 'A small frog with a big kick, ready again in three seconds.' },
+    { id: 'origami_turtle', name: 'Origami Turtle', tier: 6, rarity: 'SUPER_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 1, hp: 8, spd: 1, rng: 1 }, need: { lowTierWin: true }, how: 'Win a level from level 10 on with no beast above Tier 3', lore: 'Barely hits at all. Barely gets hurt at all. Holds a lane for ages.' },
+    { id: 'kite_ray', name: 'Kite Ray', tier: 7, rarity: 'ULTRA_RARE', element: 'WIND', motion: 'fly', stats: { atk: 2, hp: 2, spd: 5, rng: 4 }, need: { flawless: 5 }, how: 'Win 5 battles with your coin pile full', lore: 'Flies on a string nobody holds, darting in and out.' },
+    { id: 'paper_tiger', name: 'Paper Tiger', tier: 8, rarity: 'SUPER_RARE', element: 'FIRE', motion: 'walk', stats: { atk: 9, hp: 1, spd: 2, rng: 1 }, need: { bosses: 3 }, how: 'Beat 3 bosses', lore: 'Its bite is far worse than its bark. One good poke and it tears.' },
+    { id: 'lantern_koi', name: 'Lantern Koi', tier: 9, rarity: 'ULTRA_RARE', element: 'LIGHT', motion: 'swim', stats: { atk: 3, hp: 2, spd: 2, rng: 8 }, need: { seen: 75 }, how: 'Meet 75 kinds of enemy', lore: 'A paper lantern that swims through the air, throwing its light a long way.' },
+    { id: 'folded_stag', name: 'Folded Stag', tier: 10, rarity: 'ULTRA_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 6, hp: 8, spd: 1, rng: 1 }, need: { world: 1, kills: 400 }, how: 'Defeat 400 shadow folk (World 1)', lore: 'Slow and proud, with antlers creased sharp enough to cut.' },
+    { id: 'paper_bat', name: 'Paper Bat', tier: 11, rarity: 'LEGENDARY', element: 'VOID', motion: 'fly', stats: { atk: 5, hp: 3, spd: 8, rng: 2 }, need: { world: 3, kills: 400 }, how: 'Defeat 400 invaders (World 3)', lore: 'Flaps out of the dark faster than anything on the field.' },
+    { id: 'scroll_serpent', name: 'Scroll Serpent', tier: 12, rarity: 'LEGENDARY', element: 'COSMIC', motion: 'swim', stats: { atk: 5, hp: 1, spd: 2, rng: 11 }, need: { stars: 40 }, how: 'Earn 40 stars', lore: 'An unrolled scroll that strikes from the far side of the field. Keep it behind your front.' },
+    { id: 'paper_owl', name: 'Paper Owl', tier: 13, rarity: 'LEGENDARY', element: 'LIGHT', motion: 'fly', stats: { atk: 6, hp: 5, spd: 3, rng: 6 }, need: { foe: 'shade_king', kills: 3 }, how: 'Defeat the Shade King 3 times', lore: 'Sees in the dark the Shade King left behind, and does not miss.' },
+    { id: 'origami_dragon', name: 'Origami Dragon', tier: 16, rarity: 'GODLY', element: 'FIRE', motion: 'fly', stats: { atk: 9, hp: 5, spd: 2, rng: 8 }, need: { bosses: 12 }, how: 'Beat 12 bosses', lore: 'A thousand folds and every one of them a claw.' },
+    { id: 'fold_phoenix', name: 'Fold Phoenix', tier: 18, rarity: 'GODLY', element: 'FIRE', motion: 'fly', stats: { atk: 10, hp: 4, spd: 9, rng: 3 }, need: { clears: 120 }, how: 'Win 120 levels', lore: 'Burns, and folds itself again from the ashes.' },
+    { id: 'paper_kirin', name: 'The Paper Kirin', tier: 20, rarity: 'DARK_MATTER', element: 'DEITY', motion: 'walk', stats: { atk: 9, hp: 9, spd: 5, rng: 6 }, need: { allAch: true }, how: 'Earn every other battle achievement', lore: 'Folded from every medal you have won. Nothing in either universe stands up to it for long.' },
+    { id: 'thousand_cranes', name: 'The Thousand Cranes', tier: 20, rarity: 'DARK_MATTER', element: 'DEITY', motion: 'fly', stats: { atk: 8, hp: 4, spd: 5, rng: 12 }, need: { stars: 200 }, how: 'Earn 200 stars', lore: 'A wish folded a thousand times over. Strikes from further than anything else in either universe.' },
+  ];
+  const LEGENDS = {};
+  for (const l of LEGEND_LIST) LEGENDS[l.id] = { ...l, legend: true, system: 'any', svgParams: {} };
+  /** A beast or a legend, by id. */
+  const T = (id) => BEAST_TEMPLATES[id] || LEGENDS[id];
+  /** Whether a legend's challenge is met by the battle totals `t` (battle.js totals). */
+  function legendEarned(id, t) {
+    const n = (LEGENDS[id] || {}).need || {};
+    if (n.stars) return t.stars >= n.stars;
+    if (n.clears) return t.clears >= n.clears;
+    if (n.bosses) return t.bosses >= n.bosses;
+    if (n.seen) return t.seen >= n.seen;
+    if (n.flawless) return t.flawless >= n.flawless;
+    if (n.lowTierWin) return !!t.lowTierWin;
+    if (n.allAch) return t.achTotal > 0 && t.achDone >= t.achTotal;
+    if (n.role) return ((t.killsByRole || {})[n.role] || 0) >= n.kills;
+    if (n.world) return ((t.killsByWorld || {})[n.world] || 0) >= n.kills;
+    if (n.foe) return ((t.killsOf || {})[n.foe] || 0) >= n.kills;
+    return false;
+  }
+  /** How far along a legend's challenge is, as "12/40". */
+  function legendProgress(id, t) {
+    const n = (LEGENDS[id] || {}).need || {};
+    const have = n.stars ? t.stars : n.clears ? t.clears : n.bosses ? t.bosses : n.seen ? t.seen : n.flawless ? t.flawless
+      : n.allAch ? t.achDone || 0 : n.role ? (t.killsByRole || {})[n.role] || 0 : n.world ? (t.killsByWorld || {})[n.world] || 0 : n.foe ? (t.killsOf || {})[n.foe] || 0 : t.lowTierWin ? 1 : 0;
+    const want = n.stars || n.clears || n.bosses || n.seen || n.flawless || n.kills || (n.allAch ? t.achTotal : 0) || 1;
+    return `${Math.min(have, want)}/${want}`;
+  }
+
   /**
    * A beast's battle stats: 1 in each at Tier 1, one more a tier shared by its look, its rarity's
    * bonus on its highest stat, and one random point (fixed for that beast) for each prestige
    * level it has been owned at.
    */
   function beastStats(id, prestige = 0) {
+    if (LEGENDS[id]) return { ...LEGENDS[id].stats };
     const t = BEAST_TEMPLATES[id];
     if (!t) return null;
     const s = share(Math.max(0, t.tier - 1), order(id), { atk: 1, hp: 1, spd: 1, rng: 1 });
@@ -103,21 +158,27 @@ const BATTLE_DATA = (() => {
     return {
       maxHp: 60 * s.hp,
       light: 3 * s.atk,
-      speed: Math.min(150, 55 + 18 * Math.sqrt(Math.max(0, s.spd - 1))),
+      speed: Math.min(155, 62 + 18 * Math.sqrt(Math.max(0, s.spd - 1))),
       reach: 40 + 26 * Math.sqrt(Math.max(0, s.rng - 1)),
     };
   }
 
   /** Whether a beast can battle (not the shadow bosses of the meadow). */
   function canBattle(id) {
+    if (LEGENDS[id]) return true;
     const t = BEAST_TEMPLATES[id];
     return !!t && !['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'].includes(id);
   }
-  const systemOf = (id) => ((BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : 'prime');
+  /** A beast's solar system ('any' for a legend, which battles in every world). */
+  const systemOf = (id) => (LEGENDS[id] ? 'any' : (BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : 'prime');
   /** A beast's card rests this long after it is played: its tier in seconds. */
-  const cooldownOf = (id) => (BEAST_TEMPLATES[id] || { tier: 1 }).tier;
-  /** How big a beast stands in the arena (radius, in arena units), by tier. */
-  const beastRadius = (id) => Math.min(58, 20 + 2 * (((BEAST_TEMPLATES[id] || { tier: 1 }).tier) - 1));
+  const cooldownOf = (id) => (T(id) || { tier: 1 }).tier;
+  /**
+   * How big a beast stands in the arena (radius, in arena units), by tier: its body as drawn, so
+   * nothing stands inside anything else (collisions in battle_engine.js). A Tier 1 is 26 across
+   * the middle, a Tier 20 about 60 (a Tier 1 was 20 and hard to see: Sam, 17 Nov).
+   */
+  const beastRadius = (id) => Math.min(60, 26 + 1.8 * (((T(id) || { tier: 1 }).tier) - 1));
 
   // ------------------------------------------------------------------ enemies
   /**
@@ -269,10 +330,94 @@ const BATTLE_DATA = (() => {
   foe(3, 39, 'command_bot', 'Command Bot', 'tank', A('#aab0ba', '#6a707a', '#ffd700', '#5cf0ff', { plan: 'biped', size: 1.4, head: 'robot', armor: true, weapon: 'hammer', shield: 'energy', cape: '#3a4a7a' }), 'Gives the orders. Can take a beating while it does.');
   foe(3, 40, 'overlord', 'Mothership Overlord', 'boss', A('#c8a0ff', '#3a2a5a', '#ffd700', '#ffffff', { plan: 'float', size: 2.5, body: 'brain', hat: 'crown', boss: true, guns: true }), 'The mind behind the invasion, in a throne of light. Boss.');
 
+  // ---------------------------------------------------------------- the Low Gravity system
+  // Battles there use Low Gravity beasts only, from Tier 1 again: a second climb.
+
+  // World 4: the Moon Hollows. Lost astronauts, miners and the moon's own ghosts.
+  foe(4, 1, 'moon_miner', 'Moon Miner', 'grunt', P('#f0d0b0', '#c87a3a', '#5a5a6a', '#2a1a10', { plan: 'biped', size: 0.95, hat: 'helmet', weapon: 'pick' }), 'Dug too deep into the moon and came up cross. Still has the pick.');
+  foe(4, 2, 'dust_mites', 'Dust Mites', 'swarm', A('#c8c8d0', '#9a9aa8', '#e8e8ff', '#5cf0ff', { plan: 'float', size: 0.75, body: 'swarm' }), 'Moon dust that learned to bite. Comes in clouds.');
+  foe(4, 3, 'lost_astronaut', 'Lost Astronaut', 'grunt', A('#f0d0b0', '#f0f0f4', '#ff7a2a', '#2a1a10', { plan: 'biped', size: 1, head: 'astro', armor: true, weapon: 'wrench' }), 'Floated off from a mission long ago. Thinks your coins are his pay.');
+  foe(4, 4, 'crater_crawler', 'Crater Crawler', 'runner', A('#9a9aa8', '#6a6a78', '#5cf0ff', '#5cf0ff', { plan: 'crawler', size: 0.85 }), 'Lives in crater shadows and scuttles out at anything shiny.');
+  foe(4, 5, 'moon_slinger', 'Moon Slinger', 'ranged', P('#d8c8e8', '#5a6a9a', '#c8d0ff', '#3a3a7a', { plan: 'biped', size: 0.9, head: 'hood', weapon: 'sling' }), 'Throws moon rocks. In low gravity they go a very long way.');
+  foe(4, 6, 'regolith_brute', 'Regolith Brute', 'brute', A('#a8a8b0', '#7a7a88', '#5a5a68', '#ffcc33', { plan: 'biped', size: 1.3, build: 'heavy', spikes: true, weapon: 'claws' }), 'A miner who spent so long in the dust that he turned into it.');
+  foe(4, 8, 'lunar_wraith', 'Lunar Wraith', 'caster', A('#e8e8ff', '#b8c0e8', '#8ab0ff', '#5cb0ff', { plan: 'float', size: 0.95, body: 'sheet' }), 'A pale ghost of the moon that throws cold light.');
+  foe(4, 9, 'jet_scav', 'Jet Scavenger', 'runner', A('#e0b090', '#7a6a5a', '#ff9a2a', '#5cf0ff', { plan: 'biped', size: 0.9, head: 'visor', jetpack: true, weapon: 'dagger' }), 'Strips old landers for parts, and goes for coins on a sputtering jetpack.');
+  foe(4, 10, 'crater_colossus', 'Crater Colossus', 'boss', A('#9a9aa8', '#6a6a78', '#ffcc33', '#ffcc33', { plan: 'biped', size: 2.3, build: 'heavy', spikes: true, weapon: 'club', boss: true }), 'A giant of moon rock, woken by the digging. Its swing hits three. Boss.');
+  foe(4, 12, 'selenite_knight', 'Selenite Knight', 'tank', A('#c8e8ff', '#8ac8f0', '#e8f8ff', '#ffffff', { plan: 'biped', size: 1.1, head: 'crystal', crystal: true, weapon: 'sword', shield: 'round' }), 'Armour grown from moon crystal. Hits slide off it.');
+  foe(4, 13, 'moon_moths', 'Moon Moths', 'swarm', A('#f0f0ff', '#c8c8e8', '#ffffff', '#c8b0ff', { plan: 'float', size: 0.75, body: 'moth' }), 'Pale moths that follow the glint of coins across the craters.');
+  foe(4, 14, 'rover_bot', 'Rover Bot', 'tank', A('#d8d8e0', '#9aa0aa', '#ffcc33', '#5cf0ff', { plan: 'float', size: 1.2, body: 'tank' }), 'An old moon rover that decided it was in charge.');
+  foe(4, 15, 'dust_devil', 'Dust Devil', 'runner', A('#c8c0b0', '#a89a88', '#f0e8d8', '#ff5a3a', { plan: 'float', size: 1, body: 'swirl' }), 'A whirl of grey dust with two red eyes in it. Fast and hard to hit.');
+  foe(4, 17, 'crater_sniper', 'Crater Sniper', 'ranged', A('#f0d0b0', '#f0f0f4', '#3a7aff', '#2a1a10', { plan: 'biped', size: 0.95, head: 'astro', weapon: 'long_rifle' }), 'Lies on the crater rim. Low gravity lets the shot carry for ever.');
+  foe(4, 18, 'moon_witch_lg', 'Crescent Witch', 'caster', P('#e8e0f0', '#3a3a6a', '#c8d0ff', '#c8d0ff', { plan: 'biped', size: 0.95, hat: 'wizard', weapon: 'orb_staff', cape: '#1a1a3a' }), 'Reads the phases of the moon, and throws the dark ones.');
+  foe(4, 20, 'pale_queen', 'The Pale Queen', 'boss', A('#f0f0ff', '#c8d0f0', '#c8b0ff', '#9ab0ff', { plan: 'float', size: 2.2, body: 'robe', head: 'round', hat: 'crown', weapon: 'orb_staff', boss: true }), 'Queen of the moon\'s ghosts. Her cold light strikes three. Boss.');
+  foe(4, 22, 'gravity_hopper', 'Gravity Hopper', 'brute', A('#f0d0b0', '#5a5a6a', '#ff7a2a', '#2a1a10', { plan: 'biped', size: 1.15, head: 'astro', armor: true, weapon: 'hammer', jetpack: true }), 'Bounds across the moon in huge leaps and lands hammer first.');
+  foe(4, 24, 'tether_guard', 'Tether Guard', 'tank', A('#f0d0b0', '#e0e0e8', '#ff7a2a', '#2a1a10', { plan: 'biped', size: 1.15, head: 'astro', armor: true, weapon: 'spear', shield: 'energy' }), 'Guards the base\'s lifeline and lets nothing past.');
+  foe(4, 26, 'echo', 'Echo', 'caster', A('#c8d0ff', '#8a9ae8', '#ffffff', '#ffffff', { plan: 'float', size: 0.9, body: 'eye' }), 'A floating eye that repeats every blow back at you.');
+  foe(4, 28, 'moon_ogre', 'Moon Ogre', 'brute', A('#b8b8c8', '#7a7a8a', '#5a5a6a', '#ff9a2a', { plan: 'biped', size: 1.5, build: 'heavy', weapon: 'club', ears: true }), 'An ogre that drifted up from a crater and liked it there.');
+  foe(4, 30, 'lunar_leviathan', 'Lunar Leviathan', 'boss', A('#c8c8d8', '#8a8a9a', '#c8b0ff', '#ff5a3a', { plan: 'serpent', size: 2.2, horns: true, boss: true }), 'A great worm that swims through moon dust as if it were water. Boss.');
+  foe(4, 32, 'orbit_drone', 'Orbit Drone', 'swarm', A('#d8d8e0', '#9aa0aa', '#ff5a3a', '#ff5a3a', { plan: 'float', size: 0.75, body: 'drone' }), 'Little drones that swing round the moon and dive at you.');
+  foe(4, 35, 'base_commander', 'Base Commander', 'tank', A('#f0d0b0', '#3a5a9a', '#ffd700', '#2a1a10', { plan: 'biped', size: 1.3, head: 'astro', armor: true, weapon: 'sword', shield: 'tower', cape: '#3a4a7a' }), 'Runs the lost moon base and wants its coins back.');
+  foe(4, 40, 'moon_monarch', 'The Moon Monarch', 'boss', A('#f0f0ff', '#8a8ac8', '#ffd700', '#ffffff', { plan: 'biped', size: 2.4, head: 'crystal', hat: 'crown', crystal: true, weapon: 'orb_staff', cape: '#2a2a6a', boss: true }), 'The moon\'s own king, carved from its brightest crystal. Boss.');
+
+  // World 5: the Ring Pirates. Pirates, smugglers and hired guns on a planet's rings.
+  foe(5, 1, 'deckhand', 'Deckhand', 'grunt', P('#d8a07a', '#3a5a8a', '#c8a03a', '#2a1a10', { plan: 'biped', size: 0.95, hat: 'bandana', weapon: 'cutlass' }), 'Swabs the decks of a pirate ship and fights for its captain.');
+  foe(5, 2, 'loot_drones', 'Loot Drones', 'swarm', A('#c8a03a', '#8a6a2a', '#ffd700', '#ff5a3a', { plan: 'float', size: 0.75, body: 'drone' }), 'Little drones built for grabbing coins and flying off with them.');
+  foe(5, 3, 'space_pirate', 'Space Pirate', 'grunt', P('#e0b090', '#2a2a3a', '#c8a03a', '#2a1a10', { plan: 'biped', size: 1, hat: 'pirate', patch: true, weapon: 'raygun' }), 'Swapped the sea for the stars and the cutlass for a ray gun.');
+  foe(5, 4, 'smuggler', 'Smuggler', 'runner', P('#d8a07a', '#5a4a3a', '#8a7a5a', '#2a1a10', { plan: 'biped', size: 0.9, hat: 'cap', weapon: 'dagger', jetpack: true }), 'Knows every gap in the rings. Slips past you to your coins.');
+  foe(5, 5, 'gunner', 'Ring Gunner', 'ranged', P('#e0b090', '#7a3a2a', '#c8a03a', '#2a1a10', { plan: 'biped', size: 1, hat: 'bandana', weapon: 'rifle' }), 'Mans the ship\'s guns and brings one along.');
+  foe(5, 6, 'merc_brute', 'Mercenary Brute', 'brute', A('#7a9a6a', '#4a4a5a', '#ff5a3a', '#ff3c2a', { plan: 'biped', size: 1.3, build: 'heavy', tusks: true, armor: true, weapon: 'hammer' }), 'An alien for hire. Paid in coins, which is why it wants yours.');
+  foe(5, 8, 'navigator', 'Navigator', 'caster', P('#f0c39a', '#3a3a7a', '#5cf0ff', '#2a1a10', { plan: 'biped', size: 0.9, goggles: true, weapon: 'orb_staff' }), 'Reads the star charts, and throws them at you.');
+  foe(5, 9, 'boarder', 'Boarding Crew', 'tank', P('#d8a07a', '#5a5a6a', '#c8a03a', '#2a1a10', { plan: 'ram', size: 1.5 }), 'Four pirates and a battering ram, for getting through hatches.');
+  foe(5, 10, 'captain_comet', 'Captain Comet', 'boss', P('#e0b090', '#aa2a2a', '#ffd700', '#2a1a10', { plan: 'biped', size: 2.3, hat: 'pirate', beard: '#3a2a1a', weapon: 'cutlass', cape: '#2a1a3a', jetpack: true, boss: true }), 'The fastest captain in the rings. Her cutlass strikes three. Boss.');
+  foe(5, 12, 'quartermaster', 'Quartermaster', 'tank', P('#d8a07a', '#6a4a2a', '#c8a03a', '#2a1a10', { plan: 'biped', size: 1.2, build: 'heavy', beard: '#8a5a2a', weapon: 'axe', shield: 'round' }), 'Counts the loot. Every coin. Very protective of it.');
+  foe(5, 13, 'parrot_drone', 'Parrot Bot', 'runner', A('#ff5a3a', '#3aaa5a', '#ffd700', '#ffffff', { plan: 'float', size: 0.8, body: 'drone' }), 'A robot parrot that squawks rude words and pecks.');
+  foe(5, 14, 'cannoneer', 'Cannoneer', 'ranged', P('#e0b090', '#3a3a4a', '#c8a03a', '#2a1a10', { plan: 'biped', size: 1.05, hat: 'bandana', weapon: 'cannon' }), 'Carries a small cannon on one shoulder. Not that small.');
+  foe(5, 15, 'void_corsair', 'Void Corsair', 'brute', A('#9ab0c8', '#2a2a3a', '#aa7aff', '#aa7aff', { plan: 'biped', size: 1.1, head: 'alien', weapon: 'dual', cape: '#1a1a2a' }), 'An alien pirate with a knife in each hand and no mercy in either.');
+  foe(5, 17, 'salvage_mech', 'Salvage Mech', 'tank', A('#aa8a5a', '#6a5a3a', '#ffcc33', '#ffcc33', { plan: 'tripod', size: 1.4 }), 'Built from wrecks. Walks on three legs and shoots from the middle.');
+  foe(5, 18, 'siren', 'Ring Siren', 'caster', A('#8ae0d0', '#3a8a9a', '#c8fff4', '#ffffff', { plan: 'float', size: 0.95, body: 'robe', head: 'round', hair: true }), 'Sings to ships to lure them onto the rocks. It hurts to hear.');
+  foe(5, 20, 'rust_kraken', 'The Rust Kraken', 'boss', A('#aa5a3a', '#7a3a2a', '#ffa03a', '#ffee00', { plan: 'blob', size: 2.3, tentacles: true, boss: true }), 'A metal kraken that eats ships. Its arms reach three at once. Boss.');
+  foe(5, 22, 'first_mate', 'First Mate', 'brute', P('#d8a07a', '#aa3a3a', '#c8a03a', '#2a1a10', { plan: 'biped', size: 1.15, hat: 'pirate', weapon: 'dual_axe' }), 'Does the captain\'s fighting while she does the shouting.');
+  foe(5, 24, 'ghost_crew', 'Ghost Crew', 'swarm', A('#c8f0ff', '#8ac8e8', '#e8ffff', '#5cf0ff', { plan: 'float', size: 0.75, body: 'orb' }), 'The crew of a lost ship, still looking for their gold.');
+  foe(5, 26, 'bounty_hunter', 'Bounty Hunter', 'ranged', A('#c8d0d8', '#5a4a3a', '#ff7a2a', '#ff3c3c', { plan: 'biped', size: 1, head: 'visor', armor: true, weapon: 'long_rifle', cape: '#3a2a1a' }), 'Paid to bring in the rarest beasts. Yours have a price on them.');
+  foe(5, 28, 'dreadnought', 'Dreadnought', 'tank', A('#7a8a9a', '#4a5a6a', '#ff5a3a', '#ff5a3a', { plan: 'float', size: 1.4, body: 'saucer', guns: true }), 'A small warship that hovers just off the ground.');
+  foe(5, 30, 'admiral_nova', 'Admiral Nova', 'boss', A('#e0b090', '#1a2a5a', '#ffd700', '#5cf0ff', { plan: 'biped', size: 2.3, head: 'visor', hat: 'pirate', armor: true, weapon: 'laser_sword', cape: '#5a1a2a', boss: true }), 'Admiral of the whole pirate fleet. Her blade of light hits three. Boss.');
+  foe(5, 32, 'powder_monkey', 'Powder Runner', 'runner', P('#d8a07a', '#6a5a4a', '#ff5a3a', '#2a1a10', { plan: 'biped', size: 0.8, hat: 'bandana', weapon: 'potion' }), 'Runs the powder to the guns, and throws it when there is no gun.');
+  foe(5, 35, 'pirate_lord', 'Pirate Lord', 'tank', P('#e0b090', '#5a2a5a', '#ffd700', '#2a1a10', { plan: 'biped', size: 1.3, hat: 'pirate', beard: '#1a1a1a', armor: true, weapon: 'cutlass', shield: 'round', cape: '#2a0a2a' }), 'Rules a stretch of the rings. Wants the rest of it.');
+  foe(5, 40, 'black_comet', 'The Black Comet', 'boss', A('#3a3a5a', '#1a1a2a', '#ff7a2a', '#ff7a2a', { plan: 'float', size: 2.4, body: 'saucer', guns: true, boss: true }), 'The pirates\' flagship, a ship like a falling star. Boss.');
+
+  // World 6: the Eclipse Court. Knights, mages and angels of the dark between the stars.
+  foe(6, 1, 'eclipse_cultist', 'Eclipse Cultist', 'grunt', P('#d8c8e8', '#2a1a3a', '#aa7aff', '#aa7aff', { plan: 'biped', size: 0.95, head: 'hood', weapon: 'dagger' }), 'Chants for the day the light goes out for good.');
+  foe(6, 2, 'void_motes', 'Void Motes', 'swarm', A('#2a1a3a', '#1a0a2a', '#d080ff', '#d080ff', { plan: 'float', size: 0.75, body: 'orb' }), 'Specks of the dark between the stars. They sting.');
+  foe(6, 3, 'void_knight', 'Void Knight', 'tank', A('#3a3a5a', '#2a2a3a', '#aa7aff', '#d080ff', { plan: 'biped', size: 1.1, head: 'helm', armor: true, weapon: 'sword', shield: 'tower' }), 'Sworn to the Eclipse. Its armour drinks the light.');
+  foe(6, 4, 'star_mage', 'Star Mage', 'caster', P('#f0d8c0', '#2a2a6a', '#ffd700', '#ffd700', { plan: 'biped', size: 0.95, hat: 'wizard', weapon: 'orb_staff', cape: '#1a1a4a' }), 'Pulls stars down out of the sky. Small ones, luckily.');
+  foe(6, 5, 'void_hound', 'Void Hound', 'runner', A('#2a2a3a', '#1a1a2a', '#d080ff', '#d080ff', { plan: 'quad', size: 0.95, spikes: true, glitch: true }), 'A hound made of the dark. It flickers as it runs.');
+  foe(6, 6, 'gravity_brute', 'Gravity Brute', 'brute', A('#6a5a8a', '#3a2a5a', '#aa7aff', '#ffffff', { plan: 'biped', size: 1.35, build: 'heavy', armor: true, weapon: 'hammer', glow: true }), 'Its hammer weighs as much as a small moon.');
+  foe(6, 8, 'seraph', 'Dark Seraph', 'ranged', P('#f0e8f8', '#3a2a4a', '#d080ff', '#d080ff', { plan: 'biped', size: 1, hair: true, wings: 'feather', weapon: 'bow' }), 'A fallen angel who shoots arrows of shadowed light.');
+  foe(6, 9, 'shadow_sun', 'Shadow Sun', 'caster', A('#2a1a3a', '#1a0a2a', '#ff7a2a', '#ff7a2a', { plan: 'float', size: 1, body: 'star' }), 'A small dead sun, burning dark.');
+  foe(6, 10, 'eclipse_seraph', 'Eclipse Seraph', 'boss', P('#f0e8f8', '#2a1a3a', '#ffd700', '#d080ff', { plan: 'biped', size: 2.3, hair: true, wings: 'feather', weapon: 'laser_sword', armor: true, boss: true }), 'The Court\'s champion, on wings of dusk. Its blade hits three. Boss.');
+  foe(6, 12, 'oath_breaker', 'Oathbreaker', 'brute', A('#3a3a4a', '#2a1a2a', '#ff3c5a', '#ff3c5a', { plan: 'biped', size: 1.15, head: 'helm', armor: true, weapon: 'axe', cape: '#3a0a1a' }), 'A knight who broke every vow but this one: take the coins.');
+  foe(6, 13, 'comet_imps', 'Comet Imps', 'swarm', A('#ff9a5a', '#aa4a2a', '#ffd700', '#ffffff', { plan: 'biped', size: 0.6, hat: 'horns', tail: true, weapon: 'claws' }), 'Tiny devils that ride comets down and land in crowds.');
+  foe(6, 14, 'horizon_wraith', 'Horizon Wraith', 'brute', A('#1a1a2a', '#0a0a1a', '#d080ff', '#d080ff', { plan: 'float', size: 1.15, body: 'cloak', weapon: 'scythe' }), 'Waits at the edge of a black hole. Nothing comes back from its scythe.');
+  foe(6, 15, 'astral_archer', 'Astral Archer', 'ranged', P('#f0d8c0', '#1a3a5a', '#5cf0ff', '#5cf0ff', { plan: 'biped', size: 1, ears: true, head: 'hood', weapon: 'longbow' }), 'An elf of the stars whose arrows cross the whole field.');
+  foe(6, 17, 'orbit_guard', 'Orbit Guard', 'tank', A('#c8c0d8', '#5a4a7a', '#ffd700', '#ffffff', { plan: 'biped', size: 1.2, head: 'helm', armor: true, weapon: 'halberd', shield: 'energy' }), 'Circles the Court and lets no one near the throne.');
+  foe(6, 18, 'nebula_witch', 'Nebula Witch', 'caster', P('#e8d0f0', '#5a2a6a', '#ff7aff', '#ff7aff', { plan: 'float', size: 1, body: 'robe', head: 'round', hat: 'wizard', weapon: 'staff' }), 'Brews storms out of star dust and pours them on you.');
+  foe(6, 20, 'void_emperor', 'The Void Emperor', 'boss', A('#2a1a3a', '#1a0a2a', '#d080ff', '#d080ff', { plan: 'float', size: 2.2, body: 'cloak', hat: 'crown', weapon: 'scythe', boss: true }), 'An empty crown over an empty cloak, and a scythe that cuts three. Boss.');
+  foe(6, 22, 'singularity_monk', 'Singularity Monk', 'grunt', P('#d8c0a8', '#3a2a4a', '#aa7aff', '#aa7aff', { plan: 'biped', size: 0.95, head: 'bald', weapon: 'staff', glow: true }), 'Meditates on the black hole until it meditates back.');
+  foe(6, 24, 'star_eater', 'Star Eater', 'brute', A('#3a2a4a', '#1a0a2a', '#ff7a2a', '#ffee00', { plan: 'blob', size: 1.3, tentacles: true }), 'Eats stars. Has moved on to beasts.');
+  foe(6, 26, 'eclipse_hound', 'Eclipse Hound', 'runner', A('#1a1a2a', '#0a0a1a', '#ff7a2a', '#ff7a2a', { plan: 'quad', size: 1.1, long: true, mane: true }), 'Hunts in the moment the sun goes out.');
+  foe(6, 28, 'cosmic_judge', 'Cosmic Judge', 'caster', A('#e8e0f0', '#3a2a5a', '#ffd700', '#ffffff', { plan: 'float', size: 1.05, body: 'eye', metal: true }), 'Weighs every beast on the field and finds it wanting.');
+  foe(6, 30, 'singularity', 'The Singularity', 'boss', A('#0a0a14', '#05050a', '#d080ff', '#ffffff', { plan: 'float', size: 2.3, body: 'star', boss: true }), 'A point of darkness so heavy that light bends round it. Boss.');
+  foe(6, 32, 'herald', 'Eclipse Herald', 'tank', A('#c8c0d8', '#2a1a3a', '#ffd700', '#d080ff', { plan: 'biped', size: 1.25, head: 'helm', armor: true, weapon: 'lance', shield: 'tower', wings: 'feather' }), 'Announces the Emperor, with wings and a lance.');
+  foe(6, 35, 'court_mage', 'Court Astromancer', 'caster', P('#f0d8c0', '#1a1a3a', '#5cf0ff', '#5cf0ff', { plan: 'biped', size: 1, hat: 'halo_ring', beard: '#e8e8ff', weapon: 'orb_staff', cape: '#0a0a2a' }), 'The Court\'s greatest mage. Her orbits spin with whole worlds.');
+  foe(6, 40, 'eclipse_emperor', 'The Eclipse Emperor', 'boss', A('#f0e8f8', '#1a0a2a', '#ffd700', '#ffd700', { plan: 'biped', size: 2.5, hat: 'crown', armor: true, wings: 'feather', weapon: 'laser_sword', cape: '#3a0a4a', glow: true, boss: true }), 'The one who would put out every star. The last battle. Boss.');
+
   const ENEMIES = {};
   for (const e of E) ENEMIES[e.id] = e;
 
   /** An enemy's stat points at a level of `points`. */
+  /** How far into its own solar system's climb a world sits (Worlds 4 to 6 start again from 1). */
+  const stage = (world) => ((world - 1) % 3) + 1;
+
   function enemyStats(id, points) {
     const e = ENEMIES[id];
     const role = ROLES[e.role];
@@ -288,20 +433,97 @@ const BATTLE_DATA = (() => {
     return s;
   }
   /** How big an enemy stands (radius, arena units). */
-  const enemyRadius = (id) => Math.min(80, 26 * ((ENEMIES[id] || {}).look || { size: 1 }).size);
+  const enemyRadius = (id) => Math.min(84, 24 * Math.max(0.85, ((ENEMIES[id] || {}).look || { size: 1 }).size));
+  /** An enemy's size as drawn: never under 0.85, so swarms are big enough to see. */
+  const enemySize = (id) => Math.max(0.85, ((ENEMIES[id] || {}).look || { size: 1 }).size);
 
   // ------------------------------------------------------------------ worlds and levels
   const WORLDS = [
     { id: 1, system: 'prime', name: 'Shadow Wilds', theme: 'shadow', levels: 40, base: 3.2, gain: 0.62, chest: { rarity: 'LEGENDARY', tier: 10 } },
     { id: 2, system: 'prime', name: 'Iron Kingdom', theme: 'kingdom', levels: 40, base: 25, gain: 0.7, chest: { rarity: 'GODLY', tier: 12 } },
     { id: 3, system: 'prime', name: 'Star Invasion', theme: 'invasion', levels: 40, base: 48, gain: 0.75, chest: { rarity: 'GODLY', tier: 15 } },
+    { id: 4, system: 'low_gravity', name: 'Moon Hollows', theme: 'moon', levels: 40, base: 3.2, gain: 0.62, chest: { rarity: 'LEGENDARY', tier: 10 } },
+    { id: 5, system: 'low_gravity', name: 'Ring Pirates', theme: 'rings', levels: 40, base: 25, gain: 0.7, chest: { rarity: 'GODLY', tier: 12 } },
+    { id: 6, system: 'low_gravity', name: 'Eclipse Court', theme: 'eclipse', levels: 40, base: 48, gain: 0.75, chest: { rarity: 'GODLY', tier: 15 } },
   ];
   const BOSS_EVERY = 10;
+
+  /**
+   * The collection a player is expected to have reached a level with (the balance tool calibrates
+   * against it, and the rules below scale with it): one climb over 120 levels, Tier 1 at the start
+   * to about Tier 13 by the end of the first world (before any prestige), Tier 20 by the middle of
+   * the second, then prestige. Worlds 4 to 6 climb the same way with Low Gravity beasts.
+   */
+  function expect(world, n) {
+    const i = (stage(world) - 1) * 40 + n;
+    const rarity = i < 10 ? 'RARE' : i < 25 ? 'SUPER_RARE' : i < 40 ? 'ULTRA_RARE' : i < 60 ? 'LEGENDARY' : i < 95 ? 'GODLY' : 'DARK_MATTER';
+    return { tier: Math.min(20, 1 + (i - 1) * 0.31), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
+  }
+
+  /**
+   * Rules some levels set on your six, so the same strongest six does not win everything (Sam,
+   * 17 Nov): quick cards only, long reach only, swift only, Commons and Rares only, or three beasts.
+   */
+  const RULES = {
+    quick: { name: 'Quick cards', short: (v) => `rest ${v} s or less` },
+    range: { name: 'Long reach', short: (v) => `Range ${v} or more` },
+    speed: { name: 'Swift', short: (v) => `Speed ${v} or more` },
+    rarity: { name: 'Plain stock', short: () => 'Commons and Rares only' },
+    three: { name: 'Three only', short: () => 'three beasts at most' },
+  };
+  /** Whether a beast with stats `s` may join under a level's rule. */
+  function ruleAllows(rule, id, s) {
+    if (!rule) return true;
+    const t = T(id);
+    if (rule.kind === 'quick') return t.tier <= rule.value;
+    if (rule.kind === 'range') return s.rng >= rule.value;
+    if (rule.kind === 'speed') return s.spd >= rule.value;
+    if (rule.kind === 'rarity') return t.rarity === 'COMMON' || t.rarity === 'RARE';
+    return true;
+  }
+  /** Waves of one kind: snipers at the back, swarms, runners, or tanks and brutes. */
+  const THEMES = {
+    snipers: { name: 'Sniper nest', roles: ['ranged', 'caster'], tip: 'Mostly shooters: fast or long-reaching beasts get to them.' },
+    swarm: { name: 'Swarm', roles: ['swarm'], tip: 'Crowds of small enemies: many quick cards keep up.' },
+    runners: { name: 'Runners', roles: ['runner'], tip: 'Fast enemies that go for your coins: keep some beasts at home.' },
+    tanks: { name: 'Heavies', roles: ['tank', 'brute'], tip: 'Tough, hard-hitting enemies: bring your strongest hitters.' },
+  };
 
   /** Enemy points at a level: climbing through a world, a little more on boss levels. */
   function levelPoints(world, n) {
     const w = WORLDS[world - 1];
     return w.base + w.gain * (n - 1);
+  }
+
+  /**
+   * How a level's enemies come (Sam, 18 Nov: "like Battle Cats, they could all spawn at once"):
+   * a stream, a rush of many at once, waves, an ambush from both edges, pairs down the flanks, or
+   * shooters behind a tough one. The first two levels are streams and the third a small rush; after
+   * that a level never repeats the pattern of the one before.
+   */
+  const PATTERNS = {
+    stream: { name: 'Patrol', tip: 'A steady stream of enemies.' },
+    rush: { name: 'Rush', tip: 'Many come at once. Hold them near your pile, then push.' },
+    waves: { name: 'Waves', tip: 'Quiet, then a wave, each bigger than the last.' },
+    ambush: { name: 'Ambush', tip: 'A few, then a crowd from both edges at once.' },
+    flanks: { name: 'Flanks', tip: 'They come down both edges. Cover each side.' },
+    escort: { name: 'Escort', tip: 'Shooters walk behind a tough one. Get past the front.' },
+    boss: { name: 'Boss', tip: 'A boss comes out at twenty seconds with a guard either side.' },
+  };
+  function patternOf(world, n) {
+    if (n % BOSS_EVERY === 0) return 'boss';
+    if (n <= 2) return 'stream';
+    if (n === 3) return 'rush';
+    const list = ['stream', 'rush', 'waves', 'ambush', 'flanks', 'escort'];
+    // Walk up from level 4, so each level knows what the one before it really was.
+    let prev = 1, cur = 1;
+    for (let m = 4; m <= n; m++) {
+      if (m % BOSS_EVERY === 0) { prev = -1; continue; }
+      cur = Math.floor(seeded(hash(`pattern|${world}|${m}`))() * list.length);
+      if (cur === prev) cur = (cur + 1) % list.length;
+      prev = cur;
+    }
+    return list[cur];
   }
 
   /**
@@ -317,7 +539,29 @@ const BATTLE_DATA = (() => {
     const bossFoe = boss ? E.find((e) => e.world === world && e.role === 'boss' && e.debut === n) : null;
     const points = levelPoints(world, n);
     // Recent arrivals more often than old ones, and the newest always shows up early.
-    const weights = pool.map((e) => 1 + Math.max(0, 6 - (n - e.debut)) * 0.5);
+    // Rules and themes: from level 4, a rule every tenth level from 4 (quick cards) and from 7
+    // (reach, speed, rarity or three only, in turn), a themed wave every tenth level from 5.
+    let rule = null, theme = null;
+    const k10 = n % 10, round = Math.floor(n / 10);
+    if (n >= 4 && k10 === 4) rule = { kind: 'quick', value: Math.max(2, Math.round(expect(world, n).tier * 0.5)) };
+    if (n >= 7 && k10 === 7) {
+      let kind = ['range', 'speed', 'rarity', 'three'][round % 4], value = 0;
+      // The bar is set from what a player is expected to have by then, so that at least three of
+      // those beasts pass it; a rule that could not bite yet (everyone at Range 1, or nothing rarer
+      // than Rare) becomes three beasts at most.
+      const ex = expect(world, n);
+      const have = Object.keys(BEAST_TEMPLATES).filter((id) => canBattle(id) && systemOf(id) === w.system && BEAST_TEMPLATES[id].tier <= Math.round(ex.tier) && RANKS.indexOf(BEAST_TEMPLATES[id].rarity) <= RANKS.indexOf(ex.rarity));
+      if (kind === 'range' || kind === 'speed') {
+        const vals = have.map((id) => beastStats(id, ex.prestige)[kind === 'range' ? 'rng' : 'spd']).sort((a, c) => c - a);
+        value = vals.length >= 3 ? vals[2] : 1;
+        if (value < 2) kind = 'three';
+      }
+      if (kind === 'rarity' && RANKS.indexOf(ex.rarity) <= 1) kind = 'three';
+      rule = { kind, value };
+    }
+    if (n >= 5 && k10 === 5) theme = ['snipers', 'swarm', 'runners', 'tanks'][(round + world) % 4];
+    const themed = (e) => theme && THEMES[theme].roles.includes(e.role);
+    const weights = pool.map((e) => (1 + Math.max(0, 6 - (n - e.debut)) * 0.5) * (themed(e) ? 7 : 1));
     const pick = () => {
       let x = r() * weights.reduce((a, b) => a + b, 0);
       for (let i = 0; i < pool.length; i++) { x -= weights[i]; if (x <= 0) return pool[i]; }
@@ -325,27 +569,92 @@ const BATTLE_DATA = (() => {
     };
     const k = (n - 1) / (w.levels - 1);
     const spawns = [];
-    // A gentle start, then a stream that thickens through the world: groups of one to three,
-    // more often the further in.
     const every = Math.max(3.4, 6.2 - 2.2 * k - (world - 1) * 0.2 + (n <= 3 ? 1.5 : 0));
     const length = 160;
-    spawns.push({ t: 2, foe: (fresh || pick()).id, x: 0.35 + r() * 0.3 });
-    let t = 4.5;
-    while (t < length) {
-      const f = t > 12 && fresh && r() < 0.18 ? fresh : pick();
-      const many = f.role === 'swarm' ? 3 : n > 4 && r() < 0.15 + k * 0.25 ? 2 : 1;
-      const lane = 0.12 + r() * 0.76;
-      for (let i = 0; i < many; i++) spawns.push({ t: t + i * 0.7, foe: (i && f.role !== 'swarm' ? pick() : f).id, x: Math.min(0.92, Math.max(0.08, lane + (i - (many - 1) / 2) * 0.09)) });
-      t += every * (0.75 + r() * 0.5);
+    const lanes = (m) => Array.from({ length: m }, (_, i) => (m === 1 ? 0.5 : 0.1 + (0.8 * i) / (m - 1)));
+    const clampX = (x) => Math.min(0.92, Math.max(0.08, x));
+    // From level 6 on, now and then an elite: bigger, tougher, harder hitting, with a gold glow.
+    const eliteOdds = n >= 6 ? 0.03 + 0.07 * k : 0;
+    const add = (t, f, x, extra = {}) => spawns.push({ t, foe: f.id, x: clampX(x), ...(f.role !== 'swarm' && r() < eliteOdds ? { elite: true } : {}), ...extra });
+    /** A group of `m` side by side (a swarm comes as three wherever it is). */
+    const group = (t, m, x0, spread = 0.09) => {
+      const f = pick();
+      // A swarm comes as three (two in the first three levels, where three swamped a Tier 1 six).
+      const many = f.role === 'swarm' ? (n <= 3 ? 2 : Math.max(3, m)) : m;
+      for (let i = 0; i < many; i++) add(t + i * 0.5, i && f.role !== 'swarm' ? pick() : f, x0 + (i - (many - 1) / 2) * spread);
+    };
+    /** A steady stream: groups of one to three, more often the further in, every `gap` seconds. */
+    const stream = (from, to, gap) => {
+      let t = from;
+      while (t < to) {
+        const m = n > 4 && r() < 0.15 + k * 0.25 ? 2 : 1;
+        group(t, m, 0.12 + r() * 0.76);
+        t += gap * (0.75 + r() * 0.5);
+      }
+    };
+    // How many come at once in a rush: three at first, up to nine deep in the later worlds.
+    const rushSize = Math.min(9, 3 + Math.floor(n / 7) + (world - 1));
+    const pattern = boss ? 'boss' : patternOf(world, n);
+    if (fresh && pattern !== 'rush') add(2, fresh, 0.35 + r() * 0.3);
+    if (pattern === 'stream') stream(4.5, length, every);
+    else if (pattern === 'rush') {
+      // Everyone at once, in a line across the field (the newest among them), then a slow trickle
+      // and a second rush.
+      const line = lanes(rushSize);
+      line.forEach((x, i) => add(3 + i * 0.15, i === Math.floor(rushSize / 2) && fresh ? fresh : pick(), x, i ? {} : { announce: 'Here they come!' }));
+      stream(24, 70, every * 1.6);
+      lanes(Math.min(9, rushSize + 1)).forEach((x, i) => add(72 + i * 0.15, pick(), x, i ? {} : { announce: 'Another rush!' }));
+      stream(90, length, every * 1.4);
+    } else if (pattern === 'waves') {
+      // Quiet, then a wave; quiet, then a bigger one.
+      let t = 6, wave = 1;
+      while (t < length) {
+        const m = Math.min(9, 3 + Math.floor(n / 9) + (world - 1) + Math.floor(wave / 2));
+        for (let i = 0; i < m; i++) add(t + i * 0.6, pick(), 0.1 + r() * 0.8, i ? {} : { announce: `Wave ${wave}` });
+        t += 24 + r() * 6;
+        wave++;
+      }
+    } else if (pattern === 'ambush') {
+      // A trickle of ones, then a crowd from both edges at once.
+      stream(5, 38, every * 1.7);
+      const m = rushSize;
+      for (let i = 0; i < m; i++) add(40 + (i % 2) * 0.2 + Math.floor(i / 2) * 0.4, pick(), i % 2 ? 0.88 - Math.floor(i / 2) * 0.05 : 0.12 + Math.floor(i / 2) * 0.05, i ? {} : { announce: 'Ambush!' });
+      stream(52, length, every * 1.15);
+    } else if (pattern === 'flanks') {
+      // In pairs down both edges, leaving the middle open.
+      let t = 4.5;
+      while (t < length) {
+        add(t, pick(), 0.1 + r() * 0.08);
+        add(t + 0.4, pick(), 0.9 - r() * 0.08);
+        t += every * 1.25 * (0.8 + r() * 0.4);
+      }
+    } else if (pattern === 'escort') {
+      // A tough one in front with shooters behind it.
+      const front = pool.filter((e) => ['tank', 'brute', 'grunt'].includes(e.role));
+      const back = pool.filter((e) => ['ranged', 'caster'].includes(e.role));
+      let t = 4.5;
+      while (t < length) {
+        const x = 0.2 + r() * 0.6;
+        add(t, front.length ? front[Math.floor(r() * front.length)] : pick(), x);
+        const b = Math.min(2, 1 + Math.floor(n / 15));
+        for (let i = 0; i < b; i++) add(t + 1.4 + i * 0.3, back.length ? back[Math.floor(r() * back.length)] : pick(), x + (i - (b - 1) / 2) * 0.1);
+        t += every * 1.9 * (0.8 + r() * 0.4);
+      }
+    } else {
+      // A boss level: a thin stream, the boss at 20 s with a guard either side, then more.
+      stream(4.5, length, every * 1.15);
+      spawns.push({ t: 20, foe: bossFoe.id, x: 0.5, boss: true, announce: `${bossFoe.name}!` });
+      add(20.5, pick(), 0.32);
+      add(20.5, pick(), 0.68);
     }
-    if (bossFoe) spawns.push({ t: 20, foe: bossFoe.id, x: 0.5, boss: true });
     spawns.sort((a, b) => a.t - b.t);
     // Defenders who come out when their coin pile is being emptied (at 10 s and at 5 s left).
     const rally = n < 2 ? [pick().id] : [pick().id, pick().id, n > 10 ? pick().id : null, n > 25 ? pick().id : null].filter(Boolean);
     const p = LEVEL_POINTS[`${world}-${n}`];
     return {
-      id: `${world}-${n}`, world, n, boss, points: p || points, spawns, rally,
-      maxEnemies: Math.min(12, 5 + Math.floor(n / 8) + (world - 1)),
+      id: `${world}-${n}`, world, n, boss, points: p || points, spawns, rally, rule, theme,
+      maxEnemies: Math.min(14, Math.max(5 + Math.floor(n / 8) + (world - 1), ['rush', 'ambush', 'waves'].includes(pattern) ? rushSize + 2 : 0)),
+      pattern,
       pile: 15,
       starTime: STAR_TIMES[`${world}-${n}`] || 90 + Math.round(k * 60),
       fresh: fresh ? fresh.id : null, bossFoe: bossFoe ? bossFoe.id : null,
@@ -380,28 +689,37 @@ const BATTLE_DATA = (() => {
   const ACHIEVEMENTS = [
     { id: 'first_win', name: 'First Blood', desc: 'Win your first battle.', test: (b) => b.clears >= 1, reward: { crates: 2 } },
     { id: 'clear_10', name: 'Warming Up', desc: 'Clear 10 levels.', test: (b) => b.clears >= 10, reward: { crates: 5 } },
-    { id: 'clear_40', name: 'Seasoned', desc: 'Clear 40 levels.', test: (b) => b.clears >= 40, reward: { premium: 2 } },
-    { id: 'clear_80', name: 'Veteran', desc: 'Clear 80 levels.', test: (b) => b.clears >= 80, reward: { premium: 4 } },
-    { id: 'clear_120', name: 'Conqueror', desc: 'Clear all 120 Prime levels.', test: (b) => b.clears >= 120, reward: { premium: 10 } },
+    { id: 'clear_40', name: 'Seasoned', desc: 'Clear 40 levels.', test: (b) => b.clears >= 40, reward: { premium: 2, cap: 15 } },
+    { id: 'clear_80', name: 'Veteran', desc: 'Clear 80 levels.', test: (b) => b.clears >= 80, reward: { premium: 4, cap: 18 } },
+    { id: 'clear_120', name: 'Conqueror', desc: 'Clear 120 levels.', test: (b) => b.clears >= 120, reward: { premium: 10 } },
     { id: 'stars_5', name: 'Quick Paws', desc: 'Earn 5 stars.', test: (b) => b.stars >= 5, reward: { spins: 1 } },
-    { id: 'stars_25', name: 'Speed Runner', desc: 'Earn 25 stars.', test: (b) => b.stars >= 25, reward: { premium: 2 } },
-    { id: 'stars_60', name: 'Star Hoarder', desc: 'Earn 60 stars.', test: (b) => b.stars >= 60, reward: { premium: 4 } },
-    { id: 'stars_120', name: 'Constellation', desc: 'Earn every Prime star.', test: (b) => b.stars >= 120, reward: { premium: 12 } },
-    { id: 'boss_1', name: 'Giant Slayer', desc: 'Beat a boss.', test: (b) => b.bosses >= 1, reward: { premium: 1 } },
-    { id: 'boss_6', name: 'Boss Hunter', desc: 'Beat 6 bosses.', test: (b) => b.bosses >= 6, reward: { premium: 3 } },
-    { id: 'boss_12', name: 'Kingbreaker', desc: 'Beat all 12 Prime bosses.', test: (b) => b.bosses >= 12, reward: { premium: 8 } },
-    { id: 'world_1', name: 'Dawn', desc: 'Clear the Shadow Wilds.', test: (b) => b.worlds >= 1, reward: { premium: 3 } },
-    { id: 'world_2', name: 'Uncrowned', desc: 'Clear the Iron Kingdom.', test: (b) => b.worlds >= 2, reward: { premium: 5 } },
+    { id: 'stars_25', name: 'Speed Runner', desc: 'Earn 25 stars.', test: (b) => b.stars >= 25, reward: { premium: 2, cap: 15 } },
+    { id: 'stars_60', name: 'Star Hoarder', desc: 'Earn 60 stars.', test: (b) => b.stars >= 60, reward: { premium: 4, cap: 18 } },
+    { id: 'stars_120', name: 'Constellation', desc: 'Earn 120 stars.', test: (b) => b.stars >= 120, reward: { premium: 12 } },
+    { id: 'boss_1', name: 'Giant Slayer', desc: 'Beat a boss.', test: (b) => b.bosses >= 1, reward: { premium: 1, cap: 15 } },
+    { id: 'boss_6', name: 'Boss Hunter', desc: 'Beat 6 bosses.', test: (b) => b.bosses >= 6, reward: { premium: 3, cap: 15 } },
+    { id: 'boss_12', name: 'Kingbreaker', desc: 'Beat 12 bosses.', test: (b) => b.bosses >= 12, reward: { premium: 8 } },
+    { id: 'world_1', name: 'Dawn', desc: 'Clear the Shadow Wilds.', test: (b) => b.worlds >= 1, reward: { premium: 3, cap: 15 } },
+    { id: 'world_2', name: 'Uncrowned', desc: 'Clear the Iron Kingdom.', test: (b) => b.worlds >= 2, reward: { premium: 5, cap: 18 } },
     { id: 'world_3', name: 'Invaders Repelled', desc: 'Clear the Star Invasion.', test: (b) => b.worlds >= 3, reward: { premium: 8 } },
     { id: 'blitz', name: 'Blitz', desc: 'Win any level in under 40 seconds.', test: (b) => b.fastest > 0 && b.fastest < 40, reward: { spins: 2 } },
-    { id: 'underdog', name: 'Underdog', desc: 'Beat a boss with no beast above Tier 8.', test: (b) => b.underdog, reward: { premium: 3 } },
+    { id: 'underdog', name: 'Underdog', desc: 'Beat a boss with no beast above Tier 8.', test: (b) => b.underdog, reward: { premium: 3, cap: 15 } },
     { id: 'flawless', name: 'Untouched', desc: 'Win with your coin pile full.', test: (b) => b.flawless >= 1, reward: { crates: 5 } },
-    { id: 'flawless_10', name: 'Fortress', desc: 'Win 10 battles with your coin pile full.', test: (b) => b.flawless >= 10, reward: { premium: 3 } },
+    { id: 'flawless_10', name: 'Fortress', desc: 'Win 10 battles with your coin pile full.', test: (b) => b.flawless >= 10, reward: { premium: 3, cap: 15 } },
     { id: 'foes_50', name: 'Field Notes', desc: 'Meet 50 kinds of enemy.', test: (b) => b.seen >= 50, reward: { spins: 2 } },
-    { id: 'foes_120', name: 'Know Your Enemy', desc: 'Meet every Prime enemy.', test: (b) => b.seen >= 120, reward: { premium: 5 } },
+    { id: 'foes_120', name: 'Know Your Enemy', desc: 'Meet 120 kinds of enemy.', test: (b) => b.seen >= 120, reward: { premium: 5, cap: 18 } },
+    { id: 'world_4', name: 'Moonrise', desc: 'Clear the Moon Hollows.', test: (b) => b.lgWorlds >= 1, reward: { premium: 3, cap: 15 } },
+    { id: 'world_5', name: 'Scuttled', desc: 'Clear the Ring Pirates.', test: (b) => b.lgWorlds >= 2, reward: { premium: 5, cap: 18 } },
+    { id: 'world_6', name: 'Dawn Breaks', desc: 'Clear the Eclipse Court.', test: (b) => b.lgWorlds >= 3, reward: { premium: 10 } },
+    { id: 'clear_240', name: 'Two Universes', desc: 'Clear all 240 levels.', test: (b) => b.clears >= 240, reward: { premium: 15 } },
+    { id: 'boss_24', name: 'Slayer of Kings', desc: 'Beat all 24 bosses.', test: (b) => b.bosses >= 24, reward: { premium: 12 } },
+    { id: 'foes_all', name: 'Bestiary Complete', desc: 'Meet every enemy in both systems.', test: (b) => b.seen >= 192, reward: { premium: 8 } },
+    { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
+  /** The highest tier a boss level's premium crate can hold, by world. */
+  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20 };
 
-  /** Perks: one before a battle, once earned. */
+  /** Perks: one before a battle. */
   const PERKS = [
     { id: 'fury', name: 'Fury', desc: 'Every third swing is a heavy one, not every fifth.', opts: { fury: true }, unlock: (t) => t.bosses >= 1, how: 'Beat a boss' },
     { id: 'rally', name: 'Rally', desc: 'Cards rest a quarter less.', opts: { rest: 0.75 }, unlock: (t) => t.stars >= 25, how: 'Earn 25 stars' },
@@ -409,7 +727,7 @@ const BATTLE_DATA = (() => {
   ];
 
   return {
-    PERKS,
+    PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
     STATS, STAT_NAMES, RARITY_BONUS, ROLES, ENEMIES, ENEMY_LIST: E, WORLDS, BOSS_EVERY, ACHIEVEMENTS, STAR_TIMES, LEVEL_POINTS,
     hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, beastRadius,
     enemyStats, enemyRadius, level, levelPoints, difficulty, clearMinutes,

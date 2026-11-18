@@ -247,6 +247,9 @@ window.addEventListener('DOMContentLoaded', () => {
   loadGame();
   // 1.4: battle mode (battle.js): the Battle tab, and noting beasts' prestige from here on.
   if (typeof BATTLE !== 'undefined') { try { BATTLE.init(); } catch (e) { console.error('battle init', e); } }
+  // 1.4: the premium crate button showed none (and could not be pressed) after a restart until
+  // a crate was bought, so crates won in battle seemed unusable. Show what is saved.
+  updatePremiumCratesDisplay();
 
   // Mobile drawer listeners
   const menuBtn = document.getElementById('menu-toggle-btn');
@@ -1931,9 +1934,11 @@ function updateHUD() {
   if (progressPercent >= 100) {
     pctEl.innerText = 'Ready to Ascend!';
     pctEl.classList.add('ready-pulse');
+    pctEl.style.cursor = 'pointer';
   } else {
     pctEl.innerText = `${Math.floor(progressPercent)}%`;
     pctEl.classList.remove('ready-pulse');
+    pctEl.style.cursor = '';
   }
   document.getElementById('prestige-progress-bar').style.width = `${progressPercent}%`;
 
@@ -3833,6 +3838,15 @@ function setupSettingsListeners() {
       openPrestigeSelectorModal();
     }
   });
+  const ascendLabel = document.getElementById('prestige-progress-pct');
+  if (ascendLabel) {
+    ascendLabel.addEventListener('click', (e) => {
+      if (state.essence < getPrestigeTarget()) return;
+      e.stopPropagation();
+      if (audio) audio.playClick();
+      openPrestigeSelectorModal();
+    });
+  }
 
   const warpBtn = document.getElementById('warp-btn');
   if (warpBtn) {
@@ -4372,14 +4386,22 @@ function buyPremiumCrates() {
   );
 }
 
+/** 1.4: premium crates won in battle, waiting to be opened (each the highest tier it can hold). */
+function battleCrates() {
+  return (state.battle && Array.isArray(state.battle.crates)) ? state.battle.crates : [];
+}
+function premiumCratesTotal() {
+  return (state.premiumCratesCount || 0) + battleCrates().length;
+}
+
 function updatePremiumCratesDisplay() {
   const btn = document.getElementById('spawn-premium-crate-btn');
   const label = document.getElementById('premium-crates-label');
   if (label) {
-    label.innerText = `Premium: ${state.premiumCratesCount}`;
+    label.innerText = `Premium: ${premiumCratesTotal()}`;
   }
   if (btn) {
-    if (state.premiumCratesCount > 0) {
+    if (premiumCratesTotal() > 0) {
       btn.style.pointerEvents = 'auto';
       btn.style.opacity = '1.0';
       btn.style.border = '1.5px solid #ff00c8';
@@ -4392,7 +4414,7 @@ function updatePremiumCratesDisplay() {
 }
 
 // Spawns a physical Premium Crate on the field
-function spawnPremiumCrateOnField() {
+function spawnPremiumCrateOnField(maxTier = 20) {
   const playground = document.getElementById('beast-playground');
   
   const instanceId = 'premium-crate-' + Math.random().toString(36).substr(2, 9);
@@ -4411,6 +4433,7 @@ function spawnPremiumCrateOnField() {
   container.setAttribute('data-spawned-at', Date.now());
   container.setAttribute('data-land-x', landX);
   container.setAttribute('data-land-y', landY);
+  container.setAttribute('data-max-tier', maxTier);
 
   container.innerHTML = ART.crate(true).replace('class="crate-sprite crate-v2"', 'class="crate-sprite crate-v2" style="transform: scale(1.25);"'); // 1.3
 
@@ -4453,6 +4476,7 @@ function openPremiumCrate(crateId, x, y) {
 
   const dom = document.getElementById(crateId);
   if (!dom) return;
+  const maxTier = Number(dom.getAttribute('data-max-tier')) || 20;
   const r = dom.getBoundingClientRect();
   const sx = r.left + r.width / 2, sy = r.top + r.height / 2;
   dom.remove();
@@ -4461,7 +4485,7 @@ function openPremiumCrate(crateId, x, y) {
   const targetRarities = ['RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
   const possibilities = Object.values(BEAST_TEMPLATES).filter(b => {
     const bSys = b.system || 'prime';
-    return b.tier >= 5 && b.tier <= 20 && targetRarities.includes(b.rarity) && bSys === currentSys && !isBossBeast(b.id);
+    return b.tier >= 5 && b.tier <= maxTier && targetRarities.includes(b.rarity) && bSys === currentSys && !isBossBeast(b.id);
   });
 
   const defaultBeast = currentSys === 'prime' ? 'torrent' : 'tempest_eagle';
@@ -4521,8 +4545,8 @@ function setupSpawnerListeners() {
         return;
       }
 
-      if (state.premiumCratesCount <= 0) {
-        showWarning("No Premium Crates", "You don't have any Premium Crates left! Buy more in the shop.");
+      if (premiumCratesTotal() <= 0) {
+        showWarning("No Premium Crates", "You don't have any Premium Crates left! Buy more in the shop, or win them in battle.");
         return;
       }
 
@@ -4532,8 +4556,10 @@ function setupSpawnerListeners() {
         }
       }
 
-      state.premiumCratesCount--;
-      spawnPremiumCrateOnField();
+      // Battle crates first (they may hold a lower top tier), then bought ones.
+      const won = battleCrates();
+      if (won.length) spawnPremiumCrateOnField(won.shift());
+      else { state.premiumCratesCount--; spawnPremiumCrateOnField(); }
       updatePremiumCratesDisplay();
       saveGame();
     });
@@ -5163,6 +5189,12 @@ function showDailySpinModal() {
   if (!modal) return;
   
   document.getElementById('spin-result-container').style.display = 'none';
+  const todayKey = new Date().getFullYear() + '-' + (new Date().getMonth() + 1) + '-' + new Date().getDate();
+  const battleSpin = state.lastDailySpinDate === todayKey;
+  const titleEl = document.getElementById('daily-spin-title');
+  const subEl = document.getElementById('daily-spin-subtitle');
+  if (titleEl) titleEl.innerText = battleSpin ? 'BATTLE FREE SPIN' : 'DAILY FREE SPIN';
+  if (subEl) subEl.innerText = battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left). Tier 5+, up to Dark Matter!` : 'Spin for a free beast of Tier 5+ (up to Dark Matter!)';
   
   const spinBtn = document.getElementById('wheel-spin-btn');
   spinBtn.classList.remove('disabled');

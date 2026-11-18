@@ -29,7 +29,7 @@ const ENEMY_ART = (() => {
       skin: look.skin, skinD: shade(look.skin, sh ? 0.06 : -0.22), skinL: shade(look.skin, sh ? 0.1 : 0.25),
       cloth: look.cloth, clothD: shade(look.cloth, sh ? 0.05 : -0.25), clothL: shade(look.cloth, sh ? 0.12 : 0.22),
       trim: look.trim, trimD: shade(look.trim, -0.3),
-      line: sh ? shade(look.trim, -0.2) : '#1c1426',
+      line: sh ? shade(look.trim, 0.2) : '#1c1426',
       eye: look.eye,
       metal: sh ? '#1a1626' : '#c8ccd6', metalD: sh ? '#120f1c' : '#8a90a0', wood: sh ? '#1d1828' : '#8a5a2a',
     };
@@ -213,6 +213,20 @@ const ENEMY_ART = (() => {
       case 'claws':
         for (const dy of [-3, 0, 3]) path(ctx, P.shadow ? P.trim : '#f0e8d8', L, 1, () => { ctx.moveTo(2 * s, (dy - 1) * s); ctx.quadraticCurveTo(9 * s, dy * s, 11 * s, (dy + 3) * s); ctx.lineTo(3 * s, (dy + 1) * s); ctx.closePath(); });
         break;
+      case 'wrench':
+        rrect(ctx, -4 * s, -1.8 * s, 20 * s, 3.6 * s, 1.5 * s, P.metal, L, lw);
+        path(ctx, P.metal, L, lw, () => { ctx.arc(19 * s, 0, 5 * s, 0.9, Math.PI * 2 - 0.9); ctx.lineTo(19 * s, 0); ctx.closePath(); });
+        break;
+      case 'sling':
+        ctx.strokeStyle = P.shadow ? P.trim : '#8a6a4a'; ctx.lineWidth = 1.2 * s;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(8 * s, -10 * s, 14 * s, -4 * s); ctx.stroke();
+        ellipse(ctx, 14 * s, -4 * s, 3.2 * s, 3 * s, '#c8c8d0', L, 1);
+        break;
+      case 'cannon':
+        rrect(ctx, -6 * s, -4.5 * s, 24 * s, 9 * s, 4 * s, '#3a3a44', L, lw);
+        ellipse(ctx, 18 * s, 0, 4.5 * s, 4.5 * s, '#1a1a22', L, 1);
+        rrect(ctx, -2 * s, 3 * s, 6 * s, 6 * s, 2 * s, P.wood, L, 1);
+        break;
       case 'drum':
         ellipse(ctx, 6 * s, 6 * s, 8 * s, 6 * s, P.trim, L, lw);
         rrect(ctx, 0, 0, 2 * s, 12 * s, 1, wood, L, 1);
@@ -310,6 +324,12 @@ const ENEMY_ART = (() => {
       if (look.armor) path(ctx, P.trim, null, 0, () => { ctx.ellipse(x, y - r * 1.38, r * 0.25, r * 0.5, 0, 0, TAU); });
     }
     if (kind === 'bald' && !P.shadow) ellipse(ctx, x, y - r * 0.7, r * 0.5, r * 0.15, P.skinL, null);
+    if (kind === 'astro') {
+      ctx.globalAlpha *= 0.35; ellipse(ctx, x, y - r * 0.05, r * 1.45, r * 1.42, '#c8e8ff', null); ctx.globalAlpha /= 0.35;
+      ellipse(ctx, x, y - r * 0.05, r * 1.45, r * 1.42, null, '#e8f4ff', 1.8);
+      ellipse(ctx, x - r * 0.6, y - r * 0.6, r * 0.35, r * 0.2, 'rgba(255,255,255,0.8)', null, 0, -0.6);
+      rrect(ctx, x - r * 1.1, y + r * 1.15, r * 2.2, r * 0.5, r * 0.2, P.cloth, P.line, 1.2);
+    }
     hat(ctx, P, look, x, y, r, pose);
   }
 
@@ -370,6 +390,11 @@ const ENEMY_ART = (() => {
       case 'bearskin':
         path(ctx, '#18141c', L, 1.4, () => { ctx.ellipse(x, y - r * 1.2, r * 1.0, r * 1.6, 0, Math.PI * 0.95, Math.PI * 2.05); ctx.closePath(); });
         break;
+      case 'bandana':
+        path(ctx, look.trim, L, 1.3, () => { ctx.ellipse(x, y - r * 0.5, r * 1.02, r * 0.62, 0, Math.PI, TAU); ctx.closePath(); });
+        limb(ctx, x + r * 0.9, y - r * 0.5, x + r * 1.5, y - r * 0.1 + Math.sin(pose.t * 5) * 1.5, 2.2, look.trim, L);
+        for (const [dx, dy] of [[-0.4, -0.75], [0.2, -0.85], [0.6, -0.6]]) ellipse(ctx, x + dx * r, y + dy * r, 1.2, 1.2, '#ffffff', null);
+        break;
       case 'halo_ring':
         ctx.strokeStyle = look.trim; ctx.lineWidth = 2;
         glow(ctx, x, y - r * 1.6, r, look.trim, 0.4);
@@ -379,75 +404,278 @@ const ENEMY_ART = (() => {
     }
   }
 
+  /**
+   * How each weapon is used (Sam, 18 Nov: more kinds of attack). Blades slash in an arc with a
+   * swoosh, heavy tools come down from overhead, spears lunge, daggers jab twice, claws rake, bows
+   * are drawn and loosed, guns kick back with a flash, staffs are raised to charge over a glowing
+   * ring and swung forward, slings whirl, potions are thrown, instruments are played.
+   */
+  const STYLE = {
+    sword: 'slash', cutlass: 'slash', katana: 'slash', laser_sword: 'slash', axe: 'slash', dual_axe: 'slash', scythe: 'slash', blades: 'slash',
+    spear: 'thrust', pike: 'thrust', pitchfork: 'thrust', trident: 'thrust', halberd: 'thrust', lance: 'thrust',
+    hammer: 'smash', club: 'smash', pick: 'smash', shovel: 'smash', wrench: 'smash',
+    dagger: 'stab', dual: 'stab', claws: 'claw',
+    bow: 'bow', longbow: 'bow', crossbow: 'gun', raygun: 'gun', rifle: 'gun', long_rifle: 'gun', cannon: 'gun',
+    staff: 'magic', orb_staff: 'magic', lantern: 'magic', potion: 'throw', sling: 'sling',
+    flute: 'music', lute: 'music', drum: 'music', none: 'punch',
+  };
+  const styleOf = (w) => STYLE[w || 'none'] || 'punch';
+  const lerp = (a, b, k) => a + (b - a) * k;
+
   // ------------------------------------------------------------------ body plans
   /**
-   * A person standing up (and shadow folk, robots, aliens on two legs). The body leans and the
-   * arms move with the pose; the weapon hand swings through a light or heavy attack.
+   * A person standing up (and shadow folk, robots, aliens on two legs). How it walks comes from its
+   * part in a fight: runners stride long and pump their arms, the heavy stomp and sway, casters
+   * glide with their feet barely moving, swarms scurry. How it attacks comes from its weapon (STYLE).
    */
   function biped(ctx, P, look, pose) {
     const L = P.line;
     const heavy = look.build === 'heavy';
     const thin = !!look.thin;
     const bw = heavy ? 15 : thin ? 8.5 : 11;
+    const role = pose.role || 'grunt';
+    const w = look.weapon || 'none';
+    const style = styleOf(w);
+    const gait = role === 'runner' ? { stride: 7.5, bob: 2.4, arms: 0.7, sway: 0.02 }
+      : role === 'tank' || role === 'brute' || role === 'boss' || heavy ? { stride: 4.5, bob: 3.2, arms: 0.22, sway: 0.07 }
+      : role === 'caster' ? { stride: 1.6, bob: 0.5, arms: 0.1, sway: 0, hover: 2.5 }
+      : role === 'swarm' ? { stride: 4, bob: 1.9, arms: 0.4, sway: 0.03 }
+      : { stride: 5, bob: 1.6, arms: 0.3, sway: 0.025 };
+    const walking = pose.atk < 0 && !pose.capture;
     const step = Math.sin(pose.walk * TAU);
-    const bob = Math.abs(Math.cos(pose.walk * TAU)) * 1.6;
+    const bob = Math.abs(Math.cos(pose.walk * TAU)) * gait.bob + (gait.hover ? gait.hover + Math.sin(pose.t * 3) * 1.2 : 0);
     const atk = pose.atk;
-    // An attack: a wind-up back, then a fast swing through.
-    const wind = atk < 0 ? 0 : atk < 0.45 ? ease(atk / 0.45) : 1 - ease((atk - 0.45) / 0.55);
-    const swing = atk < 0 ? 0 : atk < 0.45 ? -wind : (atk - 0.45) / 0.55 < 0.35 ? 1 : 1 - ease(((atk - 0.45) / 0.55 - 0.35) / 0.65);
-    const lean = (atk >= 0 ? (atk < 0.45 ? -0.08 * wind : 0.14 * Math.max(0, swing)) * (pose.heavy ? 1.7 : 1) : 0);
+    const hv = pose.heavy ? 1.45 : 1;
+    // An attack: a wind-up (atk 0 to 0.45), then the blow (p 0 to 1): fast in, slower back.
+    const wind = atk < 0 ? 0 : atk < 0.45 ? ease(atk / 0.45) : 0;
+    const p = atk < 0.45 ? -1 : (atk - 0.45) / 0.55;
+    const hitIn = p < 0 ? 0 : p < 0.3 ? ease(p / 0.3) : 1;
+    const back = p < 0.3 ? 0 : ease((p - 0.3) / 0.7);
+    const hit = p < 0 ? 0 : hitIn * (1 - back);
+    // Arms at rest swing with the walk; an attack moves them (aim is the weapon arm's angle from
+    // the shoulder, 0 to the right and PI/2 straight down; reach how far the hand is out).
+    let aim = 1.3 - step * gait.arms, reach = 13, offA = 1.95 + step * gait.arms, offReach = 12;
+    let wAng = null, lean = step * gait.sway, lunge = 0, squash = 1;
+    let swoosh = null, glyph = 0, charge = 0, flash = 0, string = 0, hideWeapon = false, offWeapon = null;
+    const restRanged = 0.9;
+    if (atk >= 0) {
+      switch (style) {
+        case 'slash': {
+          const up = 1.3 - 1.9 * hv;
+          aim = p < 0 ? lerp(1.3, up, wind) : lerp(lerp(up, 2.35, hitIn), 1.3, back);
+          lean = p < 0 ? -0.08 * wind * hv : 0.15 * hit * hv;
+          if (p >= 0 && p < 0.5) swoosh = { from: up, to: aim, a: (1 - p / 0.5) * 0.6 };
+          break;
+        }
+        case 'smash': {
+          aim = p < 0 ? lerp(1.3, -1.55, wind) : lerp(lerp(-1.55, 1.65, p < 0.22 ? ease(p / 0.22) : 1), 1.3, back);
+          wAng = aim - Math.PI / 2 - 0.1;
+          lean = p < 0 ? -0.12 * wind * hv : 0.22 * hit * hv;
+          if (p >= 0.18 && p < 0.5) squash = 1 - 0.07 * hv * Math.sin(((p - 0.18) / 0.32) * Math.PI);
+          if (p >= 0 && p < 0.3) swoosh = { from: -1.55, to: aim, a: (1 - p / 0.3) * 0.5 };
+          break;
+        }
+        case 'thrust': {
+          aim = p < 0 ? lerp(1.1, 0.15, wind) : lerp(0.15, 0.8, hit);
+          reach = p < 0 ? lerp(13, 9, wind) : lerp(9, 21, hit);
+          wAng = p < 0 ? lerp(0.5, 0.05, wind) : lerp(0.05, 0.45, hit);
+          lunge = (p < 0 ? -1.5 * wind : 4.5 * hit) * hv;
+          lean = p < 0 ? -0.06 * wind : 0.1 * hit;
+          break;
+        }
+        case 'stab': {
+          // Two quick jabs, one with each hand when it holds two.
+          const j1 = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.45) * Math.PI);
+          const j2 = p < 0.45 ? 0 : Math.sin(Math.min(1, (p - 0.45) / 0.45) * Math.PI);
+          aim = p < 0 ? lerp(1.3, 1.75, wind) : 1.0 - 0.3 * j1;
+          reach = 11 + 8 * j1;
+          offA = p < 0 ? lerp(1.95, 1.4, wind) : 2.1 + 0.3 * j2;
+          offReach = 12 + (w === 'dual' ? 8 * j2 : 0);
+          lunge = 2.5 * Math.max(j1, j2) * hv;
+          lean = -0.05 * wind;
+          if (w !== 'dual' && j2) { aim = 1.0 - 0.3 * j2; reach = 11 + 8 * j2; }
+          break;
+        }
+        case 'claw': {
+          aim = p < 0 ? lerp(1.3, -0.7, wind) : lerp(-0.7, 2.5, hitIn) * (1 - back) + 1.3 * back;
+          offA = p < 0 ? lerp(1.95, 3.9, wind) : lerp(3.9, 0.7, hitIn) * (1 - back) + 1.95 * back;
+          lean = p < 0 ? -0.1 * wind : 0.12 * hit;
+          lunge = 3 * hit * hv;
+          if (p >= 0 && p < 0.45) swoosh = { from: -0.7, to: aim, a: (1 - p / 0.45) * 0.45, claw: true };
+          break;
+        }
+        case 'bow': {
+          aim = 0.3;
+          wAng = -0.25;
+          string = p < 0 ? wind : 0;
+          lean = p < 0 ? -0.04 * wind : -0.08 * (1 - hitIn);
+          break;
+        }
+        case 'gun': {
+          const kick = p >= 0 && p < 0.3 ? 1 - p / 0.3 : 0;
+          aim = 0.3 - 0.4 * kick * hv;
+          wAng = -0.25 - 0.3 * kick * hv;
+          lean = -0.07 * kick * hv;
+          flash = kick;
+          if (p < 0) aim = lerp(restRanged, 0.3, wind), wAng = lerp(-0.22, -0.25, wind);
+          break;
+        }
+        case 'magic': {
+          aim = p < 0 ? lerp(1.2, -1.15, wind) : lerp(lerp(-1.15, 0.45, hitIn), 1.2, back);
+          wAng = p < 0 ? lerp(-1.35, -1.55, wind) : lerp(lerp(-1.55, 0.15, hitIn), -1.35, back);
+          glyph = p < 0 ? wind : 1 - hitIn * 0.6 - back * 0.4;
+          charge = p < 0 ? wind * hv : (1 - hitIn) * hv;
+          lean = p < 0 ? -0.05 * wind : 0.1 * hit;
+          break;
+        }
+        case 'throw': {
+          aim = p < 0 ? lerp(1.3, -1.2, wind) : lerp(lerp(-1.2, 0.6, hitIn), 1.3, back);
+          wAng = aim - Math.PI / 2;
+          hideWeapon = p >= 0.12 && p < 0.75;
+          lean = p < 0 ? -0.1 * wind : 0.14 * hit;
+          break;
+        }
+        case 'sling': {
+          aim = p < 0 ? lerp(1.3, -1.35, wind) : lerp(-1.35, 0.45, hitIn) * (1 - back) + 1.3 * back;
+          wAng = p < 0 ? pose.t * 16 : -0.2;
+          lean = p >= 0 ? 0.1 * hit : 0;
+          break;
+        }
+        case 'music': {
+          aim = 0.8 + Math.sin(pose.t * 10) * 0.12;
+          offA = 1.6 + Math.sin(pose.t * 10 + 1.5) * 0.15;
+          lean = Math.sin(pose.t * 8) * 0.07;
+          wAng = -0.35;
+          charge = p >= 0 ? 1 - p : wind * 0.5;
+          break;
+        }
+        default: { // a punch
+          aim = p < 0 ? lerp(1.3, 1.7, wind) : lerp(1.7, 0.75, hit);
+          reach = p < 0 ? lerp(13, 9, wind) : lerp(9, 18, hit);
+          lunge = 3 * hit * hv;
+          lean = p < 0 ? -0.06 * wind : 0.08 * hit;
+        }
+      }
+    } else if (['bow', 'gun', 'magic', 'throw', 'music'].includes(style)) {
+      aim = style === 'magic' ? 1.2 - step * 0.1 : restRanged - step * 0.12;
+    }
     const hipY = -22 - bob;
     const legs = look.legs || 'legs';
-    // Legs.
+    ctx.save();
+    // Stomping heavies squash a little as each foot lands.
+    if (squash !== 1 || (walking && gait.bob > 3)) {
+      const k = squash !== 1 ? squash : 1 - 0.025 * Math.max(0, Math.cos(pose.walk * TAU * 2));
+      ctx.scale(2 - k, k);
+    }
+    ctx.translate(0, lunge);
+    // Legs: a stride, the shin a shade darker than the thigh, and a boot.
     for (const sd of [-1, 1]) {
-      const sw = step * sd * 5;
-      const fx = sd * (bw * 0.45) + sw * 0.4, fy = -2 + Math.max(0, sw) * -0.5;
-      limb(ctx, sd * bw * 0.4, hipY + 4, fx, fy, heavy ? 6 : 4.6, P.clothD, L);
+      const sw = (walking ? step : 0) * sd * gait.stride;
+      const fx = sd * (bw * 0.45) + sw * 0.4, fy = -2 + Math.max(0, sw) * -0.55;
+      const kx = sd * bw * 0.42 + sw * 0.25, ky = (hipY + 4 + fy) / 2 - Math.max(0, sw) * 0.4;
+      limb(ctx, sd * bw * 0.4, hipY + 4, kx, ky, heavy ? 6.4 : 4.8, P.clothD, L);
+      limb(ctx, kx, ky, fx, fy, heavy ? 5.6 : 4.2, P.shadow ? P.clothD : shade(look.cloth, -0.35), L);
       if (legs === 'hooves') ellipse(ctx, fx, fy, 3.2, 2.2, '#2a2018', L, 1);
-      else rrect(ctx, fx - 3.6, fy - 2.4, 7.2, 4, 1.8, P.shadow ? P.cloth : '#3a2a20', L, 1);
+      else {
+        rrect(ctx, fx - 3.8, fy - 2.6, 7.6, 4.2, 1.8, P.shadow ? P.cloth : '#3a2a20', L, 1);
+        if (!P.shadow) rrect(ctx, fx - 2.6, fy - 2.2, 3.4, 1.2, 0.6, 'rgba(255,255,255,0.18)', null);
+      }
     }
     ctx.save();
     ctx.translate(0, hipY + 6);
     ctx.rotate(lean);
     ctx.translate(0, -(hipY + 6));
-    // Cape behind.
-    if (look.cape) path(ctx, look.cape, L, 1.4, () => { const fl = Math.sin(pose.t * 4) * 2; ctx.moveTo(-bw * 0.9, hipY - 18); ctx.quadraticCurveTo(-bw * 1.6 + fl, hipY + 4, -bw * 1.3 + fl, hipY + 18); ctx.lineTo(bw * 1.3 + fl, hipY + 18); ctx.quadraticCurveTo(bw * 1.6 + fl, hipY + 4, bw * 0.9, hipY - 18); ctx.closePath(); });
-    if (look.jetpack) { rrect(ctx, -bw * 0.9, hipY - 20, bw * 1.8, 16, 4, P.metalD, L, 1.2); glow(ctx, 0, hipY + 2, 8, '#ffa040', 0.9); }
+    // Cape behind, rippling more when walking fast.
+    if (look.cape) path(ctx, look.cape, L, 1.4, () => { const fl = Math.sin(pose.t * (walking ? 7 : 4)) * (walking ? 3 : 2); ctx.moveTo(-bw * 0.9, hipY - 18); ctx.quadraticCurveTo(-bw * 1.6 + fl, hipY + 4, -bw * 1.3 + fl, hipY + 18); ctx.lineTo(bw * 1.3 + fl, hipY + 18); ctx.quadraticCurveTo(bw * 1.6 + fl, hipY + 4, bw * 0.9, hipY - 18); ctx.closePath(); });
+    if (look.jetpack) { rrect(ctx, -bw * 0.9, hipY - 20, bw * 1.8, 16, 4, P.metalD, L, 1.2); glow(ctx, 0, hipY + 2, 8 + Math.sin(pose.t * 20) * 1.5, '#ffa040', 0.9); }
     if (look.wings) wings(ctx, P, look, 0, hipY - 14, 1, pose);
-    // Body.
+    // A glowing ring at the feet while a spell is charged.
+    if (glyph > 0) {
+      ctx.save();
+      ctx.globalAlpha *= 0.75 * glyph;
+      ctx.translate(0, -hipY - 6 - 1);
+      glow(ctx, 0, hipY + 6, 20, look.trim, 0.4);
+      ctx.strokeStyle = look.trim; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.ellipse(0, hipY + 6, 19, 5.5, 0, 0, TAU); ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(0, hipY + 6, 13, 3.8, 0, 0, TAU); ctx.stroke();
+      for (let i = 0; i < 6; i++) { const a = pose.t * 2 + (i * TAU) / 6; ellipse(ctx, Math.cos(a) * 16, hipY + 6 + Math.sin(a) * 4.6, 1.4, 1.4, '#ffffff', null); }
+      ctx.restore();
+    }
+    // Body, shaded on one side, with a collar and a buckle.
     const top = hipY - 20;
     path(ctx, P.cloth, L, 1.8, () => { ctx.moveTo(-bw, top + 4); ctx.quadraticCurveTo(-bw - 1.5, hipY + 2, -bw * 0.8, hipY + 6); ctx.lineTo(bw * 0.8, hipY + 6); ctx.quadraticCurveTo(bw + 1.5, hipY + 2, bw, top + 4); ctx.quadraticCurveTo(0, top - 2, -bw, top + 4); ctx.closePath(); });
+    path(ctx, P.clothD, null, 0, () => { ctx.moveTo(bw * 0.35, top + 2); ctx.quadraticCurveTo(bw + 0.5, top + 4, bw, top + 6); ctx.quadraticCurveTo(bw + 1.2, hipY + 2, bw * 0.8, hipY + 5); ctx.lineTo(bw * 0.4, hipY + 5); ctx.closePath(); });
     if (!P.shadow) path(ctx, P.clothL, null, 0, () => { ctx.ellipse(-bw * 0.4, top + 9, bw * 0.35, 5, -0.3, 0, TAU); });
-    if (look.armor) { rrect(ctx, -bw * 0.75, top + 5, bw * 1.5, 12, 4, P.metal, L, 1.2); if (!P.shadow) limb(ctx, -bw * 0.5, top + 9, bw * 0.5, top + 9, 0.8, P.metalD, P.metalD); }
+    if (look.armor) { rrect(ctx, -bw * 0.75, top + 5, bw * 1.5, 12, 4, P.metal, L, 1.2); if (!P.shadow) { limb(ctx, -bw * 0.5, top + 9, bw * 0.5, top + 9, 0.8, P.metalD, P.metalD); ellipse(ctx, -bw * 0.35, top + 8, bw * 0.25, 2, 'rgba(255,255,255,0.35)', null); } }
+    else if (!P.shadow) path(ctx, P.clothD, null, 0, () => { ctx.moveTo(-3, top + 1); ctx.lineTo(0, top + 6); ctx.lineTo(3, top + 1); ctx.closePath(); });
     rrect(ctx, -bw * 0.85, hipY - 1, bw * 1.7, 3.4, 1.5, P.trim, L, 1);
+    rrect(ctx, -2.2, hipY - 1.6, 4.4, 4.6, 1, P.shadow ? P.trim : P.metal, L, 0.8);
     if (P.shadow) { ctx.strokeStyle = P.trim; ctx.lineWidth = 1.3; ctx.globalAlpha *= 0.7; ctx.beginPath(); ctx.moveTo(-bw + 1, top + 6); ctx.quadraticCurveTo(-bw - 0.5, hipY - 2, -bw * 0.8 + 1, hipY + 4); ctx.stroke(); ctx.globalAlpha /= 0.7; }
     if (look.strings) for (const sx of [-bw * 0.8, bw * 0.8, 0]) { ctx.strokeStyle = 'rgba(220,210,255,0.5)'; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(sx, top); ctx.lineTo(sx * 1.4, top - 90); ctx.stroke(); }
     if (look.tail) limb(ctx, bw * 0.5, hipY + 2, bw * 1.8, hipY - 6 + Math.sin(pose.t * 5) * 3, 2.4, P.skinD, L);
-    // Arms: the off hand holds a shield or swings with the walk; the weapon hand attacks.
+    // Arms.
     const shoulderY = top + 6;
-    const offA = 1.95 + step * 0.25;
-    const offHand = [-bw - 1 + Math.cos(offA) * 12, shoulderY + Math.sin(offA) * 12];
-    const wa = 1.3 - step * 0.2 - wind * (pose.heavy ? 2.6 : 1.8) + Math.max(0, swing) * (pose.heavy ? 1.2 : 0.9);
-    const ranged = ['bow', 'longbow', 'crossbow', 'raygun', 'rifle', 'long_rifle', 'staff', 'orb_staff', 'lantern', 'potion'].includes(look.weapon);
-    const aim = ranged ? (atk >= 0 ? 0.25 + 0.25 * (1 - wind) : 0.9) : wa;
-    const wHand = [bw + 1 + Math.cos(aim) * 13, shoulderY + Math.sin(aim) * 13];
+    const offHand = [-bw - 1 + Math.cos(offA) * offReach, shoulderY + Math.sin(offA) * offReach];
+    const wHand = [bw + 1 + Math.cos(aim) * reach, shoulderY + Math.sin(aim) * reach];
+    // A bow drawn: the off hand pulls the string back to the cheek.
+    if (string > 0) { offHand[0] = lerp(offHand[0], wHand[0] - 6 - 10 * string, 0.8); offHand[1] = lerp(offHand[1], wHand[1] - 1, 0.8); }
     limb(ctx, -bw + 1, shoulderY, offHand[0], offHand[1], heavy ? 5.6 : 4.2, P.cloth, L);
     ellipse(ctx, offHand[0], offHand[1], 2.8, 2.8, P.skin, L, 1);
     if (look.twin) { ctx.globalAlpha *= 0.55; ellipse(ctx, -bw - 3, top - 6, 7, 7, P.skin, L, 1.2); ctx.globalAlpha /= 0.55; }
-    // Head.
+    // Head: it nods with a heavy step and dips into a blow.
     const hr = heavy ? 9.5 : thin ? 8 : 9;
-    head(ctx, P, look, 0, top - hr + 2 + Math.sin(pose.t * 2.5) * 0.4, hr, pose);
-    // Shield in front.
-    if (look.shield === 'round') ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 8.5, 9.5, P.shadow ? P.cloth : look.trim, L, 1.6), ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 2.6, 2.6, P.metal, L, 1);
+    head(ctx, P, look, 0, top - hr + 2 + Math.sin(pose.t * 2.5) * 0.4 + hit * 1.2, hr, pose);
+    if (look.shield === 'round') ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 8.5, 9.5, P.shadow ? P.cloth : look.trim, L, 1.6), ellipse(ctx, offHand[0] + 2, offHand[1] - 3, 2.6, 2.6, P.metal, L, 1), (!P.shadow && ellipse(ctx, offHand[0] - 0.5, offHand[1] - 6.5, 3, 2, 'rgba(255,255,255,0.3)', null));
     if (look.shield === 'tower') rrect(ctx, offHand[0] - 7, offHand[1] - 16, 15, 24, 4, P.shadow ? P.cloth : look.trim, L, 1.6), rrect(ctx, offHand[0] - 3.5, offHand[1] - 12, 8, 16, 3, P.metal, null);
-    if (look.shield === 'energy') { glow(ctx, offHand[0] + 2, offHand[1] - 4, 15, look.trim, 0.45); ctx.strokeStyle = look.trim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(offHand[0] + 2, offHand[1] - 4, 11, -1.9, 1.9); ctx.stroke(); }
-    // Weapon arm and weapon.
+    if (look.shield === 'energy') { glow(ctx, offHand[0] + 2, offHand[1] - 4, 15, look.trim, 0.45 + 0.15 * Math.sin(pose.t * 5)); ctx.strokeStyle = look.trim; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(offHand[0] + 2, offHand[1] - 4, 11, -1.9, 1.9); ctx.stroke(); }
+    // A heavy blow building: the weapon hand glows.
+    if (pose.heavy && wind > 0) glow(ctx, wHand[0], wHand[1], 6 + 12 * wind, look.trim, 0.55 * wind);
+    // The swoosh of a blade (or claws) through the air behind it.
+    if (swoosh && swoosh.a > 0.02) {
+      ctx.save();
+      ctx.globalAlpha *= swoosh.a;
+      const R = reach + (swoosh.claw ? 8 : 20);
+      const a0 = Math.min(swoosh.from, swoosh.to), a1 = Math.max(swoosh.from, swoosh.to);
+      ctx.strokeStyle = P.shadow ? P.trim : swoosh.claw ? '#ffe8e0' : '#ffffff';
+      ctx.lineCap = 'round';
+      for (const [rr, lw] of swoosh.claw ? [[R - 3, 1.4], [R, 1.6], [R + 3, 1.4]] : [[R, pose.heavy ? 5 : 3.5], [R - 4, 1.5]]) {
+        ctx.lineWidth = lw;
+        ctx.beginPath(); ctx.arc(bw + 1, shoulderY, rr, a0, a1); ctx.stroke();
+      }
+      ctx.restore();
+    }
     limb(ctx, bw - 1, shoulderY, wHand[0], wHand[1], heavy ? 5.6 : 4.2, P.cloth, L);
-    const w = look.weapon || 'none';
-    if (w === 'dual' || w === 'dual_axe') weapon(ctx, P, look, w === 'dual' ? 'dagger' : 'axe', offHand[0], offHand[1], offA + 0.3, 0.9, pose.heavy);
-    if (w !== 'none') weapon(ctx, P, look, w === 'dual' ? 'dagger' : w === 'dual_axe' ? 'axe' : w, wHand[0], wHand[1], ranged ? -0.25 + (1 - aim) * 0.3 : aim - Math.PI / 2 - 0.4, 1, pose.heavy);
+    if (w === 'dual' || w === 'dual_axe') weapon(ctx, P, look, w === 'dual' ? 'dagger' : 'axe', offHand[0], offHand[1], offA + 0.3 - (style === 'stab' ? 1.6 : 0), 0.9, pose.heavy);
+    const ranged = ['bow', 'gun', 'magic', 'throw', 'music'].includes(style);
+    const ang = wAng != null ? wAng : ranged ? -0.25 + (1 - aim) * 0.3 : aim - Math.PI / 2 - 0.4;
+    if (w !== 'none' && !hideWeapon) weapon(ctx, P, look, w === 'dual' ? 'dagger' : w === 'dual_axe' ? 'axe' : w, wHand[0], wHand[1], ang, 1, pose.heavy);
+    // The bowstring pulled, with an arrow on it.
+    if (string > 0) {
+      const h = (w === 'longbow' ? 18 : 14);
+      const tip = (k) => [wHand[0] + Math.cos(ang + k * 1.2) * h, wHand[1] + Math.sin(ang + k * 1.2) * h];
+      const [ax, ay] = tip(-1), [bx, by] = tip(1);
+      ctx.strokeStyle = P.shadow ? P.trim : '#f4f0e8'; ctx.lineWidth = 0.9;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(offHand[0], offHand[1]); ctx.lineTo(bx, by); ctx.stroke();
+      limb(ctx, offHand[0], offHand[1], wHand[0] + Math.cos(ang) * 8, wHand[1] + Math.sin(ang) * 8, 1, P.shadow ? P.trim : '#c8a070', L);
+    }
+    // A muzzle flash as a gun goes off.
+    if (flash > 0) {
+      const len = w === 'long_rifle' ? 30 : w === 'rifle' ? 22 : w === 'cannon' ? 22 : w === 'crossbow' ? 20 : 12;
+      const mx = wHand[0] + Math.cos(ang) * len, my = wHand[1] + Math.sin(ang) * len;
+      glow(ctx, mx, my, (8 + 6 * hv) * flash, w === 'crossbow' ? '#ffffff' : '#fff2a0', 0.9);
+      if (w !== 'crossbow') path(ctx, '#fff8d0', null, 0, () => { for (let i = 0; i < 5; i++) { const a = ang + (i - 2) * 0.45; ctx.moveTo(mx, my); ctx.lineTo(mx + Math.cos(a) * 8 * flash, my + Math.sin(a) * 8 * flash); ctx.lineTo(mx + Math.cos(a + 0.2) * 3, my + Math.sin(a + 0.2) * 3); } });
+    }
+    // A spell gathering at the top of the staff (or a note in the air for a player).
+    if (charge > 0) {
+      const len = w === 'lantern' ? 14 : style === 'music' ? 10 : 30;
+      const cx = wHand[0] + Math.cos(ang) * len, cy = wHand[1] + Math.sin(ang) * len;
+      glow(ctx, cx, cy, (5 + 11 * charge), look.trim, 0.85);
+      for (let i = 0; i < 4; i++) { const a = pose.t * 5 + (i * TAU) / 4; ellipse(ctx, cx + Math.cos(a) * 7 * charge, cy + Math.sin(a) * 7 * charge, 1.1, 1.1, '#ffffff', null); }
+    }
     ellipse(ctx, wHand[0], wHand[1], 2.9, 2.9, P.skin, L, 1);
     if (look.glow) glow(ctx, 0, top + 10, bw * 1.6, look.trim, 0.35 + 0.15 * Math.sin(pose.t * 6));
+    ctx.restore();
     ctx.restore();
   }
 
@@ -518,6 +746,26 @@ const ENEMY_ART = (() => {
           limb(ctx, 10, y - 4, 18, y + 2, 3.4, col, L);
           weapon(ctx, P, look, look.weapon, 18, y + 2, a, 0.9, pose.heavy);
         }
+        return;
+      }
+      case 'swirl': {
+        for (let i = 0; i < 7; i++) {
+          const k = i / 6, w = 6 + k * 14, a = pose.t * 9 + i;
+          ctx.globalAlpha *= 0.75;
+          ellipse(ctx, Math.sin(a) * (2 + k * 3), y + 14 - k * 34, w, 3.5 + k * 2, i % 2 ? P.skin : P.skinD, null);
+          ctx.globalAlpha /= 0.75;
+        }
+        eyes(ctx, P, 0, y - 6, 7, 1.7, 'glow');
+        return;
+      }
+      case 'star': {
+        glow(ctx, 0, y - 6, 30, look.trim, 0.55 + 0.15 * Math.sin(pose.t * 4));
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * TAU + pose.t * 0.8;
+          path(ctx, look.trim, null, 0, () => { ctx.moveTo(Math.cos(a - 0.12) * 13, y - 6 + Math.sin(a - 0.12) * 13); ctx.lineTo(Math.cos(a) * 21, y - 6 + Math.sin(a) * 21); ctx.lineTo(Math.cos(a + 0.12) * 13, y - 6 + Math.sin(a + 0.12) * 13); ctx.closePath(); });
+        }
+        ellipse(ctx, 0, y - 6, 14, 14, P.skin, look.trim, 2);
+        eyes(ctx, P, 0, y - 7, 9, 2.2, 'glow');
         return;
       }
       case 'eye': {
@@ -750,6 +998,7 @@ const ENEMY_ART = (() => {
     const look = e.look;
     const P = palette(look);
     const s = (px / 60) * (look.size || 1);
+    pose = { ...pose, role: e.role };
     ctx.save();
     const d = pose.dying || 0;
     if (d > 0) {
@@ -788,7 +1037,29 @@ const ENEMY_ART = (() => {
   function body(ctx, P, look, pose) {
     ellipse(ctx, 0, 0, 16, 4.5, 'rgba(0,0,0,0.28)', null);
     if (pose.capture) ctx.translate(0, Math.abs(Math.sin(pose.t * 9)) * -3);
-    (PLANS[look.plan] || biped)(ctx, P, look, pose);
+    const plan = look.plan || 'biped';
+    const atk = pose.atk;
+    if (plan !== 'biped' && atk >= 0) {
+      // Not a person: gather (a crouch, or a glow for something that shoots), then spring.
+      const wind = atk < 0.45 ? ease(atk / 0.45) : 0;
+      const p = atk < 0.45 ? -1 : (atk - 0.45) / 0.55;
+      const hit = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.6) * Math.PI);
+      const hv = pose.heavy ? 1.5 : 1;
+      const sq = 1 - 0.08 * wind * hv + 0.1 * hit * hv;
+      ctx.save();
+      ctx.scale(2 - sq, sq);
+      ctx.translate(0, hit * 3 * hv);
+      (PLANS[plan] || biped)(ctx, P, look, pose);
+      ctx.restore();
+      if (pose.ranged && (wind > 0 || (p >= 0 && p < 0.3))) {
+        const k = wind > 0 ? wind : 1 - p / 0.3;
+        const cy = plan === 'float' ? -28 : -18;
+        glow(ctx, 0, cy, (6 + 12 * k) * hv, look.trim, 0.7 * k);
+        ellipse(ctx, 0, cy, 2.5 * k * hv, 2.5 * k * hv, '#ffffff', null);
+      } else if (pose.heavy && wind > 0) glow(ctx, 0, -16, 16 * wind, look.trim, 0.5 * wind);
+      return;
+    }
+    (PLANS[plan] || biped)(ctx, P, look, pose);
   }
 
   let flashC = null;
@@ -822,5 +1093,5 @@ const ENEMY_ART = (() => {
     return url;
   }
 
-  return { draw, still, palette, glowSprite };
+  return { draw, still, palette, glowSprite, styleOf };
 })();

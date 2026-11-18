@@ -6,7 +6,7 @@ import { openTab } from '../../MineToAustralia/scripts/trailer/cdp.mjs';
 
 const [, , out = 'battle-check', world = '1', lvl = '1', secs = '25'] = process.argv;
 mkdirSync(out, { recursive: true });
-const t = await openTab({ width: 428, height: 926, scale: 2, mobile: true, headless: false });
+const t = await openTab({ width: Number(process.env.W || 428), height: Number(process.env.H || 926), scale: 2, mobile: true, headless: false });
 await t.send('Network.enable');
 await t.send('Network.clearBrowserCache');
 await t.send('Network.setCacheDisabled', { cacheDisabled: true });

@@ -32,6 +32,7 @@ const WORLD = (() => {
     centre();
     listen();
     window.addEventListener('resize', () => {
+      padAt = 0;
       const cx = (vw / 2 - tx) / z / (vw * SCALE), cy = (vh / 2 - ty) / z / (vh * SCALE);
       measure();
       tx = vw / 2 - cx * vw * SCALE * z;
@@ -47,10 +48,35 @@ const WORLD = (() => {
     el.style.height = `${vh * SCALE}px`;
   }
 
+  /**
+   * 1.4: how much of the screen the bars cover, top (the HUD) and bottom (the spawner bar and the
+   * incubators), in screen pixels. The camera may go that far past the world's top and bottom
+   * edges, so a beast at an edge can always be brought out into the open at any zoom: they used to
+   * wander under the bars and could not be reached (Sam, 17 Nov). Measured again now and then.
+   */
+  let padT = 0, padB = 0, padAt = 0;
+  function pads() {
+    const now = performance.now();
+    if (now - padAt < 1000) return;
+    padAt = now;
+    const vr = vp.getBoundingClientRect();
+    const hud = document.getElementById('hud-overlay');
+    padT = hud && hud.offsetParent !== null ? Math.max(0, Math.min(vh * 0.3, hud.getBoundingClientRect().bottom - vr.top)) : 0;
+    let b = 0;
+    for (const id of ['spawner-overlay', 'incubator-pedestal', 'incubator-pedestal-2', 'incubator-pedestal-3']) {
+      const e = document.getElementById(id);
+      if (!e || e.offsetParent === null) continue;
+      const r = e.getBoundingClientRect();
+      if (r.height > 0 && r.top < vr.bottom) b = Math.max(b, vr.bottom - r.top);
+    }
+    padB = Math.min(vh * 0.35, b);
+  }
+
   function clamp() {
     z = Math.max(minZoom(), Math.min(MAX_ZOOM, z));
+    pads();
     tx = Math.min(0, Math.max(vw - vw * SCALE * z, tx));
-    ty = Math.min(0, Math.max(vh - vh * SCALE * z, ty));
+    ty = Math.min(padT, Math.max(vh - vh * SCALE * z - padB, ty));
   }
 
   let settle = 0;

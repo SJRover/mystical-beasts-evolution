@@ -1,0 +1,16 @@
+{
+ "prime": {
+  "casual": [
+   "PrimeSolarSystemCasualBattleMusicVariant1.mp3"
+  ],
+  "boss": []
+ },
+ "low_gravity": {
+  "casual": [],
+  "boss": [
+   "LowGravityBattleBossLevelMusic.mp3"
+  ]
+ },
+ "victory": [],
+ "defeat": []
+}

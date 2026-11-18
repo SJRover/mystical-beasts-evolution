@@ -3,8 +3,8 @@
  * game's (audio.js), and its music. Each beast's hits sound like what it is made of (a stone
  * thud, a fire whoosh, a watery slap, a chime of light, a cosmic zap); each enemy's like its
  * weapon (a sword's clang, a bow's twang, a club's thud, a ray gun's pew) or its stuff (shadow
- * folk whisper and pop). Music: `Battle Music N.mp3` and `Battle Boss Music.mp3` at the root
- * when they exist (BATTLE_MODE.md), else the solar system's own music carries on.
+ * folk whisper and pop). Music: Sam's battle MP3s at the root, listed in battle_music.json by
+ * build.js (BATTLE_MODE.md); with none for a battle, the solar system's own music carries on.
  */
 const BATTLE_SFX = (() => {
   let noise = null;
@@ -68,7 +68,7 @@ const BATTLE_SFX = (() => {
   /** What a beast or enemy sounds like when it hits. */
   function voiceOf(u) {
     if (u.side === 'you') {
-      const t = BEAST_TEMPLATES[u.kind] || {};
+      const t = BATTLE_DATA.T(u.kind) || {};
       const body = (t.svgParams || {}).body || 'droplet';
       if (['golem', 'stone', 'spiky_stone', 'shell', 'tree'].includes(body)) return 'stone';
       if (['dragon', 'dino', 'lion', 'wolf', 'bull', 'hydra'].includes(body)) return 'roar';
@@ -142,6 +142,10 @@ const BATTLE_SFX = (() => {
     defeat(ctx, t) { [392, 330, 262, 196].forEach((f, i) => tone(ctx, 'triangle', f, f * 0.98, 0.4, 0.16, t + i * 0.16)); },
     star(ctx, t) { [1047, 1319, 1568].forEach((f, i) => tone(ctx, 'sine', f, f, 0.25, 0.14, t + i * 0.08)); },
     tap(ctx, t) { tone(ctx, 'triangle', 700, 600, 0.06, 0.1, t); },
+    // The countdown: a tick for three, two and one, then a bright two-note call to fight.
+    count(ctx, t) { tone(ctx, 'triangle', 660, 660, 0.14, 0.2, t); tone(ctx, 'sine', 1320, 1320, 0.1, 0.06, t); },
+    go(ctx, t) { tone(ctx, 'sawtooth', 523, 523, 0.12, 0.12, t); tone(ctx, 'sawtooth', 784, 784, 0.35, 0.14, t + 0.12); tone(ctx, 'triangle', 1047, 1047, 0.35, 0.1, t + 0.12); hiss(ctx, 8000, 5000, 0.5, 0.5, 0.08, t + 0.12, 'highpass'); },
+    nope(ctx, t) { tone(ctx, 'square', 220, 180, 0.12, 0.06, t); },
   };
   function play(kind, priority = true) {
     const ctx = ready();
@@ -150,27 +154,24 @@ const BATTLE_SFX = (() => {
   }
 
   // ---------------------------------------------------------------- music
-  let track = null, resumeSystem = false;
-  const exists = new Map();
-  async function has(file) {
-    if (exists.has(file)) return exists.get(file);
-    let ok = false;
-    try { ok = (await fetch(encodeURI(file), { method: 'HEAD' })).ok; } catch (e) { ok = false; }
-    exists.set(file, ok);
-    return ok;
+  // battle_music.json (written by build.js from the MP3s at the root with "battle" in their name):
+  // tracks by solar system, casual and boss, and victory and defeat stings. Sam makes the music.
+  let track = null, resumeSystem = false, list = null, stingTrack = null, fadeT = null;
+  async function manifest() {
+    if (list) return list;
+    try { list = await (await fetch('battle_music.json', { cache: 'no-store' })).json(); }
+    catch (e) { list = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, victory: [], defeat: [] }; }
+    return list;
   }
-  /** The battle's music, if Sam's files are there: else the solar system's keeps playing. */
-  async function music(boss, n) {
+  /** The battle's music: a boss level's track, else the next casual track, for its solar system. */
+  async function music(boss, n, system = 'prime') {
     stopMusic();
     if (typeof audio === 'undefined' || !audio || !audio.musicEnabled) return;
-    let file = null;
-    if (boss && await has('Battle Boss Music.mp3')) file = 'Battle Boss Music.mp3';
-    if (!file) {
-      const list = [];
-      for (let i = 1; i <= 8; i++) { if (await has(`Battle Music ${i}.mp3`)) list.push(`Battle Music ${i}.mp3`); else break; }
-      if (list.length) file = list[(n - 1) % list.length];
-    }
-    if (!file) return;
+    const m = await manifest();
+    const sys = m[system] || m.prime;
+    const pool = boss && sys.boss.length ? sys.boss : sys.casual;
+    if (!pool || !pool.length) return;
+    const file = pool[(n - 1) % pool.length];
     audio.init();
     resumeSystem = audio.musicPlaying;
     audio.stopMusic();
@@ -180,14 +181,112 @@ const BATTLE_SFX = (() => {
     track.play().catch(() => {});
   }
   function stopMusic() {
+    clearInterval(fadeT);
     if (track) { track.pause(); track = null; }
     if (resumeSystem && typeof audio !== 'undefined' && audio) { resumeSystem = false; audio.startMusic(); }
   }
-  async function sting(won) {
-    const file = won ? 'Battle Victory.mp3' : 'Battle Defeat.mp3';
-    if (typeof audio !== 'undefined' && audio && audio.musicEnabled && await has(file)) { const a = new Audio(encodeURI(file)); a.volume = Math.min(1, (audio.volume || 0.5)); a.play().catch(() => {}); }
-    else play(won ? 'victory' : 'defeat');
+  /**
+   * The battle is over: its music fades out over a second and a half (Sam, 18 Nov: stopping dead
+   * was an anticlimax) while the victory or defeat music comes in.
+   */
+  function endMusic() {
+    clearInterval(fadeT);
+    const tr = track;
+    if (!tr) return;
+    const v0 = tr.volume;
+    const t0 = performance.now();
+    fadeT = setInterval(() => {
+      const k = Math.min(1, (performance.now() - t0) / 1600);
+      tr.volume = Math.max(0, v0 * (1 - k));
+      if (k >= 1) { clearInterval(fadeT); tr.pause(); if (track === tr) track = null; }
+    }, 50);
+  }
+  /** Leaving the results: the solar system's music comes back. */
+  function leave() {
+    if (stingTrack) { stingTrack.pause(); stingTrack = null; }
+    stopMusic();
   }
 
-  return { hit, death, play, music, stopMusic, sting, voiceOf };
+  /**
+   * A short piece of music, synthesised: notes as [time, beats long, frequency] for each voice. A
+   * brass lead (a filtered sawtooth with a little vibrato), soft chords, a bass, and drums.
+   */
+  function piece(ctx, t0, beat, parts) {
+    const bus = ctx.createGain();
+    bus.gain.value = 0.9;
+    bus.connect(audio.sfxGain);
+    const note = (type, f, at, dur, vol, o = {}) => {
+      const when = t0 + at * beat, len = dur * beat;
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(f, when);
+      if (o.glide) osc.frequency.exponentialRampToValueAtTime(f * o.glide, when + len);
+      if (o.vib) { const lfo = ctx.createOscillator(); const lg = ctx.createGain(); lfo.frequency.value = 5.5; lg.gain.value = f * o.vib; lfo.connect(lg); lg.connect(osc.frequency); lfo.start(when); lfo.stop(when + len + 0.3); }
+      const g = ctx.createGain();
+      const att = o.att || 0.02, rel = o.rel || 0.12;
+      g.gain.setValueAtTime(0.0001, when);
+      g.gain.exponentialRampToValueAtTime(vol, when + att);
+      g.gain.setValueAtTime(vol, Math.max(when + att, when + len - rel));
+      g.gain.exponentialRampToValueAtTime(0.0001, when + len + rel);
+      let node = osc;
+      if (o.lp) { const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = o.lp; f2.Q.value = 1.2; osc.connect(f2); node = f2; }
+      node.connect(g);
+      g.connect(bus);
+      osc.start(when);
+      osc.stop(when + len + rel + 0.05);
+    };
+    const drum = (kind, at, vol = 1) => {
+      const when = t0 + at * beat;
+      if (kind === 'kick') { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(130, when); o.frequency.exponentialRampToValueAtTime(42, when + 0.18); const g = out(ctx, 0.55 * vol, when, 0.25); o.connect(g); o.start(when); o.stop(when + 0.3); }
+      else if (kind === 'snare') hiss(ctx, 2600, 1400, 0.9, 0.16, 0.28 * vol, when);
+      else if (kind === 'cymbal') hiss(ctx, 9000, 6000, 0.5, 1.6, 0.16 * vol, when, 'highpass');
+      else if (kind === 'timp') { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(98 * (vol > 1 ? 1 : 1), when); o.frequency.exponentialRampToValueAtTime(80, when + 0.5); const g = out(ctx, 0.4, when, 0.6); o.connect(g); o.start(when); o.stop(when + 0.65); hiss(ctx, 400, 120, 0.8, 0.3, 0.15, when, 'lowpass'); }
+    };
+    for (const [at, dur, f, v] of parts.lead || []) { note('sawtooth', f, at, dur, (v || 1) * 0.12, { lp: 2600, vib: 0.006, att: 0.03 }); note('square', f / 2, at, dur, (v || 1) * 0.035, { lp: 1400 }); }
+    for (const [at, dur, fs] of parts.pads || []) for (const f of fs) note('triangle', f, at, dur, 0.05, { att: 0.12, rel: 0.4 });
+    for (const [at, dur, f, glide] of parts.bass || []) note('triangle', f, at, dur, 0.22, { lp: 900, glide });
+    for (const [at, dur, f] of parts.bell || []) { note('sine', f, at, dur, 0.06, { rel: 0.5 }); note('sine', f * 2, at, dur * 0.6, 0.025, { rel: 0.4 }); }
+    for (const [at, kind, v] of parts.drums || []) drum(kind, at, v);
+  }
+  const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI number to frequency
+  const chord = (...ns) => ns.map(NOTE);
+  /** A rising fanfare that lands on a big held chord with a roll and a cymbal: about five seconds. */
+  function victoryFanfare(ctx, t) {
+    const B = 0.2;
+    piece(ctx, t, B, {
+      lead: [[0, 0.7, NOTE(67)], [0.75, 0.7, NOTE(72)], [1.5, 0.7, NOTE(76)], [2.25, 1.5, NOTE(79)], [4, 0.7, NOTE(76)], [4.75, 2.2, NOTE(79)],
+        [7.5, 1, NOTE(81)], [8.5, 0.5, NOTE(79)], [9, 0.5, NOTE(77)], [9.5, 1, NOTE(76)], [10.5, 1, NOTE(74)], [11.5, 0.5, NOTE(76)], [12, 0.5, NOTE(77)], [12.5, 1, NOTE(79)],
+        [14, 7, NOTE(84), 1.2]],
+      pads: [[0, 4, chord(60, 64, 67)], [4, 3.5, chord(60, 65, 69)], [7.5, 3, chord(65, 69, 72)], [10.5, 3.5, chord(67, 71, 74)], [14, 7, chord(60, 64, 67, 72)]],
+      bass: [[0, 2, NOTE(48)], [2, 2, NOTE(55)], [4, 3.5, NOTE(53)], [7.5, 3, NOTE(53)], [10.5, 3.5, NOTE(55)], [14, 7, NOTE(48)]],
+      bell: [[14, 1, NOTE(84)], [14.5, 1, NOTE(88)], [15, 1, NOTE(91)], [15.5, 2, NOTE(96)]],
+      drums: [[0, 'kick'], [1, 'snare'], [2, 'kick'], [3, 'snare'], [4, 'kick'], [5, 'snare'], [6, 'kick'], [7, 'snare'], [7.5, 'kick'], [9, 'snare'], [10.5, 'kick'], [11.5, 'snare'],
+        [12.5, 'timp'], [12.75, 'timp'], [13, 'timp'], [13.25, 'timp'], [13.5, 'timp'], [13.75, 'timp'], [14, 'kick', 1.3], [14, 'cymbal', 1.4]],
+    });
+  }
+  /** A slow fall in a minor key, down to a low held chord that fades: about five seconds. */
+  function defeatTheme(ctx, t) {
+    const B = 0.3;
+    piece(ctx, t, B, {
+      lead: [[0, 1, NOTE(76), 0.8], [1, 1, NOTE(74), 0.8], [2, 1, NOTE(72), 0.8], [3, 2, NOTE(71), 0.8], [5.5, 1, NOTE(69), 0.7], [6.5, 1, NOTE(68), 0.7], [7.5, 1.2, NOTE(67), 0.65], [9, 5, NOTE(69), 0.6]],
+      pads: [[0, 3, chord(57, 60, 64)], [3, 2.5, chord(53, 57, 60)], [5.5, 3.5, chord(52, 56, 59)], [9, 5.5, chord(45, 52, 57, 60)]],
+      bass: [[0, 3, NOTE(45)], [3, 2.5, NOTE(41)], [5.5, 3.5, NOTE(40)], [9, 5.5, NOTE(33), 0.97]],
+      drums: [[0, 'timp'], [3, 'timp'], [5.5, 'timp'], [8.5, 'timp'], [8.75, 'timp'], [9, 'kick', 0.8]],
+    });
+  }
+  async function sting(won) {
+    const m = await manifest();
+    const pool = won ? m.victory : m.defeat;
+    if (typeof audio !== 'undefined' && audio && audio.musicEnabled && pool && pool.length) {
+      stingTrack = new Audio(encodeURI(pool[Math.floor(Math.random() * pool.length)]));
+      stingTrack.volume = Math.min(1, (audio.volume || 0.5));
+      stingTrack.play().catch(() => {});
+      return;
+    }
+    const ctx = ready();
+    if (!ctx) return;
+    (won ? victoryFanfare : defeatTheme)(ctx, ctx.currentTime + 0.05);
+  }
+
+  return { hit, death, play, music, stopMusic, endMusic, leave, sting, voiceOf };
 })();

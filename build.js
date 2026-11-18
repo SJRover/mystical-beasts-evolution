@@ -7,9 +7,24 @@ if (!fs.existsSync(destDir)) {
   fs.mkdirSync(destDir, { recursive: true });
 }
 
+// 1.4: the battle music files at the root (any MP3 with "battle" in its name), listed for
+// battle_audio.js by solar system and kind: Low Gravity if the name says so, a boss track if it
+// says boss, victory and defeat stings; everything else is a Prime battle track.
+const music = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, victory: [], defeat: [] };
+for (const f of fs.readdirSync(__dirname).sort()) {
+  const n = f.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!f.toLowerCase().endsWith('.mp3') || !n.includes('battle')) continue;
+  if (n.includes('victory') || n.includes('win')) { music.victory.push(f); continue; }
+  if (n.includes('defeat') || n.includes('lose')) { music.defeat.push(f); continue; }
+  const sys = n.includes('lowgravity') ? 'low_gravity' : 'prime';
+  music[sys][n.includes('boss') ? 'boss' : 'casual'].push(f);
+}
+fs.writeFileSync(path.join(__dirname, 'battle_music.json'), JSON.stringify(music, null, 1));
+console.log('battle_music.json:', JSON.stringify(music));
+
 const files = fs.readdirSync(__dirname).filter(file => {
   const ext = path.extname(file).toLowerCase();
-  return ['.html', '.css', '.js', '.png', '.mp3'].includes(ext) && file !== 'build.js' && file !== 'generate_native_icon.js';
+  return ['.html', '.css', '.js', '.png', '.mp3', '.json'].includes(ext) && !['package.json', 'package-lock.json', 'capacitor.config.json'].includes(file) && file !== 'build.js' && file !== 'generate_native_icon.js';
 });
 
 files.forEach(file => {

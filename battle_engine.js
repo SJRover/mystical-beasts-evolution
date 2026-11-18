@@ -17,6 +17,8 @@ const BattleEngine = (() => {
   const SIGHT = 380;
   const SIGHT_SIDE = 200;
   const MAX_YOURS = 10;
+  /** The top of your safe zone, where beasts can be placed. */
+  const ZONE_Y = 1600;
   const DYING = 0.7;
   /** Before the first blow of a fight, a moment to square up. */
   const SQUARE_UP = 0.35;
@@ -25,13 +27,14 @@ const BattleEngine = (() => {
 
   function unitFrom(side, kind, stats, radius, extra = {}) {
     const n = BATTLE_DATA.battleNumbers(stats);
-    const hpMul = extra.hpMul || 1;
+    const hpMul = (extra.hpMul || 1) * (extra.elite ? 1.8 : 1);
+    if (extra.elite) n.light *= 1.4;
     return {
       uid: nextId++, side, kind, stats, r: radius,
       maxHp: n.maxHp * hpMul, hp: n.maxHp * hpMul, light: n.light, speed: n.speed, reach: n.reach,
       multi: extra.multi || 1, boss: !!extra.boss,
       x: 0, y: 0, state: 'walk', target: null, swing: 0, swings: 0, age: 0, dyingT: 0,
-      lastSwing: -9, lastHeavy: false, lastHurt: -9, capturing: false,
+      lastSwing: -9, lastHeavy: false, lastHurt: -9, capturing: false, elite: !!extra.elite,
     };
   }
 
@@ -73,22 +76,26 @@ const BattleEngine = (() => {
       return !this.result && !!c && this.time >= c.ready && this.yours.length < MAX_YOURS;
     }
 
-    /** Play card `i` at `x` across your safe zone (0 to 1). */
-    deploy(i, xFrac) {
+    /**
+     * Play card `i` at `x` across your safe zone (0 to 1), and at `yAt` up it if given (arena
+     * units, kept inside the zone; by default just above your pile).
+     */
+    deploy(i, xFrac, yAt) {
       if (!this.canDeploy(i)) return null;
       const c = this.cards[i];
       const r = BATTLE_DATA.beastRadius(c.id);
       const u = unitFrom('you', c.id, c.stats, r);
       let x = Math.max(r + 10, Math.min(ARENA.w - r - 10, xFrac * ARENA.w));
+      const y = yAt == null ? PILES.you.y - 30 : Math.max(ZONE_Y + r * 0.5, Math.min(ARENA.h - r - 8, yAt));
       // Not on top of your own coin pile: to whichever side of it was nearer.
       const gap = PILE_R + r + 6;
-      if (Math.abs(x - PILES.you.x) < gap) x = PILES.you.x + (x < PILES.you.x ? -gap : gap);
+      if (Math.abs(x - PILES.you.x) < gap && Math.abs(y - PILES.you.y) < gap) x = PILES.you.x + (x < PILES.you.x ? -gap : gap);
       u.x = x;
-      u.y = PILES.you.y - 30;
+      u.y = y;
       this.units.push(u);
       c.ready = this.time + c.cooldown;
       this.deployed++;
-      this.maxTierUsed = Math.max(this.maxTierUsed, (BEAST_TEMPLATES[c.id] || { tier: 1 }).tier);
+      this.maxTierUsed = Math.max(this.maxTierUsed, (BATTLE_DATA.T(c.id) || { tier: 1 }).tier);
       this.events.push({ type: 'deploy', unit: u });
       return u;
     }
@@ -96,7 +103,9 @@ const BattleEngine = (() => {
     spawnFoe(s) {
       const e = BATTLE_DATA.ENEMIES[s.foe];
       const role = BATTLE_DATA.ROLES[e.role];
-      const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points), BATTLE_DATA.enemyRadius(e.id), { hpMul: role.hp || 1, multi: role.multi || 1, boss: e.role === 'boss' });
+      const elite = !!s.elite && e.role !== 'boss';
+      const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points), BATTLE_DATA.enemyRadius(e.id) * (elite ? 1.15 : 1), { hpMul: role.hp || 1, multi: role.multi || 1, boss: e.role === 'boss', elite });
+      if (s.announce) this.events.push({ type: 'wave', text: s.announce });
       // Out of their camp around the pile (the middle half of the width), so it is defended.
       const fx = 0.25 + 0.5 * s.x;
       u.x = Math.max(u.r + 10, Math.min(ARENA.w - u.r - 10, fx * ARENA.w));
@@ -161,24 +170,35 @@ const BattleEngine = (() => {
     }
 
     /**
-     * Units of one side do not stand inside each other: an overlapping pair eases apart, mostly
-     * sideways so the line keeps walking (ten beasts played at one marker stood on one spot).
+     * Collisions: nobody stands inside anybody else, beast or enemy (Sam, 17 Nov: they overlapped).
+     * Radii are bodies as drawn (battle_data.js). An overlapping pair is pushed apart, a pair on one
+     * side mostly sideways so a line keeps walking; someone fighting or taking coins stands its
+     * ground and the other is moved. Two passes a step.
      */
     spread(dt) {
       const live = this.units.filter((u) => u.state !== 'dying');
-      for (let i = 0; i < live.length; i++) {
-        for (let j = i + 1; j < live.length; j++) {
-          const a = live[i], b = live[j];
-          if (a.side !== b.side) continue;
-          const dx = b.x - a.x, dy = b.y - a.y;
-          const d = Math.hypot(dx, dy), min = (a.r + b.r) * 0.8;
-          if (d >= min) continue;
-          const push = Math.min((min - d) / 2, 90 * dt);
-          const nx = d > 0.01 ? dx / d : (a.uid < b.uid ? 1 : -1), ny = d > 0.01 ? dy / d : 0;
-          const sideways = Math.abs(nx) < 0.3 ? (a.uid < b.uid ? 1 : -1) * 0.6 : nx;
-          a.x -= sideways * push; b.x += sideways * push;
-          a.y -= ny * push * 0.4; b.y += ny * push * 0.4;
-          for (const u of [a, b]) u.x = Math.max(u.r + 6, Math.min(ARENA.w - u.r - 6, u.x));
+      const planted = (u) => u.state === 'fight' || u.state === 'capture';
+      for (let pass = 0; pass < 2; pass++) {
+        for (let i = 0; i < live.length; i++) {
+          for (let j = i + 1; j < live.length; j++) {
+            const a = live[i], b = live[j];
+            const same = a.side === b.side;
+            const dx = b.x - a.x, dy = b.y - a.y;
+            const d = Math.hypot(dx, dy), min = (a.r + b.r) * (same ? 0.95 : 0.9);
+            if (d >= min) continue;
+            const push = Math.min(min - d, 300 * dt);
+            let nx = d > 0.01 ? dx / d : (a.uid < b.uid ? 1 : -1), ny = d > 0.01 ? dy / d : 0;
+            if (same && Math.abs(nx) < 0.35) { nx = (nx >= 0 ? 1 : -1) * 0.7; ny *= 0.6; }
+            let wa = 0.5;
+            if (planted(a) && !planted(b)) wa = 0.12;
+            else if (planted(b) && !planted(a)) wa = 0.88;
+            a.x -= nx * push * wa; a.y -= ny * push * wa;
+            b.x += nx * push * (1 - wa); b.y += ny * push * (1 - wa);
+            for (const u of [a, b]) {
+              u.x = Math.max(u.r + 4, Math.min(ARENA.w - u.r - 4, u.x));
+              u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
+            }
+          }
         }
       }
     }
@@ -308,7 +328,7 @@ const BattleEngine = (() => {
     }
   }
 
-  return { ARENA, PILE_R, PILES, HOME, MAX_YOURS, DYING, Battle };
+  return { ARENA, PILE_R, PILES, HOME, MAX_YOURS, ZONE_Y, DYING, Battle };
 })();
 
 if (typeof module !== 'undefined') module.exports = BattleEngine;
