@@ -53,9 +53,34 @@ across the map or hit from the other end of it.
 ## A battle
 
 - You pick six beasts (your deck; one per beast, only beasts you have discovered, only from the
-  world's own solar system, plus any Folded Legends you have won) on the level's screen, which
-  shows each one's four stats. The list sorts by tier, rarity or any stat, high to low or low to
-  high, and filters by rarity. A level with a rule (below) keeps its own six.
+  world's own solar system, plus any Folded Legends and Relics you have won) on the level's
+  screen, which shows each one's four stats, its mana cost and how it fights. The list sorts by
+  tier, rarity or any stat, high to low or low to high, and filters by rarity. A level with a rule
+  (below) that limits who may come keeps its own six.
+- **Mana** (fifth round, Sam's idea, like Clash Royale's elixir and Battle Cats' wallet, so the
+  best cards cannot just be played over and over): a bar over the cards; you hold at most 50,
+  start with 25, and it fills 10 every 5 seconds. A beast costs about half its tier (Tier 1 one,
+  Tier 10 six, Tier 20 eleven), shown on its card; cards also still recharge. Sam suggested a
+  beast's whole tier; tested that way a Tier 6 six beat as strong enemies as a Tier 14 one, so
+  merging up would not have helped (at half, Tier 14 and up beat about 40% more). The Wellspring
+  perk fills mana a quarter faster, Deep Pool holds 65, and Mana spring levels (9, 19, 29, 39 of
+  each world) fill it half as fast again.
+- **How beasts fight** (fifth round): Single (one enemy up close), Area (the big-bodied: titans,
+  giants, krakens, hydras, slimes, colossi; the blow also lands at half strength on everything
+  near the target, with no extra reach or attack) or Ranged (Range 3 and up, one enemy from afar).
+  Shown on the level screen, a mark on each card, and in the Rules. Enemies too: shooters and
+  casters ranged, heavy hammers and clubs area, bosses three at once.
+- **Evolved forms** (fifth round): the same stats as the beast, plus a special, once a battle. Up
+  to three evolved forms in a six (the ✦ under a beast you have evolved swaps it in), one of each
+  on the field at a time; tap its card again while it is out to set the special off, like a Clash
+  Royale champion. The special comes from how it is built and its best stat, else its element:
+  Leap (foxes, cats, wolves, lions, dinosaurs: onto the nearest enemy ahead, stunning those it
+  lands among), Dash (Speed: three times as fast, the first blow heavy), Shield (Health: a fifth of
+  the damage for five seconds), Volley (Range: the five nearest enemies), or by element Blast
+  (fire), Freeze (water, two and a half seconds), Gust (wind, blown back up the field), Quake
+  (earth, hurt and stunned), Heal (light, two fifths), Gravity well (void, pulled in and held),
+  Starfall (cosmic, four enemies) and War cry (deity, half as hard again for five seconds). Kept
+  small, a few seconds or a few light hits' worth; the levels are balanced without them.
 - The level's screen shows its enemies as "???" until you have played that level once (won, lost
   or retreated), then the ones you have met.
 - The arena is the size of the meadow's world, with pinch to zoom and drag to look around. It opens
@@ -65,8 +90,10 @@ across the map or hit from the other end of it.
 - A three-second countdown (3, 2, 1, Fight!) before anything moves. You can choose your spot
   during it.
 - Your six cards sit along the bottom, each with its four stats underneath when the screen is tall
-  enough. Tap a spot in your blue zone, then tap a card: the beast comes out at that spot and walks
-  up. Or drag a card onto the zone. Each card then recharges for as many seconds as its tier
+  enough, its mana cost (top left, red when you cannot afford it) and how it fights (top right). Tap a spot in your blue zone, then tap a card: the beast comes out at that spot and walks
+  up. Or drag a card onto the zone. Zoomed in at the top with your zone off the screen, a tap
+  anywhere on the field chooses the lane: a line flashes down it and an arrow at the bottom shows
+  where beasts will come out (fifth round). Each card then recharges for as many seconds as its tier
   (Tier 1, 1 s; Tier 20, 20 s). At most ten of your beasts on the field (five under the Small
   band rule); trying for one more says so, as does a card that is still recharging. Each card and
   its four stats sit framed together as one tile, with a gap between tiles.
@@ -128,8 +155,9 @@ across the map or hit from the other end of it.
 
 ## Stars and rewards
 
-- A star for clearing a level under its target time (shown before and during the battle; never
-  more than four minutes).
+- A star for clearing a level under its target time (shown before and during the battle). Sam
+  (fifth round): stars should be hard to earn. The time is nine tenths of the fastest win of the
+  balance bot's five ways of playing, never more than two and a half minutes.
 - First clear: essence (a few minutes of your current income in that solar system, more for later
   levels) and, on a boss level, a premium crate.
 - Premium crates won in battle wait in the spawner bar with any bought ones and are used first.
@@ -255,9 +283,60 @@ Beastopedia after the two solar systems, and a reveal in the results when one is
 
 ## Achievements
 
-28, in groups (battles won, stars, bosses, worlds, feats, foes met, Grand Master). Each shows a
-medal that stays a dark silhouette until earned, a progress bar, and its reward as pictures
-(crates, premium crates with their top tier, spins, the legend it gives).
+28 battle achievements, in groups (battles won, stars, bosses, worlds, feats, foes met, Grand
+Master), and 16 merge achievements (below), on one sheet with a Battle and Merge switch. Each shows
+a medal that stays a dark silhouette until earned, a progress bar, and its reward as pictures
+(crates, premium crates with their top tier, spins, the legend or Relic it gives).
+
+## Relics and the merge achievements (fifth round)
+
+Sam: achievements for the merge part of the game (merges of one beast or in all, evolving,
+discovering, mutations, cures), some giving unique high-tier beasts, "automatically evolved unless
+they're two part achievements ... the second achievement unlocks the evolved form". Six Relics
+(`relics.js`), stained glass: jewel-coloured panes in dark lead, glowing; evolved, the lead is
+gold with a halo. `tools/relics.html` shows them. They wander and make essence like any beast and
+battle in every world, but never merge, never go in an incubator, and never come from crates,
+spins or the shop (their solar system is 'relic', which every random pool leaves out). They have
+their own section at the end of the Beastopedia.
+
+| Relic | Tier, rarity | Won by |
+|---|---|---|
+| Glasswing (moth) | 9 Super Rare | 500 merges (evolved) |
+| Prism Wolf | 11 Ultra Rare | cure 25 plagued beasts; evolved at 100 cures |
+| Rosette Whale | 13 Legendary | 50 rare mutations (evolved) |
+| Cathedral Peacock | 15 Godly | discover 60 beasts; evolved for every beast in both systems |
+| Sunwindow Lion | 17 Godly | evolve 3 beasts (evolved) |
+| The Rose Window (dragon) | 20 Dark Matter | 20,000 merges (evolved) |
+
+The other ten pay crates, premium crates (up to Tier 15 or 18) or spins: 25 and 2,000 merges, 100
+Sparky merges, 20 discoveries, 10 mutations, the first evolution, prestige 3 and 9. Counted from
+1.4 on (merges, mutations, cures, evolutions); discoveries and prestige count what a save already
+has, so those are earned on opening 1.4. A rare mutation is a merge giving anything but its usual
+result (a rarer branch, a Legendary or a Godly).
+
+## The meadow in 1.4 (fifth round)
+
+- Evolving takes 100 incubations of a species (Sam: evolved beasts were too easy). Each
+  incubation still takes its time and gives the beast up towards it; the hundredth brings out an
+  evolved one, and the count starts again. The Beastopedia shows each species' count under its
+  card and in its details. Cures are as before.
+- One finger on open ground drags the map (after a few pixels, so taps still tap); one finger on a
+  beast drags the beast; two pinch.
+- Beasts walk out from under the top bar and the bottom bar (spawner, incubators, crates) when
+  they wander under them.
+- Upgrade buttons: every quick tap counts (a second tap within about a third of a second was lost,
+  and each purchase rebuilt the whole shop under the finger).
+- Merging high tiers: the drop now counts anywhere on the target's body (big beasts were often
+  missed: the distance allowed did not grow with the beast); the nearest match wins; an evolved
+  (or infected) beast dropped on a plain one says it only merges with its own kind.
+- The two-Tier-7s-into-Aurelion merge Sam saw is an existing rule: any merge under Tier 14 has a
+  0.1% chance of Aurelion (1% if the beasts are evolved). Evolved beasts being rarer now makes it
+  rarer too.
+- Sound comes back after the phone is locked or the app was in the background (iOS left the audio
+  interrupted).
+- The Beastopedia and the other sidebar pages scroll only up and down (they swayed sideways).
+- The tutorial's text is plain ("Welcome! Want a quick look at the basics?").
+- Beast and enemy descriptions rewritten in plain, short lines (Sam: they read as AI).
 
 ## Music (Sam's to make)
 
@@ -266,8 +345,10 @@ Put the MP3s at the root of the project, beside the solar system music, with "Ba
 build.js` after adding one while testing in the browser). It sorts them by the words in the name:
 
 - "LowGravity" (or "Low Gravity") anywhere in the name: a Low Gravity battle track; otherwise Prime.
-- "Boss": a boss level's track; otherwise a casual track for the other levels (several are
-  played in turn: `...Variant1`, `...Variant2` and so on).
+- "Boss": a boss level's track; otherwise a casual track for the other levels (`...Variant1`,
+  `...Variant2` and so on, spread over the levels: each stretch of ten levels has its own track,
+  and the next world starts one track on, so with four tracks World 1 plays 1, 2, 3, 4 and World 2
+  plays 2, 3, 4, 1).
 - "Victory" or "Defeat": the music at the end of a battle, for example
   `PrimeSolarSystemVictoryMusic.mp3`. A battle picks one from its own solar system ("LowGravity"
   in the name for the Low Gravity worlds) at random, or any if its system has none.
@@ -344,16 +425,14 @@ Each pattern is harder or easier at the same points (a champion's stats are thre
 level's, a horde's under half), so the smoothing takes out each pattern's own lean, measured per
 world, and puts it back after: champions came out at 0.54 to 0.91 of the climb, hordes at 1.0 to
 1.6, rushes 0.9 to 1.3. Levels with a rule are left out of the smoothing and kept at or under what
-their own six can beat. Margins under the most the deck beats: 0.55 on levels 1 to 3, 0.75 to
-level 8, then 0.82 rising to 0.9, bosses 0.92 (they were 0.5, 0.7, 0.78 to 0.86 and 0.9). The
-search for the most starts just under the level before's.
+their own six can beat. Margins under the most the deck beats (fifth round, the first levels were
+too easy): 0.65 on levels 1 to 3, 0.82 to level 8, then 0.85 rising to 0.92, bosses 0.93. The
+search for the most starts just under the level before's. The bot plays with mana like anyone.
 
-What that gives in World 1 (the bot, playing simply): the expected deck wins every level in at
-least three of five ways (World 1 level 37, three only, is lost one way of five); a deck three
-tiers weaker wins 21 of 40, slowly, and stalls on most of the rest (it was 33 of 40 before). A
-Tier 3 deck can still win level 5 (so the Origami Turtle's challenge moved there) but nothing from
-level 10. A Tier 8 deck beats the bosses of levels 10, 20 and 30 (Underdog stays possible). Many
-star times reach the four-minute cap on champion, fortress and horde levels, where the bot is slow.
+What that gives in World 1 (the bot, playing simply), after the fifth round (mana, faster units,
+sidestepping): the expected deck wins every level, each in at least three of five ways; a deck
+three tiers weaker wins 16 of 40 (21 before mana, 33 before the fourth round). Star times run from
+40 seconds to the cap of 2:30.
 
 Stalemates: a deck that is too weak often neither wins nor loses (the bot holds its half and never
 breaks through). An overtime rule was tried and taken out (see Bugs found); a person can change
@@ -571,6 +650,33 @@ like a fight. No game errors. What it found, and what was done:
 - [x] Folded Legends that look like origami characters, someone or something, not just folded paper.
 - [x] Better walking and running animations, and attacks unique to an enemy's stats or who it is.
 - [x] The same for beasts.
+
+### Sam's notes of 18 Nov (fifth round)
+
+- [x] Less text: the rules key under the levels moved to Settings, under Battle Rules (with the
+  basics, mana, how beasts fight, the specials, the level types and the perks); explanations on
+  the level screen, the world and the legends cut; the tutorial's "interactive tour" gone.
+- [x] Sam's music variants spread over the levels: each stretch of ten levels has its own track,
+  the next world starting one on; his victory and defeat music plays at the end.
+- [x] Ranged attacks for beasts: a burst at the beast's mouth by element as the shot leaves, and a
+  heavy shot is a volley of three.
+- [x] Beast and enemy descriptions rewritten in plain words.
+- [x] Evolved forms with a special, once a battle, up to three in a six, tapped again to use.
+- [x] The first levels were easy and slow: everyone walks about a third faster, enemies come
+  sooner, the early margins are tighter, and mana makes spamming cost.
+- [x] Units stuck behind their own side step round to find a space to attack.
+- [x] Stars harder: nine tenths of the bot's fastest win, at most 2:30.
+- [x] Mana, capped at 50, 10 every 5 seconds, with perks and Mana spring levels.
+- [x] More attack and death sounds (two or three of each voice; poofs, clatters, power-downs,
+  groans and a boss's boom).
+- [x] Zoomed in, a tap anywhere on the field chooses the lane.
+- [x] The Aurelion from two Tier 7s explained; high tiers that would not merge fixed.
+- [x] Single, area and ranged attack shown for beasts and enemies; area kept modest.
+- [x] Merge achievements with Relics, auto-evolved or two-part.
+- [x] Upgrade taps, 100 incubations to evolve, sound after locking the phone, beasts under the
+  bars, the Beastopedia's sway, one-finger panning.
+- [ ] The 30-second App Store trailer and new iPhone and iPad screenshots of battle mode (after
+  this round is played and tested, as Sam asked).
 
 ## Ideas for later
 

@@ -88,10 +88,10 @@ function strongest(lv, deck, from = 2) {
 }
 /** How close to the most the reference deck can beat each level sits: kind first, tough at bosses. */
 function margin(n, boss, levels) {
-  if (boss) return 0.92;
-  if (n <= 3) return 0.55;
-  if (n <= 8) return 0.75;
-  return 0.82 + 0.08 * (n / levels);
+  if (boss) return 0.93;
+  if (n <= 3) return 0.65;
+  if (n <= 8) return 0.82;
+  return 0.85 + 0.07 * (n / levels);
 }
 /** The median of the values at the `k` usable levels nearest to each level. */
 function nearMedian(vals, use, k = 5) {
@@ -157,8 +157,9 @@ if (isMain && calibrate) {
       while (!beats(lv, deck, p, 3, 5) && p > 2) { p *= 0.92; eased++; }
       const times = [0, 1, 2, 3, 4].map((variant) => play({ ...lv, points: p }, deck, { variant })).filter((r) => r.result === 'won').map((r) => r.time).sort((x, y) => x - y);
       points[lv.id] = +p.toFixed(2);
-      // At most four minutes: the bot plays far slower than a person, and a star should not take longer.
-      stars[lv.id] = Math.min(240, Math.max(30, Math.ceil(((times[Math.floor(times.length / 2)] || 120) * 1.2) / 5) * 5));
+      // Stars are hard to earn (Sam, 18 Nov: the times were too long): under the bot's fastest win,
+      // never more than two and a half minutes.
+      stars[lv.id] = Math.min(150, Math.max(25, Math.ceil(((times[0] || 120) * 0.9) / 5) * 5));
       console.log(`${lv.id.padEnd(5)} ${lv.pattern.padEnd(9)}${(lv.rule ? lv.rule.kind : '').padEnd(7)} most ${most[i].toFixed(1).padStart(6)} smooth ${med[i].toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
     }
   }

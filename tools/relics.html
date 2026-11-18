@@ -1,0 +1,13 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Relics</title>
+<style>body{margin:0;background:#1a2040;font:12px system-ui;color:#dde}#g{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:6px}.c{background:radial-gradient(circle at 50% 40%,#34468a,#18224a 75%);border-radius:10px;text-align:center;padding:4px}.c div{width:200px;height:200px;margin:0 auto}</style></head>
+<body><div id="g"></div>
+<script src="../beasts.js"></script><script src="../relics.js"></script>
+<script>
+  // tools/relics.html: the six Relics, plain then evolved.
+  for (const evolved of [false, true]) for (const r of RELICS) {
+    const d = document.createElement('div'); d.className = 'c';
+    d.innerHTML = `<div>${RELIC_ART.svg(r.id, { evolved })}</div>${r.name}${evolved ? ' (evolved)' : ''}`;
+    document.getElementById('g').appendChild(d);
+  }
+</script></body></html>

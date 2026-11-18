@@ -653,6 +653,8 @@ const ART = (() => {
   function beast(id, opts = {}) {
     const t = BEAST_TEMPLATES[id];
     if (!t) return '';
+    // 1.4: a Relic is stained glass (relics.js).
+    if (t.relic && typeof RELIC_ART !== 'undefined') return RELIC_ART.svg(id, opts);
     const p = t.svgParams || {};
     const shadow = !!(p.shadow_fiend || p.shadow_fiend_evolved || p.void_parasite || p.void_parasite_evolved);
     const o = { infected: !!opts.infected, shadow, evolved: !!opts.evolved };

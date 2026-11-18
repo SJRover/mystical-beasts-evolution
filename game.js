@@ -713,7 +713,8 @@ function restoreIncubatorSlotUI(slotNum) {
       if (slotNum === 2) {
         if (label) label.innerText = 'Purified!';
       } else {
-        if (label) label.innerText = inc.isInfected ? 'Cured!' : 'Evolved!';
+        const done = ((state.evolveProgress || {})[inc.beastType] || 0) + 1;
+        if (label) label.innerText = inc.isInfected ? 'Cured!' : done >= EVOLVE_NEEDED ? 'Evolved!' : `${done}/${EVOLVE_NEEDED}`;
       }
       if (ring) ring.style.strokeDashoffset = 0;
       if (pedestal) pedestal.classList.add('hovering-compatible');
@@ -1409,6 +1410,18 @@ function gameLoop() {
     const b = state.beastsOnField[i];
     if (meadowPaused) continue;
     
+    // 1.4: under a bar on screen: head out into the open.
+    if (!isBossBeast(b.type) && draggedBeast !== b && WORLD.underBar && now > (b._barCheck || 0)) {
+      b._barCheck = now + 400;
+      const s = b._size || 80;
+      const out = WORLD.underBar(b.x, b.y, s);
+      if (out) {
+        const ang = Math.atan2(out.dy, out.dx);
+        b.tvx = Math.cos(ang) * b.speed * 1.3;
+        b.tvy = Math.sin(ang) * b.speed * 1.3;
+        b.lastWalkChange = now + 900;
+      }
+    }
     // Wander direction changes
     if (now > b.lastWalkChange) {
       // 1.3: a new heading to steer towards (field.js turns them smoothly and faces them the right way).
@@ -2241,7 +2254,9 @@ function dragEnd(e) {
       Math.pow((pRect1.top + pRect1.height/2) - (bRect.top + bRect.height/2), 2)
     );
 
-    if (dPed1 < 75) {
+    if (dPed1 < 75 && isRelic(draggedBeast.type)) {
+      showWarning('A Relic', 'Relics cannot go in an incubator.');
+    } else if (dPed1 < 75) {
       if (isBossBeast(draggedBeast.type)) {
         showWarning("Incompatible", `${BEAST_TEMPLATES[draggedBeast.type].name}s cannot be placed in Incubator Alpha!`);
       } else if (!state.unlockedIncubators[0]) {
@@ -2267,7 +2282,9 @@ function dragEnd(e) {
         Math.pow((pRect2.top + pRect2.height/2) - (bRect.top + bRect.height/2), 2)
       );
 
-      if (dPed2 < 75) {
+      if (dPed2 < 75 && isRelic(draggedBeast.type)) {
+        showWarning('A Relic', 'Relics cannot go in an incubator.');
+      } else if (dPed2 < 75) {
         if (isBossBeast(draggedBeast.type)) {
           showWarning("Incompatible", `${BEAST_TEMPLATES[draggedBeast.type].name}s cannot be placed in Incubator Beta!`);
         } else if (!state.unlockedIncubators[1]) {
@@ -2312,26 +2329,31 @@ function dragEnd(e) {
   }
 
   // Normal merges
-  let mergeTarget = null;
+  let mergeTarget = null, nearMismatch = null;
   const draggedTemplate = BEAST_TEMPLATES[draggedBeast.type];
-  if (!isBossBeast(draggedBeast.type)) {
+  if (!isBossBeast(draggedBeast.type) && !isRelic(draggedBeast.type)) {
+    const ws = WORLD.worldSize();
+    let best = Infinity;
     for (let b of state.beastsOnField) {
       if (b.id === draggedBeast.id) continue;
       const bTemplate = BEAST_TEMPLATES[b.type];
       if (!draggedTemplate || !bTemplate) continue;
-      if (bTemplate.tier !== draggedTemplate.tier) continue;
-      if (b.evolved !== draggedBeast.evolved) continue;
-      if (b.infected !== draggedBeast.infected) continue;
-
-      const dx = b.x - draggedBeast.x;
-      const dy = b.y - draggedBeast.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < 7.5 / (window.WORLD_SCALE || 1)) {
-        mergeTarget = b;
-        break;
-      }
+      if (bTemplate.tier !== draggedTemplate.tier || bTemplate.relic) continue;
+      // Centre to centre in world pixels, allowed up to the bigger of the two bodies' half widths
+      // (at least what it always was).
+      const sa = draggedBeast._size || 80, sb = b._size || 80;
+      const dx = ((b.x - draggedBeast.x) / 100) * ws.w + (sb - sa) / 2;
+      const dy = ((b.y - draggedBeast.y) / 100) * ws.h + (sb - sa) / 2;
+      const d = Math.hypot(dx, dy);
+      const reach = Math.max((7.5 / (window.WORLD_SCALE || 1) / 100) * ws.w, Math.max(sa, sb) * 0.55);
+      if (d >= reach) continue;
+      if (b.evolved !== draggedBeast.evolved || b.infected !== draggedBeast.infected) { nearMismatch = b; continue; }
+      if (d < best) { best = d; mergeTarget = b; }
     }
+  }
+  if (!mergeTarget && nearMismatch) {
+    const why = nearMismatch.infected !== draggedBeast.infected ? 'An infected beast only merges with another infected one.' : 'An evolved beast only merges with another evolved one.';
+    showWarning('No merge', why);
   }
 
   if (mergeTarget) {
@@ -2344,8 +2366,20 @@ function dragEnd(e) {
   dragElement = null;
 }
 
+// 1.4: merges, rare mutations, cures and evolutions are counted for the merge achievements.
+function mergeStats() {
+  return state.mergeStats || (state.mergeStats = { merges: 0, mergesOf: {}, mutations: 0, cures: 0, evolved: 0 });
+}
+function checkMergeAchievements() {
+  if (typeof BATTLE !== 'undefined' && BATTLE.checkMergeAch) { try { BATTLE.checkMergeAch(); } catch (e) { console.error(e); } }
+}
+
 // Executes merger mutation
 function executeMerge(beastA, beastB) {
+  executeMergeInner(beastA, beastB);
+  checkMergeAchievements();
+}
+function executeMergeInner(beastA, beastB) {
   let template = BEAST_TEMPLATES[beastA.type];
   const targetTemplate = BEAST_TEMPLATES[beastB.type];
   if (!template || !targetTemplate) {
@@ -2395,6 +2429,9 @@ function executeMerge(beastA, beastB) {
 
   removeBeastFromField(beastA.id);
   removeBeastFromField(beastB.id);
+  const ms = mergeStats();
+  ms.merges++;
+  ms.mergesOf[beastA.type] = (ms.mergesOf[beastA.type] || 0) + 1;
 
   const abs = getAbsolutePosition(mergeX, mergeY);
   const elementColor = ELEMENTS[template.element].color;
@@ -2413,7 +2450,7 @@ function executeMerge(beastA, beastB) {
       const resultType = godlyPool[Math.floor(Math.random() * godlyPool.length)];
       
       spawnToastNotification(
-        '🌌 GODLY MUTATION!',
+        (ms.mutations++, '🌌 GODLY MUTATION!'),
         `Legendary elements converged into the Godly <b>${BEAST_TEMPLATES[resultType].name}</b> (10% chance)!`,
         getBeastSVG(resultType, false)
       );
@@ -2486,7 +2523,7 @@ function executeMerge(beastA, beastB) {
       const resultType = godlyPool[Math.floor(Math.random() * godlyPool.length)];
       
       spawnToastNotification(
-        '🌌 GODLY CONVERGENCE!',
+        (mergeStats().mutations++, '🌌 GODLY CONVERGENCE!'),
         `Merging Tier 15 elements converged into the Godly <b>${BEAST_TEMPLATES[resultType].name}</b> (10% chance)!`,
         getBeastSVG(resultType, false)
       );
@@ -2652,6 +2689,8 @@ function executeMerge(beastA, beastB) {
   if (!isLegendarySuccess) {
     resultType = rollMutation(template.evolutions);
   }
+  // A rare mutation: a Legendary, or anything but the usual result.
+  if (isLegendarySuccess || (template.evolutions[0] && resultType !== template.evolutions[0].to)) ms.mutations++;
 
   // Double Evolve Upgrade (not applicable to T13 or legendary results)
   const doubleChance = UPGRADE_CONFIGS.doubleMergeChance.getValue(state.upgrades.doubleMergeChance);
@@ -2743,6 +2782,7 @@ function checkDiscovery(beastId) {
 
   state.unlockedBeasts.push(beastId);
   saveGame();
+  setTimeout(checkMergeAchievements, 0);
 
   renderBeastopedia();
   renderShop();
@@ -2769,6 +2809,9 @@ function triggerDiscoveryModal(beastId) {
   if (audio) audio.playUnlock(template.rarity);
 
   const modal = document.getElementById('discovery-modal');
+  // 1.4: a Relic says so.
+  const title = modal.querySelector('.modal-title');
+  if (title) title.textContent = template.relic ? 'A Relic joins you!' : 'New Mutation Discovered!';
   modal.classList.add('active');
 }
 
@@ -2917,6 +2960,9 @@ function startBeastIncubatorCycle(slotNum, beast) {
   saveGame();
 }
 
+/** 1.4: incubations of one species for one evolved beast of it. */
+const EVOLVE_NEEDED = 100;
+
 // Progress timer inside game loop
 function tickIncubatorFrames(slotNum, dt) {
   if (state.inBeastHub) return;
@@ -2938,7 +2984,8 @@ function tickIncubatorFrames(slotNum, dt) {
     if (slotNum === 2) {
       if (label) label.innerText = 'Purified!';
     } else {
-      if (label) label.innerText = inc.isInfected ? 'Cured!' : 'Evolved!';
+      const done = ((state.evolveProgress || {})[inc.beastType] || 0) + 1;
+      if (label) label.innerText = inc.isInfected ? 'Cured!' : done >= EVOLVE_NEEDED ? 'Evolved!' : `${done}/${EVOLVE_NEEDED}`;
     }
     if (ring) ring.style.strokeDashoffset = 0;
 
@@ -3016,19 +3063,28 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
       );
     }
   } else {
-    // If cured: spawns normal beast. If evolved: spawns evolved beast.
-    const isEvolvedResult = inc.isInfected ? inc.evolvedState : true; // evolve completes base form
-    const isInfectedResult = false; // cured cured cured!
-
-    // Spawn back on field
     const spot = incubatorReleaseSpot(slotNum);
-    spawnBeastOnField(inc.beastType, spot.x, spot.y, isEvolvedResult, isInfectedResult);
-
-    if (audio) audio.playCrateOpen();
-
-    // Add evolved lock check
-    if (isEvolvedResult && !state.unlockedEvolved.includes(inc.beastType)) {
-      state.unlockedEvolved.push(inc.beastType);
+    if (inc.isInfected) {
+      // Cured: back as it was, healthy.
+      spawnBeastOnField(inc.beastType, spot.x, spot.y, inc.evolvedState, false);
+      mergeStats().cures++;
+      if (audio) audio.playCrateOpen();
+    } else {
+      // 1.4: one more towards its species' evolved form; at the hundredth, an evolved one comes out.
+      const p = state.evolveProgress || (state.evolveProgress = {});
+      p[inc.beastType] = (p[inc.beastType] || 0) + 1;
+      const name = (BEAST_TEMPLATES[inc.beastType] || {}).name || 'Beast';
+      if (p[inc.beastType] >= EVOLVE_NEEDED) {
+        p[inc.beastType] = 0;
+        mergeStats().evolved++;
+        spawnBeastOnField(inc.beastType, spot.x, spot.y, true, false);
+        if (!state.unlockedEvolved.includes(inc.beastType)) state.unlockedEvolved.push(inc.beastType);
+        spawnToastNotification('🧬 EVOLVED!', `${EVOLVE_NEEDED} incubations: an evolved <b>${name}</b>!`, getBeastSVG(inc.beastType, true, false));
+        if (audio) audio.playUnlock('ULTRA_RARE');
+      } else {
+        spawnToastNotification('🧬 Evolution', `${name}: ${p[inc.beastType]} of ${EVOLVE_NEEDED}`, getBeastSVG(inc.beastType, false, false));
+        if (audio) audio.playCrateOpen();
+      }
     }
   }
 
@@ -3054,6 +3110,7 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
   renderBeastopedia();
   renderShop();
   renderSanctuary();
+  checkMergeAchievements();
 }
 
 // --- SHOP & UPGRADES UI ---
@@ -3319,7 +3376,19 @@ function renderUpgrades() {
   // Re-bind click listeners
   const buyUpgradesButtons = upgradesList.querySelectorAll('.shop-buy-btn');
   buyUpgradesButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
+    // 1.4: a tap counts the moment the finger lifts (a quick second tap was taken as part of a
+    // double tap and lost). A finger that moved is a scroll, not a tap. The click that follows is
+    // ignored; a click on its own (a mouse, a keyboard) still works.
+    let down = null, tapped = 0;
+    btn.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+    btn.addEventListener('pointerup', (e) => {
+      if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10 || btn.disabled) { down = null; return; }
+      down = null;
+      tapped = performance.now();
+      act();
+    });
+    btn.addEventListener('click', () => { if (performance.now() - tapped < 600) return; act(); });
+    const act = () => {
       const upgradeId = btn.getAttribute('data-upgrade');
       const incSlot = btn.getAttribute('data-buy-inc');
       const cost = parseFloat(btn.getAttribute('data-cost'));
@@ -3331,24 +3400,47 @@ function renderUpgrades() {
       } else {
         buyUpgrade(upgradeId, cost);
       }
-    });
+    };
   });
 }
 
 function buyUpgrade(upgradeId, cost) {
-  if (state.essence >= cost) {
-    state.essence -= cost;
-    state.upgrades[upgradeId] = (state.upgrades[upgradeId] || 0) + 1;
-    
-    if (audio) audio.playUnlock('COMMON');
-
-    saveGame();
-    renderShop();
-    updateHUD();
+  const config = UPGRADE_CONFIGS[upgradeId];
+  if (!config || state.essence < cost) return;
+  state.essence -= cost;
+  state.upgrades[upgradeId] = (state.upgrades[upgradeId] || 0) + 1;
+  if (audio) audio.playUnlock('COMMON');
+  // 1.4: the card is updated where it is, so tap after tap all land on the same button (Sam: there
+  // was a delay of about a second before the next tap counted, from the whole shop being rebuilt).
+  const lvl = state.upgrades[upgradeId];
+  const btn = document.querySelector(`.shop-buy-btn[data-upgrade="${upgradeId}"]`);
+  if (btn && lvl < config.maxLevel) {
+    const next = Math.round(config.baseCost * Math.pow(config.costMultiplier, lvl));
+    btn.setAttribute('data-cost', next);
+    const card = btn.closest('.shop-card');
+    const name = card && card.querySelector('.shop-card-name');
+    if (name) name.textContent = `${config.name} (Lvl ${lvl})`;
+    const meta = card && card.querySelector('.shop-card-meta');
+    if (meta && meta.lastChild) meta.lastChild.textContent = ` Upgrade: ${formatNumber(next)} `;
+  } else {
+    renderUpgrades();
   }
+  document.querySelectorAll('.shop-buy-btn[data-cost]').forEach((b) => { b.disabled = state.essence < parseFloat(b.getAttribute('data-cost')); });
+  updateHUD();
+  clearTimeout(buyUpgrade.saveT);
+  buyUpgrade.saveT = setTimeout(saveGame, 400);
 }
 
 // --- BEASTOPEDIA TAB ---
+
+/** 1.4: a species' road to its evolved form, under its card in the Beastopedia. */
+function evolveBadge(id) {
+  if (isBossBeast(id)) return '';
+  const n = (state.evolveProgress || {})[id] || 0;
+  const got = (state.unlockedEvolved || []).includes(id);
+  if (!n && !got) return '';
+  return `<div class="evolve-badge ${got ? 'got' : ''}"><i style="width:${(n / EVOLVE_NEEDED) * 100}%"></i><span>${got ? '✦ ' : ''}${n}/${EVOLVE_NEEDED}</span></div>`;
+}
 
 function renderBeastopedia() {
   updateBeastopediaProgressBar();
@@ -3425,6 +3517,7 @@ function renderBeastopedia() {
           `}
         </div>
         <div class="beastopedia-card-name" style="font-size: 9px; margin-top: 4px; text-align: center;">${isUnlocked ? template.name : 'Unknown'}</div>
+        ${isUnlocked ? evolveBadge(template.id) : ''}
       `;
       subGrid.appendChild(card);
     });
@@ -3434,6 +3527,9 @@ function renderBeastopedia() {
 
   createSection('Prime Solar System', primeTemplates, primeUnlocked);
   createSection('Low Gravity Solar System', lgTemplates, lgUnlocked);
+  // 1.4: the Relics, won by merge achievements (Battle tab, Achievements, Merge).
+  const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic);
+  if (relicTemplates.length) createSection('Relics', relicTemplates, relicTemplates.filter((b) => state.unlockedBeasts.includes(b.id)).length);
 
   grid.querySelectorAll('.beastopedia-card:not(.locked)').forEach(card => {
     card.addEventListener('click', () => {
@@ -3502,6 +3598,16 @@ function updateDetailsModalContent() {
     `Tier ${template.tier} | ${elementLabel} Element | Produces +${cpsText}/s | Merged: ${merges} times`;
 
   document.getElementById('details-beast-lore').innerText = template.lore;
+  // 1.4: how far this species is towards its evolved form.
+  let evoLine = document.getElementById('details-beast-evolve');
+  const lore = document.getElementById('details-beast-lore');
+  if (!evoLine && lore) { evoLine = document.createElement('div'); evoLine.id = 'details-beast-evolve'; evoLine.className = 'details-evolve'; lore.after(evoLine); }
+  if (evoLine) {
+    const n = (state.evolveProgress || {})[beastId] || 0;
+    const got = (state.unlockedEvolved || []).includes(beastId);
+    evoLine.style.display = isBossBeast(beastId) ? 'none' : '';
+    evoLine.textContent = `${got ? 'Evolved form found. ' : ''}Incubations towards the next evolved one: ${n} of ${EVOLVE_NEEDED}.`;
+  }
   document.getElementById('details-beast-svg-container').innerHTML = getBeastSVG(detailsBeastId, detailsStateEvolved, false);
 
   // Possible mutations/evolutions display
@@ -3655,7 +3761,7 @@ function renderSanctuary() {
   const rarityFilter = document.getElementById('filter-rarity')?.value || 'all';
   const tierFilter = document.getElementById('filter-tier')?.value || 'all';
 
-  const rareTemplates = Object.values(BEAST_TEMPLATES).filter(b => b.rarity !== 'COMMON');
+  const rareTemplates = Object.values(BEAST_TEMPLATES).filter(b => b.rarity !== 'COMMON' && !b.relic);
   
   // Sort by Tier ascending (Tier 1 at top down to Tier 20)
   rareTemplates.sort((a, b) => a.tier - b.tier);
@@ -4086,6 +4192,7 @@ function executePrestigeAscent() {
 
   state.sanctuaryBeasts = [...selectedSanctuaryIds];
   state.prestigeLevel++;
+  setTimeout(checkMergeAchievements, 1200);
 
   applyBiomeBg(state.prestigeLevel);
 
@@ -5516,13 +5623,13 @@ function updateTutorialStage() {
   switch (state.tutorialStage) {
     case 1:
       document.body.classList.add('stage-1');
-      if (bannerText) bannerText.innerText = "A few beast crates have landed! Tap on them to open them!";
+      if (bannerText) bannerText.innerText = "Tap the crates to open them.";
       const crates = document.querySelectorAll('.crate-container');
       crates.forEach(c => c.classList.add('tutorial-glow'));
       break;
     case 2:
       document.body.classList.add('stage-2');
-      if (bannerText) bannerText.innerText = "Drag one Sparky onto another to merge and evolve them!";
+      if (bannerText) bannerText.innerText = "Drag a Sparky onto another to merge them.";
       const beasts = document.querySelectorAll('.beast-container');
       beasts.forEach(b => b.classList.add('tutorial-glow'));
       break;
@@ -5545,13 +5652,13 @@ function showTutorialStep(step) {
   const skipBtn = document.getElementById('tutorial-skip-btn');
 
   if (step === 0) {
-    titleEl.innerText = "Welcome, Creator!";
-    descEl.innerText = "Learn the basics of growing your sanctuary by taking a short, interactive tour.";
+    titleEl.innerText = "Welcome!";
+    descEl.innerText = "Want a quick look at the basics?";
     if (skipBtn) skipBtn.style.display = 'inline-block';
-    nextBtn.innerText = "Start Tutorial";
+    nextBtn.innerText = "Show me";
   } else if (step === 1) {
-    titleEl.innerText = "Masterfully Done!";
-    descEl.innerText = "You have evolved your first beast! Continue merging, exploring new solar systems, and restoring the biomes.";
+    titleEl.innerText = "Nice!";
+    descEl.innerText = "That is your first merge. Keep merging to find new beasts.";
     if (skipBtn) skipBtn.style.display = 'none';
     nextBtn.innerText = "Finish";
   }

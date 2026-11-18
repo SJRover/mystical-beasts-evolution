@@ -86,6 +86,25 @@ const BATTLE_SFX = (() => {
     return 'metal';
   }
 
+  // Each voice comes in a few versions, one picked for each unit, so a crowd of the same kind does
+  // not all sound alike; heavy blows add a low impact.
+  const MORE = {
+    stone: [(ctx, k, t) => { hiss(ctx, 2400, 400, 0.9, 0.09, 0.3, t); tone(ctx, 'sine', 220 * k, 70, 0.12, 0.3, t); }, (ctx, k, t) => { tone(ctx, 'triangle', 95 * k, 40, 0.3, 0.45, t); hiss(ctx, 300, 120, 1, 0.25, 0.3, t, 'lowpass'); }],
+    roar: [(ctx, k, t) => { tone(ctx, 'sawtooth', 180 * k, 90, 0.18, 0.2, t); tone(ctx, 'square', 90 * k, 60, 0.18, 0.08, t); }, (ctx, k, t) => { hiss(ctx, 1200, 300, 3, 0.08, 0.3, t); tone(ctx, 'sine', 260 * k, 120, 0.08, 0.3, t + 0.03); }],
+    fire: [(ctx, k, t) => { for (let i = 0; i < 3; i++) hiss(ctx, 3000 * k, 1200, 4, 0.05, 0.22, t + i * 0.04); }, (ctx, k, t) => { hiss(ctx, 200, 1800 * k, 0.9, 0.3, 0.4, t, 'lowpass'); }],
+    water: [(ctx, k, t) => { tone(ctx, 'sine', 400 * k, 900 * k, 0.08, 0.3, t); tone(ctx, 'sine', 900 * k, 300, 0.1, 0.2, t + 0.07); }, (ctx, k, t) => { hiss(ctx, 2200, 400, 2, 0.18, 0.3, t); }],
+    wind: [(ctx, k, t) => { hiss(ctx, 600, 3000 * k, 1.5, 0.16, 0.35, t); }, (ctx, k, t) => { hiss(ctx, 4000 * k, 1200, 2.5, 0.1, 0.3, t, 'highpass'); hiss(ctx, 1500, 700, 1, 0.12, 0.2, t + 0.05); }],
+    chime: [(ctx, k, t) => { [1568, 2093].forEach((f, i) => tone(ctx, 'sine', f * k, f * k, 0.2, 0.12, t + i * 0.05)); }, (ctx, k, t) => { tone(ctx, 'triangle', 880 * k, 1760 * k, 0.12, 0.15, t); }],
+    zap: [(ctx, k, t) => { tone(ctx, 'sawtooth', 2400 * k, 400, 0.08, 0.1, t); tone(ctx, 'sawtooth', 2000 * k, 300, 0.08, 0.1, t + 0.05); }, (ctx, k, t) => { tone(ctx, 'square', 300 * k, 1200 * k, 0.1, 0.08, t); }],
+    void: [(ctx, k, t) => { tone(ctx, 'sine', 90 * k, 200, 0.22, 0.3, t); hiss(ctx, 400, 100, 2, 0.2, 0.2, t, 'lowpass'); }, (ctx, k, t) => { tone(ctx, 'sawtooth', 400 * k, 80, 0.3, 0.1, t, 30); }],
+    shadow: [(ctx, k, t) => { hiss(ctx, 800, 3600 * k, 3, 0.12, 0.25, t); }, (ctx, k, t) => { tone(ctx, 'sine', 180 * k, 90, 0.2, 0.2, t); hiss(ctx, 1800, 900, 6, 0.1, 0.15, t); }],
+    laser: [(ctx, k, t) => { tone(ctx, 'sine', 2600 * k, 600, 0.12, 0.12, t); }, (ctx, k, t) => { tone(ctx, 'square', 700 * k, 700 * k, 0.08, 0.06, t); tone(ctx, 'square', 1400 * k, 1400 * k, 0.08, 0.05, t + 0.06); }],
+    twang: [(ctx, k, t) => { tone(ctx, 'triangle', 360 * k, 300 * k, 0.2, 0.25, t); hiss(ctx, 6000, 3000, 6, 0.04, 0.12, t + 0.12); }],
+    magic: [(ctx, k, t) => { [660, 990, 1320].forEach((f, i) => tone(ctx, 'sine', f * k, f * k * 1.5, 0.12, 0.08, t + i * 0.04)); }, (ctx, k, t) => { tone(ctx, 'triangle', 300 * k, 1200 * k, 0.25, 0.12, t, 25); }],
+    thud: [(ctx, k, t) => { tone(ctx, 'sine', 160 * k, 60, 0.15, 0.45, t); tone(ctx, 'square', 80 * k, 50, 0.1, 0.06, t); }, (ctx, k, t) => { hiss(ctx, 300, 90, 0.7, 0.22, 0.45, t, 'lowpass'); }],
+    slash: [(ctx, k, t) => { hiss(ctx, 1200, 4800 * k, 2, 0.09, 0.3, t); }, (ctx, k, t) => { hiss(ctx, 5000 * k, 1500, 3, 0.07, 0.3, t); hiss(ctx, 4000 * k, 1200, 3, 0.07, 0.25, t + 0.06); }],
+    metal: [(ctx, k, t) => { for (const f of [900, 1310, 1980]) tone(ctx, 'sine', f * k, f * k * 0.97, 0.22, 0.07, t); }, (ctx, k, t) => { tone(ctx, 'square', 1600 * k, 1500 * k, 0.05, 0.06, t); hiss(ctx, 7000, 4000, 5, 0.06, 0.15, t); }],
+  };
   const VOICES = {
     stone(ctx, k, t) { tone(ctx, 'sine', 140 * k, 50, 0.22, 0.5, t); hiss(ctx, 900, 200, 1.2, 0.12, 0.35, t, 'lowpass'); },
     roar(ctx, k, t) { tone(ctx, 'sawtooth', 120 * k, 70, 0.25, 0.22, t); hiss(ctx, 600, 300, 2, 0.2, 0.25, t); },
@@ -109,25 +128,46 @@ const BATTLE_SFX = (() => {
     if (!ctx || !allowed(heavy)) return;
     const t = ctx.currentTime;
     const v = voiceOf(u);
-    const k = heavy ? 0.75 : 1 + (Math.random() - 0.5) * 0.12;
-    VOICES[v](ctx, k, t);
+    const k = heavy ? 0.75 : 1 + (Math.random() - 0.5) * 0.16;
+    const all = [VOICES[v], ...(MORE[v] || [])];
+    all[(u.uid || 0) % all.length](ctx, k, t);
     if (heavy) { tone(ctx, 'sine', 90, 35, 0.35, 0.55, t); hiss(ctx, 700, 120, 0.8, 0.25, 0.3, t, 'lowpass'); }
   }
 
+  /** A short vowel, for a groan or a yelp: a buzz through two formant filters. */
+  function voice(ctx, f0, f1, a, b, dur, vol, t) {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    const g = out(ctx, vol, t, dur);
+    for (const [f, q] of [[a, 6], [b, 8]]) { const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; o.connect(bp); bp.connect(g); }
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const DIES = {
+    // Beasts: a falling chime, a poof of sparkles, a sad little whistle.
+    you: [
+      (ctx, t) => { tone(ctx, 'triangle', 880, 330, 0.35, 0.2, t); tone(ctx, 'sine', 660, 220, 0.4, 0.14, t + 0.06); },
+      (ctx, t) => { hiss(ctx, 6000, 1500, 2, 0.25, 0.2, t); [1760, 1320, 990].forEach((f, i) => tone(ctx, 'sine', f, f, 0.1, 0.08, t + i * 0.05)); },
+      (ctx, t) => { tone(ctx, 'sine', 1200, 500, 0.45, 0.16, t); },
+    ],
+    shadow: [(ctx, t) => { hiss(ctx, 400, 4000, 1.5, 0.3, 0.35, t); tone(ctx, 'sine', 500, 1400, 0.12, 0.12, t + 0.18); }, (ctx, t) => { hiss(ctx, 3000, 300, 1, 0.45, 0.3, t); voice(ctx, 160, 90, 500, 900, 0.4, 0.2, t); }],
+    metal: [(ctx, t) => { hiss(ctx, 3000, 400, 0.7, 0.35, 0.3, t); tone(ctx, 'square', 300, 60, 0.3, 0.1, t); }, (ctx, t) => { for (let i = 0; i < 4; i++) tone(ctx, 'sine', 1400 - i * 230, 1300 - i * 230, 0.1, 0.08, t + i * 0.07); }],
+    laser: [(ctx, t) => { tone(ctx, 'sawtooth', 600, 40, 0.6, 0.12, t); hiss(ctx, 2000, 200, 1, 0.3, 0.15, t); }, (ctx, t) => { tone(ctx, 'square', 800, 100, 0.35, 0.1, t); tone(ctx, 'square', 400, 60, 0.35, 0.08, t + 0.1); }],
+    magic: [(ctx, t) => { tone(ctx, 'sine', 500, 1200, 0.1, 0.15, t); tone(ctx, 'sine', 1200, 200, 0.25, 0.15, t + 0.08); }, (ctx, t) => { hiss(ctx, 1000, 8000, 2, 0.2, 0.2, t); tone(ctx, 'triangle', 2000, 2000, 0.15, 0.06, t + 0.15); }],
+    flesh: [(ctx, t) => { voice(ctx, 220, 120, 600, 1000, 0.35, 0.25, t); tone(ctx, 'sine', 120, 50, 0.2, 0.3, t); }, (ctx, t) => { voice(ctx, 300, 160, 400, 800, 0.25, 0.22, t); }, (ctx, t) => { tone(ctx, 'triangle', 240, 90, 0.3, 0.3, t); hiss(ctx, 800, 200, 1, 0.2, 0.18, t, 'lowpass'); }],
+    big: [(ctx, t) => { hiss(ctx, 1200, 50, 0.6, 1.2, 0.6, t, 'lowpass'); tone(ctx, 'sine', 80, 25, 1, 0.6, t); voice(ctx, 120, 60, 400, 700, 0.9, 0.3, t); }],
+  };
   function death(u) {
     const ctx = ready();
     if (!ctx || !allowed(true)) return;
     const t = ctx.currentTime;
-    if (u.side === 'you') {
-      tone(ctx, 'triangle', 880, 330, 0.35, 0.2, t);
-      tone(ctx, 'sine', 660, 220, 0.4, 0.14, t + 0.06);
-      return;
-    }
+    const pickOf = (list) => list[(u.uid || 0) % list.length];
+    if (u.side === 'you') { pickOf(DIES.you)(ctx, t); return; }
+    if (u.boss) { DIES.big[0](ctx, t); return; }
     const v = voiceOf(u);
-    if (v === 'shadow') { hiss(ctx, 400, 4000, 1.5, 0.3, 0.35, t); tone(ctx, 'sine', 500, 1400, 0.12, 0.12, t + 0.18); }
-    else if (v === 'laser' || v === 'metal') { hiss(ctx, 3000, 400, 0.7, 0.35, 0.3, t); tone(ctx, 'square', 300, 60, 0.3, 0.1, t); }
-    else if (v === 'slash' || v === 'magic') { tone(ctx, 'sine', 500, 1200, 0.1, 0.15, t); tone(ctx, 'sine', 1200, 200, 0.25, 0.15, t + 0.08); }
-    else { tone(ctx, 'triangle', 240, 90, 0.3, 0.3, t); hiss(ctx, 800, 200, 1, 0.2, 0.18, t, 'lowpass'); }
+    const kind = v === 'shadow' ? 'shadow' : v === 'metal' ? 'metal' : v === 'laser' ? 'laser' : v === 'magic' || v === 'twang' ? 'magic' : 'flesh';
+    pickOf(DIES[kind])(ctx, t);
   }
 
   const once = {
@@ -146,6 +186,8 @@ const BATTLE_SFX = (() => {
     count(ctx, t) { tone(ctx, 'triangle', 660, 660, 0.14, 0.2, t); tone(ctx, 'sine', 1320, 1320, 0.1, 0.06, t); },
     go(ctx, t) { tone(ctx, 'sawtooth', 523, 523, 0.12, 0.12, t); tone(ctx, 'sawtooth', 784, 784, 0.35, 0.14, t + 0.12); tone(ctx, 'triangle', 1047, 1047, 0.35, 0.1, t + 0.12); hiss(ctx, 8000, 5000, 0.5, 0.5, 0.08, t + 0.12, 'highpass'); },
     nope(ctx, t) { tone(ctx, 'square', 220, 180, 0.12, 0.06, t); },
+    // An evolved form's special: a rising shimmer and a strike.
+    special(ctx, t) { [523, 784, 1047, 1568].forEach((f, i) => tone(ctx, 'triangle', f, f * 1.02, 0.2, 0.12, t + i * 0.05)); hiss(ctx, 400, 4000, 1.2, 0.35, 0.2, t + 0.15); tone(ctx, 'sine', 120, 40, 0.4, 0.4, t + 0.2); },
   };
   function play(kind, priority = true) {
     const ctx = ready();
@@ -163,15 +205,20 @@ const BATTLE_SFX = (() => {
     catch (e) { list = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, victory: [], defeat: [] }; }
     return list;
   }
-  /** The battle's music: a boss level's track, else the next casual track, for its solar system. */
-  async function music(boss, n, system = 'prime') {
+  /**
+   * The battle's music: a boss level's track, else a casual track for its solar system. Sam's
+   * casual tracks are spread over the levels: each stretch of ten levels has its own, and the next
+   * world starts one track on (with four tracks, World 1 plays 1, 2, 3, 4 and World 2 2, 3, 4, 1).
+   */
+  async function music(boss, n, system = 'prime', world = 1) {
     stopMusic();
     if (typeof audio === 'undefined' || !audio || !audio.musicEnabled) return;
     const m = await manifest();
     const sys = m[system] || m.prime;
     const pool = boss && sys.boss.length ? sys.boss : sys.casual;
     if (!pool || !pool.length) return;
-    const file = pool[(n - 1) % pool.length];
+    const stretch = Math.floor((n - 1) / 10) + ((world - 1) % 3);
+    const file = pool[stretch % pool.length];
     audio.init();
     resumeSystem = audio.musicPlaying;
     audio.stopMusic();
@@ -201,6 +248,11 @@ const BATTLE_SFX = (() => {
       if (k >= 1) { clearInterval(fadeT); tr.pause(); if (track === tr) track = null; }
     }, 50);
   }
+  /** Back from the lock screen: the battle's music carries on. */
+  function wake() {
+    if (track && track.paused && !run_paused()) track.play().catch(() => {});
+  }
+  const run_paused = () => typeof BATTLE !== 'undefined' && BATTLE.run && BATTLE.run.paused;
   /** Leaving the results: the solar system's music comes back. */
   function leave() {
     if (stingTrack) { stingTrack.pause(); stingTrack = null; }
@@ -292,5 +344,5 @@ const BATTLE_SFX = (() => {
     (won ? victoryFanfare : defeatTheme)(ctx, ctx.currentTime + 0.05);
   }
 
-  return { hit, death, play, music, stopMusic, endMusic, leave, sting, voiceOf };
+  return { hit, death, play, music, stopMusic, endMusic, leave, sting, voiceOf, wake };
 })();

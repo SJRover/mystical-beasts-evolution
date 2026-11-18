@@ -190,6 +190,16 @@ class AudioEngine {
     }
   }
 
+  /** 1.4: wake the sound after the phone was locked or the app was in the background. */
+  wake() {
+    if (!this.ctx) return;
+    if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+    if (this.musicPlaying && this.musicEnabled) {
+      for (const a of [this.primeActiveAudio, this.lgActiveAudio]) if (a && a.paused && !a.ended) a.play().catch(() => {});
+    }
+    if (typeof BATTLE_SFX !== 'undefined' && BATTLE_SFX.wake) BATTLE_SFX.wake();
+  }
+
   startMusic() {
     this.init();
     if (this.musicPlaying) return;
@@ -1106,4 +1116,11 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = AudioEngine;
 } else {
   window.AudioEngine = AudioEngine;
+  // 1.4: back from the lock screen or the background, and on the first touch after it.
+  const wake = () => { try { if (window.audio && typeof window.audio.wake === 'function') window.audio.wake(); else if (typeof audio !== 'undefined' && audio && audio.wake) audio.wake(); } catch (e) { /* no sound yet */ } };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+  window.addEventListener('pageshow', wake);
+  window.addEventListener('focus', wake);
+  document.addEventListener('touchstart', wake, { capture: true, passive: true });
+  document.addEventListener('pointerdown', wake, { capture: true, passive: true });
 }

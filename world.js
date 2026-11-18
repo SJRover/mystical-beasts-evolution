@@ -2,9 +2,9 @@
  * Merge Beasts: the meadow as a world bigger than the screen (version 1.3).
  *
  * The background and the beasts' field sit inside one #world element, WORLD.SCALE times the
- * screen's width and height, which the camera moves and scales: two fingers pinch to zoom and
- * drag to look round (a mouse wheel and a right-button drag do the same on a computer). One
- * finger still drags beasts, collects crystals and opens crates, exactly as before.
+ * screen's width and height, which the camera moves and scales: two fingers pinch to zoom, and one
+ * finger on open ground drags the map (1.4; a mouse wheel and a drag do the same on a computer).
+ * One finger on a beast still drags it, and taps still collect crystals and open crates.
  *
  * Positions stay percentages of the field, as the saves and all the game's rules have them; the
  * distance rules (merging, infection, shadow attacks) are divided by WORLD.SCALE in game.js so they
@@ -121,6 +121,19 @@ const WORLD = (() => {
 
   const worldSize = () => ({ w: vw * SCALE, h: vh * SCALE });
   const zoom = () => z;
+  /**
+   * 1.4: if a beast at (x, y) per cent of the world, `size` world pixels across, has its middle
+   * under the top bar or the bottom bars on screen, the way out on screen (towards the middle).
+   */
+  function underBar(x, y, size) {
+    pads();
+    const sx = tx + ((x / 100) * vw * SCALE + size / 2) * z;
+    const sy = ty + ((y / 100) * vh * SCALE + size / 2) * z;
+    if (sx < 0 || sx > vw) return null;
+    if (sy > padT + 6 && sy < vh - padB - 6) return null;
+    if (sy < -size * z || sy > vh + size * z) return null;
+    return { dx: vw / 2 - sx, dy: vh * 0.45 - sy };
+  }
 
   // ---------------------------------------------------------------- gestures
   let pinch = null;
@@ -161,6 +174,39 @@ const WORLD = (() => {
     const endPinch = (e) => { if (pinch && e.touches.length < 2) pinch = null; };
     vp.addEventListener('touchend', endPinch, { capture: true });
     vp.addEventListener('touchcancel', endPinch, { capture: true });
+
+    // 1.4: one finger on open ground drags the map, once it has moved a little (so taps still tap).
+    let one = null;
+    const free = (t) => !(t && t.closest && t.closest('.beast-container, .crate-container, .essence-crystal, .premium-crate, button, a, input'));
+    const holding = () => { try { return typeof draggedBeast !== 'undefined' && !!draggedBeast; } catch (e) { return false; } };
+    vp.addEventListener('touchstart', (e) => {
+      one = e.touches.length === 1 && !pinch && free(e.target) ? { x: e.touches[0].clientX, y: e.touches[0].clientY, tx, ty, on: false } : null;
+    }, { passive: true });
+    vp.addEventListener('touchmove', (e) => {
+      if (!one || pinch || e.touches.length !== 1 || holding()) { one = null; return; }
+      const dx = e.touches[0].clientX - one.x, dy = e.touches[0].clientY - one.y;
+      if (!one.on && Math.hypot(dx, dy) < 9) return;
+      one.on = true;
+      e.preventDefault();
+      tx = one.tx + dx;
+      ty = one.ty + dy;
+      apply();
+    }, { passive: false });
+    vp.addEventListener('touchend', () => { one = null; });
+    vp.addEventListener('touchcancel', () => { one = null; });
+    // The same with the left mouse button on open ground.
+    let drag = null;
+    vp.addEventListener('mousedown', (e) => { if (e.button === 0 && free(e.target)) drag = { x: e.clientX, y: e.clientY, tx, ty, on: false }; });
+    window.addEventListener('mousemove', (e) => {
+      if (!drag || holding()) { drag = null; return; }
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.on && Math.hypot(dx, dy) < 9) return;
+      drag.on = true;
+      tx = drag.tx + dx;
+      ty = drag.ty + dy;
+      apply();
+    });
+    window.addEventListener('mouseup', () => { drag = null; });
 
     // On a computer: the wheel zooms round the pointer, a right-button drag looks round.
     vp.addEventListener('wheel', (e) => {
@@ -249,7 +295,7 @@ const WORLD = (() => {
   }
   requestAnimationFrame(assist);
 
-  return { init, viewPct, worldSize, zoom, centre, zoomAt, SCALE, isPinching: () => !!pinch };
+  return { init, viewPct, worldSize, zoom, centre, zoomAt, SCALE, isPinching: () => !!pinch, underBar };
 })();
 
 // Loaded after the page's markup and before game.js, so the world is ready before any beast is placed.

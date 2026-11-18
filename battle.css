@@ -274,3 +274,42 @@ body.bt-in-battle #toast-container { display: none !important; }
 /* A Folded Legend's title (the Courier, the Samurai...) under its name. */
 .bt-legend-title { display: block; font-style: italic; font-size: 11px; font-weight: 700; color: #ffe6a8; margin-top: -2px; }
 .bt-legend-title.big { font-size: 15px; margin: -4px 0 4px; }
+
+/* The battle rules, in Settings under Rules. */
+#settings-rules .bt-rules { text-align: left; }
+.bt-rules-h { font-family: var(--font-game); font-size: 13px; color: var(--bt-gold, #ffd43b); margin: 10px 2px 4px; }
+.bt-rules-h:first-child { margin-top: 2px; }
+.bt-rules ul { margin: 0 0 2px 18px; padding: 0; font-size: 12px; line-height: 1.5; color: #dfe6f6; }
+.bt-rules-row { display: grid; grid-template-columns: 22px auto 1fr; gap: 6px; align-items: baseline; font-size: 12px; padding: 3px 2px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.bt-rules-row b { color: #fff; white-space: nowrap; }
+.bt-rules-row span:last-child { color: #c4cbe0; }
+.bt-rules-icon { text-align: center; }
+
+/* Mana (1.4, fourth round): a bar over the cards with a mark every ten. */
+.bt-mana { position: relative; height: 16px; margin: 0 2px 6px; border-radius: 8px; background: rgba(0,0,0,0.55); border: 1.5px solid rgba(120,200,255,0.55); overflow: hidden; }
+.bt-mana-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(180deg, #7ad8ff, #2a7ae8); box-shadow: 0 0 8px rgba(120,210,255,0.7); transition: width 0.12s linear; }
+.bt-mana::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), rgba(255,255,255,0.35) calc(20% - 1px) 20%); pointer-events: none; }
+.bt-mana span { position: relative; display: block; text-align: center; font-size: 11px; line-height: 13px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; }
+.bt-cardbtn .bt-cost { position: absolute; left: 2px; top: 2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: #1e5ab8; border: 1px solid #9ad8ff; font-style: normal; font-size: 10px; font-weight: 900; line-height: 14px; color: #fff; box-sizing: border-box; pointer-events: none; z-index: 2; }
+.bt-cardbtn.poor .bt-cost { background: #8a1e2e; border-color: #ff8a9a; }
+.bt-cardbtn .bt-kind { position: absolute; right: 2px; top: 2px; font-style: normal; font-size: 10px; line-height: 14px; pointer-events: none; z-index: 2; filter: drop-shadow(0 1px 1px #000); }
+.bt-cardbtn.poor img { filter: grayscale(0.85) brightness(0.6); }
+.bt-cardcell.evo { border-color: #c070ff; box-shadow: 0 3px 8px rgba(0,0,0,0.55), 0 0 10px rgba(192,112,255,0.55); }
+.bt-cardbtn .bt-special { position: absolute; left: 0; right: 0; top: 38%; display: none; font-size: 9px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; z-index: 3; }
+.bt-cardbtn.special .bt-special { display: block; animation: bt-special 0.8s ease-in-out infinite alternate; }
+.bt-cardbtn.special { box-shadow: 0 0 14px #ffd84a, inset 0 0 12px rgba(255,216,74,0.6); border-color: #ffd84a; }
+.bt-cardbtn.spent img { filter: grayscale(1) brightness(0.55); }
+@keyframes bt-special { from { transform: scale(1); } to { transform: scale(1.12); } }
+.bt-slot.evo { box-shadow: 0 0 10px rgba(192,112,255,0.8); }
+.bt-slot em { position: absolute; right: 3px; top: 1px; font-style: normal; color: #e0b0ff; font-size: 12px; text-shadow: 0 0 4px #7a3cff; }
+.bt-kindchip { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 800; background: rgba(255,255,255,0.1); color: #e8ecf8; }
+.bt-kindchip.area { background: rgba(255,150,60,0.22); color: #ffc890; }
+.bt-kindchip.ranged { background: rgba(120,200,255,0.2); color: #b8e4ff; }
+.bt-evo-toggle { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 9px; border: 1px solid #a070ff; color: #d8c0ff; font-size: 11px; font-weight: 800; background: rgba(120,60,255,0.15); }
+.bt-evo-toggle.on { background: linear-gradient(180deg, #8a4aff, #5a2ad0); color: #fff; border-color: #e0c0ff; box-shadow: 0 0 8px rgba(160,100,255,0.7); }
+
+/* Achievements: battle or merge. */
+.bt-ach-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 2px 0 8px; }
+.bt-ach-tabs button { padding: 9px 0; border-radius: 12px; border: 2px solid var(--bt-line); background: rgba(20,28,64,0.9); color: #c4cbe0; font-family: var(--font-game); font-size: 15px; cursor: pointer; }
+.bt-ach-tabs button.on { background: linear-gradient(180deg, #ffd84a, #e8a020); color: #2a1a00; border-color: #fff2b0; }
+.bt-rw.relic img { width: 44px; height: 44px; }

@@ -37,6 +37,11 @@ const BattleEngine = (() => {
       multi: extra.multi || 1, boss: !!extra.boss,
       x: 0, y: 0, state: 'walk', target: null, swing: 0, swings: 0, age: 0, dyingT: 0,
       lastSwing: -9, lastHeavy: false, lastHurt: -9, capturing: false, elite: !!extra.elite,
+      // An area attacker's blow also lands at this fraction on everything near its target.
+      area: extra.area || 0,
+      // Specials and their effects: stunned or frozen until, shielded until, dashing until, a
+      // war cry's boost until (and how much), a heavy first blow owed.
+      stunUntil: -1, frozen: false, shieldUntil: -1, dashUntil: -1, buffUntil: -1, buff: 1, forceHeavy: false,
     };
   }
 
@@ -53,9 +58,21 @@ const BattleEngine = (() => {
       const kind = (level.rule || {}).kind;
       this.cards = deck.map((c) => {
         const stats = BATTLE_DATA.beastStats(c.id, c.prestige || 0);
-        return { id: c.id, prestige: c.prestige || 0, stats, cooldown: BATTLE_DATA.cooldownOf(c.id) * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0 };
+        return {
+          id: c.id, prestige: c.prestige || 0, stats, cooldown: BATTLE_DATA.cooldownOf(c.id) * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0,
+          cost: BATTLE_DATA.costOf(c.id),
+          // An evolved form: its special, once a battle, and one of it on the field at a time.
+          evolved: !!c.evolved, ability: c.evolved ? BATTLE_DATA.abilityOf(c.id) : null, abilityUsed: false, unit: null,
+          area: BATTLE_DATA.attackKind(c.id, c.prestige || 0) === 'area' ? 0.5 : 0,
+        };
       });
       this.maxYours = kind === 'few' ? 5 : MAX_YOURS;
+      // Mana: each card costs its tier; it fills over time up to a cap (perks and a Mana spring
+      // level fill it faster or hold more).
+      const M = BATTLE_DATA.MANA;
+      this.manaMax = opts.manaMax || M.max;
+      this.manaRegen = M.regen * (opts.manaRegen || 1) * (kind === 'spring' ? 1.5 : 1);
+      this.mana = Math.min(this.manaMax, M.start);
       this.garrisoned = false;
       this.heavyEvery = opts.fury ? 3 : 5;
       this.perk = opts.perk || null;
@@ -80,7 +97,62 @@ const BattleEngine = (() => {
     /** Whether card `i` can be played now. */
     canDeploy(i) {
       const c = this.cards[i];
-      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.maxYours;
+      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.maxYours && this.mana >= c.cost && !(c.evolved && this.inPlay(i));
+    }
+
+    /** Whether card `i`'s beast is on the field now (an evolved form's, for its special). */
+    inPlay(i) {
+      const u = this.cards[i] && this.cards[i].unit;
+      return !!u && u.state !== 'dying' && u.hp > 0 && this.units.includes(u);
+    }
+    /** Whether card `i`'s special can be set off now. */
+    canSpecial(i) {
+      const c = this.cards[i];
+      return !this.result && !!c && c.evolved && !c.abilityUsed && this.inPlay(i);
+    }
+
+    /**
+     * An evolved form's special (battle_data.js ABILITIES), once a battle: tap its card again while
+     * it is on the field.
+     */
+    special(i) {
+      if (!this.canSpecial(i)) return false;
+      const c = this.cards[i], u = c.unit;
+      c.abilityUsed = true;
+      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying');
+      const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
+      const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
+      const nearest = (list, R, k) => near(list, R).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y)).slice(0, k);
+      const L = u.light, now = this.time, dir = u.side === 'you' ? -1 : 1;
+      const hit = [];
+      let at = null;
+      switch (c.ability) {
+        case 'blast': for (const o of near(foes, 190)) { this.hurt(o, L * 4, u, true); hit.push(o); } break;
+        case 'freeze': for (const o of near(foes, 210)) { o.stunUntil = Math.max(o.stunUntil, now + 2.5); o.frozen = true; hit.push(o); } break;
+        case 'gust': for (const o of near(foes, 230)) { o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y - dir * 170)); o.stunUntil = Math.max(o.stunUntil, now + 0.6); o.frozen = false; hit.push(o); } break;
+        case 'quake': for (const o of near(foes, 210)) { this.hurt(o, L * 2, u, true); o.stunUntil = Math.max(o.stunUntil, now + 1.6); o.frozen = false; hit.push(o); } break;
+        case 'heal': for (const o of near(friends, 240)) { o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.4); hit.push(o); } break;
+        case 'gravity': for (const o of near(foes, 280)) { o.x += (u.x - o.x) * 0.6; o.y += (u.y - o.y) * 0.6; this.hurt(o, L * 1.5, u, false); o.stunUntil = Math.max(o.stunUntil, now + 1); o.frozen = false; hit.push(o); } break;
+        case 'starfall': for (const o of nearest(foes, 450, 4)) { this.hurt(o, L * 3, u, true); hit.push(o); } break;
+        case 'rally': for (const o of near(friends, 280)) { o.buffUntil = now + 5; o.buff = 1.5; hit.push(o); } break;
+        case 'dash': u.dashUntil = now + 1.8; u.forceHeavy = true; break;
+        case 'shield': u.shieldUntil = now + 5; break;
+        case 'volley': for (const o of nearest(foes, u.reach * 1.6 + 120, 5)) { this.hurt(o, L * 2, u, false); hit.push(o); } break;
+        case 'leap': {
+          const ahead = foes.filter((o) => (o.y - u.y) * dir > -u.r && Math.hypot(o.x - u.x, o.y - u.y) < 480).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y))[0];
+          if (ahead) {
+            const d = Math.hypot(ahead.x - u.x, ahead.y - u.y) || 1;
+            const gap = ahead.r + u.r + 4;
+            at = { x: u.x, y: u.y };
+            u.x = ahead.x - ((ahead.x - u.x) / d) * gap;
+            u.y = ahead.y - ((ahead.y - u.y) / d) * gap;
+          } else u.y += dir * 220;
+          for (const o of near(foes, 130)) { this.hurt(o, L * 2.5, u, true); o.stunUntil = Math.max(o.stunUntil, now + 0.8); o.frozen = false; hit.push(o); }
+          break;
+        }
+      }
+      this.events.push({ type: 'special', unit: u, ability: c.ability, targets: hit, from: at });
+      return true;
     }
 
     /**
@@ -91,7 +163,11 @@ const BattleEngine = (() => {
       if (!this.canDeploy(i)) return null;
       const c = this.cards[i];
       const r = BATTLE_DATA.beastRadius(c.id);
-      const u = unitFrom('you', c.id, c.stats, r);
+      const u = unitFrom('you', c.id, c.stats, r, { area: c.area });
+      u.evolved = c.evolved;
+      u.card = i;
+      c.unit = u;
+      this.mana -= c.cost;
       let x = Math.max(r + 10, Math.min(ARENA.w - r - 10, xFrac * ARENA.w));
       const y = yAt == null ? PILES.you.y - 30 : Math.max(ZONE_Y + r * 0.5, Math.min(ARENA.h - r - 8, yAt));
       // Not on top of your own coin pile: to whichever side of it was nearer.
@@ -114,7 +190,8 @@ const BattleEngine = (() => {
       // A champion (battle_data.js, the Champion pattern): its stats from several times the level's
       // points (`mul`), a size and a half up, hitting two at once. A horde's are weaker (mul < 1).
       const champ = !!s.champ && e.role !== 'boss';
-      const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points * (s.mul || 1)), Math.min(110, BATTLE_DATA.enemyRadius(e.id) * (elite ? 1.15 : 1) * (champ ? 1.45 : 1)), { hpMul: role.hp || 1, multi: champ ? 2 : role.multi || 1, boss: e.role === 'boss', elite });
+      const area = BATTLE_DATA.enemyAttackKind(e.id) === 'area' && e.role !== 'boss' ? 0.5 : 0;
+      const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points * (s.mul || 1)), Math.min(110, BATTLE_DATA.enemyRadius(e.id) * (elite ? 1.15 : 1) * (champ ? 1.45 : 1)), { hpMul: role.hp || 1, multi: champ ? 2 : role.multi || 1, boss: e.role === 'boss', elite, area });
       u.shooter = e.role === 'ranged' || e.role === 'caster';
       u.champ = champ;
       u.weak = (s.mul || 1) < 1;
@@ -149,6 +226,7 @@ const BattleEngine = (() => {
         return;
       }
       this.time += dt;
+      this.mana = Math.min(this.manaMax, this.mana + this.manaRegen * dt);
       // Enemies arrive on the level's schedule, when there is room; the schedule repeats (without
       // its boss) for as long as the battle goes on.
       const foeCount = this.foes.length;
@@ -222,6 +300,9 @@ const BattleEngine = (() => {
     }
 
     think(u, dt) {
+      // Stunned or frozen: nothing until it wears off (the blow it was winding up waits too).
+      if (u.stunUntil > this.time) return;
+      u.frozen = false;
       const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying');
       // The nearest enemy within reach (edge to edge).
       let best = null, bd = Infinity;
@@ -255,6 +336,34 @@ const BattleEngine = (() => {
       }
       u.state = 'walk';
       u.capturing = false;
+      const dir = u.side === 'you' ? -1 : 1;
+      // 1.4 (Sam, 18 Nov: units got stuck behind their own side and could not get at the enemy):
+      // one of our own just in front, fighting or slower, is stepped round, to the side with the
+      // enemy (or the more room), so it finds a space to attack from.
+      let block = null;
+      for (const o of this.units) {
+        if (o === u || o.side !== u.side || o.state === 'dying') continue;
+        const ady = (o.y - u.y) * dir, adx = o.x - u.x, touch = u.r + o.r + 10;
+        if (ady > -4 && ady < touch && Math.abs(adx) < touch * 0.85 && (o.state !== 'walk' || o.speed < u.speed * 0.95 || o.stunUntil > this.time)) { block = o; break; }
+      }
+      let slow = 1;
+      if (block) {
+        if (u.blocker !== block.uid) {
+          u.blocker = block.uid;
+          const foeNear = foes.reduce((m, o) => (!m || Math.hypot(o.x - u.x, o.y - u.y) < Math.hypot(m.x - u.x, m.y - u.y) ? o : m), null);
+          let side = foeNear && Math.abs(foeNear.x - block.x) > 8 ? Math.sign(foeNear.x - block.x) : u.x < block.x ? -1 : 1;
+          if (u.x + side * (block.r + u.r) < u.r + 10 || u.x + side * (block.r + u.r) > ARENA.w - u.r - 10) side = -side;
+          u.sidestep = side || (u.uid % 2 ? 1 : -1);
+        }
+        u.x = Math.max(u.r + 4, Math.min(ARENA.w - u.r - 4, u.x + u.sidestep * u.speed * 0.9 * dt));
+        slow = 0.3;
+      } else u.blocker = null;
+      // Dashing (a special): straight on at three times the speed until something is in reach.
+      if (u.dashUntil > this.time) {
+        u.y += dir * u.speed * 3 * dt;
+        u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
+        return;
+      }
       // At home, an attacker near your own pile is seen to first (either side, the same rule).
       const own = u.side === 'you' ? PILES.you : PILES.foe;
       if (Math.abs(u.y - own.y) < GUARD) {
@@ -266,12 +375,11 @@ const BattleEngine = (() => {
         }
         if (near) {
           const dx = near.x - u.x, dy = near.y - u.y, d = Math.hypot(dx, dy) || 1;
-          u.x += (dx / d) * u.speed * dt;
-          u.y += (dy / d) * u.speed * dt;
+          u.x += (dx / d) * u.speed * dt * slow;
+          u.y += (dy / d) * u.speed * dt * slow;
           return;
         }
       }
-      const dir = u.side === 'you' ? -1 : 1;
       // An enemy just ahead and not far to the side draws a unit across to meet it (a front line
       // forms where the armies meet); far to the side, they pass each other by.
       let ahead = null, ad = Infinity;
@@ -280,7 +388,7 @@ const BattleEngine = (() => {
         const dx = Math.abs(o.x - u.x);
         if (dy > -u.r && dy < SIGHT && dx < SIGHT_SIDE + o.r && dy + dx < ad) { ad = dy + dx; ahead = o; }
       }
-      if (ahead) {
+      if (ahead && !block) {
         const step = Math.min(Math.abs(ahead.x - u.x), u.speed * 0.6 * dt);
         u.x += Math.sign(ahead.x - u.x) * step;
       }
@@ -292,15 +400,16 @@ const BattleEngine = (() => {
         const dx = pile.x - u.x, dy = pile.y - u.y, d = Math.hypot(dx, dy) || 1;
         vx = dx / d; vy = dy / d;
       }
-      u.x += vx * u.speed * dt;
-      u.y += vy * u.speed * dt;
+      u.x += vx * u.speed * dt * slow;
+      u.y += vy * u.speed * dt * slow;
       u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
     }
 
     attack(u, foes) {
       u.swings++;
-      const heavy = u.swings % this.heavyEvery === 0 || (u.side === 'foe' && u.swings % 5 === 0);
-      const dmg = u.light * (heavy ? 5 : 1);
+      const heavy = u.forceHeavy || u.swings % this.heavyEvery === 0 || (u.side === 'foe' && u.swings % 5 === 0);
+      u.forceHeavy = false;
+      const dmg = u.light * (heavy ? 5 : 1) * (u.buffUntil > this.time ? u.buff : 1);
       u.lastSwing = this.time;
       u.lastHeavy = heavy;
       // The target first, then (bosses) the nearest others in reach.
@@ -310,12 +419,17 @@ const BattleEngine = (() => {
           .sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y));
         hit.push(...others.slice(0, u.multi - 1));
       }
-      this.events.push({ type: 'swing', unit: u, heavy, targets: hit, ranged: u.reach >= SHOT_REACH || u.shooter });
+      // An area blow: everything near the target takes part of it too.
+      let splash = [];
+      if (u.area) splash = foes.filter((o) => !hit.includes(o) && Math.hypot(o.x - u.target.x, o.y - u.target.y) - o.r <= 70);
+      this.events.push({ type: 'swing', unit: u, heavy, targets: hit, ranged: u.reach >= SHOT_REACH || u.shooter, splash });
       for (const o of hit) this.hurt(o, dmg, u, heavy);
+      for (const o of splash) this.hurt(o, dmg * u.area, u, false);
     }
 
     hurt(o, dmg, by, heavy) {
       if (o.state === 'dying') return;
+      if (o.shieldUntil > this.time) dmg *= 0.2;
       o.hp -= dmg;
       o.lastHurt = this.time;
       this.events.push({ type: 'hit', unit: o, by, dmg, heavy });
