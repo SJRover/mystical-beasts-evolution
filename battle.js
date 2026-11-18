@@ -90,7 +90,7 @@ const BATTLE = (() => {
   function statChips(s) {
     return `<span class="bt-stat atk">ATK ${s.atk}</span><span class="bt-stat hp">HP ${s.hp}</span><span class="bt-stat spd">SPD ${s.spd}</span><span class="bt-stat rng">RNG ${s.rng}</span>`;
   }
-  const miniStats = (s) => `<i class="atk">${s.atk}</i><i class="hp">${s.hp}</i><i class="spd">${s.spd}</i><i class="rng">${s.rng}</i>`;
+  const miniStats = (s) => `<i class="atk">A${s.atk}</i><i class="hp">H${s.hp}</i><i class="spd">S${s.spd}</i><i class="rng">R${s.rng}</i>`;
   const heartsHtml = (d) => { let s = ''; for (let i = 1; i <= 5; i++) s += `<span class="bt-dstar ${d >= i ? 'full' : d >= i - 0.5 ? 'half' : ''}">★</span>`; return s; };
   const RULE_ICON = { quick: '⏱', range: '🎯', speed: '💨', rarity: '◇', three: '3' };
   function ruleText(rule) {
@@ -299,9 +299,10 @@ const BATTLE = (() => {
         </button>`;
       }
       sh.body.innerHTML = `
-        <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><div class="bt-chest-icon"></div><div><b>World chest</b><span>One chest for the whole world: earn all ${w.levels} stars in ${w.name} for a guaranteed ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.</span></div><em>${chest}</em></div>
+        <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>One chest for the whole world: earn all ${w.levels} stars in ${w.name} for a guaranteed ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.</span></div><em>${chest}</em></div>
         <div class="bt-dim bt-levels-note">Won levels can be played again, for stars or for the enemies a challenge needs.</div>
-        <div class="bt-levels">${tiles}</div>`;
+        <div class="bt-levels">${tiles}</div>
+        <div class="bt-dim bt-rule-key">Rule levels: ⏱ quick cards · 🎯 long reach · 💨 swift · ◇ Commons and Rares · 3 three beasts</div>`;
       sh.body.querySelectorAll('.bt-level').forEach((btn) => btn.addEventListener('click', () => {
         const n = Number(btn.dataset.n);
         if (!levelOpen(w, n)) { showWarning('Level locked', `Win level ${n - 1} first.`); return; }
@@ -344,7 +345,8 @@ const BATTLE = (() => {
     if (!deck.length) deck = bestDeck(sys, level);
     if (!b.pickSort) b.pickSort = { key: 'tier', dir: -1, rarity: 'all' };
     const sort = b.pickSort;
-    const sh = sheet(level.boss ? `${n}. ${level.name}` : `${w.name} ${n}`, level.boss ? 'Boss level' : D.PATTERNS[level.pattern].name);
+    const known = !!b.played[level.id] || cleared(level.id);
+    const sh = sheet(level.boss ? `${n}. ${known ? level.name : 'Boss level'}` : `${w.name} ${n}`, level.boss ? (known ? 'Boss level' : 'Who is it? Play to find out') : D.PATTERNS[level.pattern].name);
     const draw = () => {
       const played = !!b.played[level.id] || cleared(level.id);
       const foes = foesOf(level).map((id) => {
@@ -525,12 +527,11 @@ const BATTLE = (() => {
     // As big as the meadow's world at most (its width spread over the arena), and no less than twice the fit.
     const worldW = (typeof WORLD !== 'undefined' && WORLD.worldSize) ? WORLD.worldSize().w : vw * 1.8;
     run.max = Math.max(run.fit * 2.4, (worldW / W) * 1.15);
-    // The battle opens on (nearly) the whole field (Sam, 18 Nov: it opened too far in): the full
-    // width on a phone, a little closer than the whole field on a wide screen. The ⤢ button goes
-    // in close on your half and back out to the whole field.
-    run.start = Math.max(run.fit, Math.min(vw / W, run.fit * 1.25));
+    // The battle opens on the whole field (Sam, 18 Nov: it opened too far in; reviewer 2: their pile
+    // was under the top bar). The ⤢ button goes in close on your half and back out.
+    run.start = run.fit;
     run.close = Math.min(run.max, Math.max(run.fit * 1.9, (vw / W) * 1.3));
-    if (!run.cam.set) run.cam = { zoom: run.start, x: W / 2, y: H, set: true };
+    if (!run.cam.set) run.cam = { zoom: run.start, x: W / 2, y: H / 2, set: true };
     clampCam();
   }
   function clampCam() {
@@ -538,7 +539,7 @@ const BATTLE = (() => {
     c.zoom = Math.max(run.fit, Math.min(run.max, c.zoom));
     const halfW = run.vw / 2 / c.zoom, halfH = (run.vh - run.top - run.bottom) / 2 / c.zoom;
     c.x = halfW * 2 >= W ? W / 2 : Math.max(halfW, Math.min(W - halfW, c.x));
-    c.y = halfH * 2 >= H ? H / 2 : Math.max(halfH, Math.min(H - halfH, c.y));
+    c.y = halfH * 2 >= H ? H / 2 : Math.max(halfH - 80, Math.min(H - halfH + 30, c.y));
   }
   const sx = (x) => (x - run.cam.x) * run.cam.zoom + run.vw / 2;
   const sy = (y) => (y - run.cam.y) * run.cam.zoom + run.top + (run.vh - run.top - run.bottom) / 2;
@@ -686,6 +687,8 @@ const BATTLE = (() => {
     requestAnimationFrame(frame);
   }
 
+  /** Whether a unit's blows are drawn as shots (battle_engine.js: Range 3 and up, or a shooter). */
+  const shoots = (u) => u.reach >= BE.SHOT_REACH || !!u.shooter;
   function colourOf(u) {
     if (u.side === 'you') return (ELEMENTS[(D.T(u.kind) || {}).element] || { color: '#ffd43b' }).color;
     const e = D.ENEMIES[u.kind];
@@ -729,7 +732,7 @@ const BATTLE = (() => {
         case 'deploy': sfx('deploy'); burst(u.x, u.y, colourOf(u), 14, 160, 'spark'); ring(u.x, u.y, u.r * 1.8, colourOf(u)); break;
         case 'spawn':
           sfx('spawn');
-          if (D.ENEMIES[u.kind].look.shadow) burst(u.x, u.y - 10, '#1a1426', 10, 90, 'smoke'); else burst(u.x, u.y, '#c8b8a0', 8, 80, 'smoke');
+          if (D.ENEMIES[u.kind].look.shadow) burst(u.x, u.y - 10, '#6a5a8a', 8, 90, 'smoke'); else burst(u.x, u.y, '#c8b8a0', 8, 80, 'smoke');
           if (u.elite) { burst(u.x, u.y - u.r, '#ffd84a', 16, 200, 'star'); ring(u.x, u.y, u.r * 2.2, '#ffd84a'); }
           if (!B().seen[u.kind]) seenNow(u.kind);
           break;
@@ -750,7 +753,7 @@ const BATTLE = (() => {
         case 'hit':
           if (!ev.heavy && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(ev.by, false);
           hitFx(u, ev.by, ev.heavy);
-          if (ev.heavy) text(u.x, u.y - u.r * 2.4, `${Math.round(ev.dmg)}`, '#ffe066');
+          if (ev.heavy) text(u.x + u.r * 1.1, u.y - u.r * 1.6, `${Math.round(ev.dmg)}`, '#ffe066');
           u._hurt = 1;
           break;
         case 'death':
@@ -796,7 +799,7 @@ const BATTLE = (() => {
         case 'DEITY': ring(x, y, u.r * 1.6, '#ffe9a0'); burst(x, y, '#ffd84a', 6 * n, 200, 'spark'); break;
         default: burst(x, y, colourOf(by), 6 * n, 200, 'spark');
       }
-      if (by.reach < 90 && beastStyle(by.kind) === 'slam') burst(u.x, u.y, '#a89880', 3 * n, 90, 'smoke');
+      if (!shoots(by) && beastStyle(by.kind) === 'slam') burst(u.x, u.y, '#a89880', 3 * n, 90, 'smoke');
     } else {
       const st = ENEMY_ART.styleOf(D.ENEMIES[by.kind].look.weapon);
       const col = colourOf(by);
@@ -971,11 +974,14 @@ const BATTLE = (() => {
     const topGrad = g.createLinearGradient(0, 0, 0, 380);
     topGrad.addColorStop(0, 'rgba(0,0,0,0.5)'); topGrad.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = topGrad; g.fillRect(0, 0, W, 380);
+    // Your zone (where beasts can be placed): plainly blue, edged, and named (reviewer 2: it was not).
     const lowGrad = g.createLinearGradient(0, SAFE_Y, 0, H);
-    lowGrad.addColorStop(0, 'rgba(120,200,255,0)'); lowGrad.addColorStop(1, 'rgba(120,200,255,0.16)');
+    lowGrad.addColorStop(0, 'rgba(80,170,255,0.2)'); lowGrad.addColorStop(1, 'rgba(80,170,255,0.34)');
     g.fillStyle = lowGrad; g.fillRect(0, SAFE_Y, W, H - SAFE_Y);
-    g.strokeStyle = 'rgba(160,220,255,0.35)'; g.setLineDash([18, 14]); g.lineWidth = 4;
+    g.strokeStyle = 'rgba(170,225,255,0.8)'; g.setLineDash([22, 12]); g.lineWidth = 5;
     g.beginPath(); g.moveTo(0, SAFE_Y); g.lineTo(W, SAFE_Y); g.stroke(); g.setLineDash([]);
+    g.font = '800 30px Fredoka, sans-serif'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(200,235,255,0.75)'; g.fillText('YOUR ZONE', 26, SAFE_Y + 40);
     if (theme === 'kingdom') { // castle wall along the top
       g.fillStyle = '#8a8a96'; g.fillRect(0, 0, W, 40);
       for (let x = 0; x < W; x += 50) g.fillRect(x, 40, 30, 16);
@@ -1029,7 +1035,7 @@ const BATTLE = (() => {
     const h = size;
     const top = y + h * 0.35 - frac * h * 0.84;
     heartPath(ctx, x, y, h);
-    ctx.fillStyle = mine ? 'rgba(60,10,16,0.78)' : 'rgba(70,18,26,0.82)';
+    ctx.fillStyle = mine ? 'rgba(60,10,16,0.78)' : 'rgba(26,24,38,0.88)';
     ctx.fill();
     ctx.save();
     heartPath(ctx, x, y, h);
@@ -1227,7 +1233,7 @@ const BATTLE = (() => {
       if (u.state === 'dying') continue;
       const hgt = u.side === 'you' ? u.r * 2.85 : u.r * (D.ENEMIES[u.kind].look.plan === 'float' ? 3.0 : 3.5);
       const size = Math.max(15, Math.min(u.boss ? 42 : 30, u.r * z * (u.boss ? 0.9 : 0.85)));
-      heart(ctx, sx(u.x), sy(u.y - hgt) - size * 0.45, size, u.hp / u.maxHp, u.side === 'you', u.elite);
+      heart(ctx, sx(u.x), Math.max(run.top + size * 0.55, sy(u.y - hgt) - size * 0.45), size, u.hp / u.maxHp, u.side === 'you', u.elite);
     }
     drawFx(ctx, z);
     ctx.restore();
@@ -1415,7 +1421,7 @@ const BATTLE = (() => {
     const wind = ph >= 0 && ph < 0.45 ? ph / 0.45 : 0;
     const p = ph >= 0.45 ? (ph - 0.45) / 0.55 : -1;
     const hit = p < 0 ? 0 : Math.sin(Math.min(1, p / 0.7) * Math.PI);
-    if (ph >= 0 && u.reach < 90) {
+    if (ph >= 0 && !shoots(u)) {
       switch (beastStyle(u.kind)) {
         case 'slam':
           if (p < 0) { oy -= wind * S * 0.2 * hv; scy *= 1 + wind * 0.08; scx *= 1 - wind * 0.04; }
@@ -1453,7 +1459,7 @@ const BATTLE = (() => {
     const fl = mo === 'fly' || mo === 'float' ? 0.7 : 1;
     ctx.beginPath(); ctx.ellipse(x, y, S * 0.3 * fl, S * 0.09 * fl, 0, 0, Math.PI * 2); ctx.fill();
     // A heavy blow, or a shot, gathering: a glow in the beast's colour.
-    if (ph >= 0 && ph < 0.6 && (heavyNow || u.reach >= 90)) {
+    if (ph >= 0 && ph < 0.6 && (heavyNow || shoots(u))) {
       const k = ph < 0.45 ? ph / 0.45 : 1;
       ctx.globalAlpha = (heavyNow ? 0.55 : 0.35) * k;
       const gs = S * (heavyNow ? 1.7 : 1.2);
@@ -1478,7 +1484,7 @@ const BATTLE = (() => {
     const pose = {
       t: t + u.uid * 0.37, walk: (run.walk.get(u.uid) || 0) % 1, atk: ph, heavy: heavyNow,
       hurt: u._hurt || 0, dying: u.state === 'dying' ? Math.min(1, u.dyingT / BE.DYING) : 0,
-      capture: u.state === 'capture', seed: u.uid, ranged: u.reach >= 90,
+      capture: u.state === 'capture', seed: u.uid, ranged: shoots(u),
     };
     ctx.save();
     ctx.translate(sx(u.x), sy(u.y));
@@ -1569,7 +1575,7 @@ const BATTLE = (() => {
       <button class="bt-btn" data-a="quit">Retreat (counts as a loss)</button></div></div>`);
     run.screen.appendChild(m);
     m.querySelector('[data-a=resume]').addEventListener('click', () => { click(); m.remove(); run.paused = false; run.last = performance.now(); });
-    m.querySelector('[data-a=quit]').addEventListener('click', () => { click(); m.remove(); run.paused = false; run.battle.finish('lost'); });
+    m.querySelector('[data-a=quit]').addEventListener('click', () => { click(); m.remove(); run.paused = false; run.retreated = true; run.battle.finish('lost'); });
   }
 
   function seenNow(id) {
@@ -1577,6 +1583,7 @@ const BATTLE = (() => {
     if (b.seen[id]) return;
     b.seen[id] = Date.now();
     run.newFoes = (run.newFoes || 0) + 1;
+    (run.newFoeIds = run.newFoeIds || []).push(id);
     const e = D.ENEMIES[id];
     text(500, 260, `New foe: ${e.name}`, '#9ae6ff');
   }
@@ -1593,6 +1600,7 @@ const BATTLE = (() => {
     const starNow = won && time <= level.starTime;
     const newStar = starNow && !b.stars[level.id];
     const rewards = [];
+    const perksBefore = D.PERKS.filter((p) => p.unlock(totals())).map((p) => p.id);
     if (won) {
       b.best[level.id] = Math.min(b.best[level.id] || Infinity, Math.round(time));
       if (starNow) b.stars[level.id] = true;
@@ -1616,8 +1624,9 @@ const BATTLE = (() => {
       }
     }
     // Achievements first (the last of them gives a legend), then any legends now earned.
-    const ach = checkAchievements(rewards, level);
+    const ach = checkAchievements(level);
     const legends = checkLegends();
+    const newPerks = D.PERKS.filter((p) => p.unlock(totals()) && !perksBefore.includes(p.id));
     if (legends.length && typeof renderBeastopedia === 'function') { try { renderBeastopedia(); } catch (e) { console.error(e); } }
     saveGame();
     if (typeof updateHUD === 'function') updateHUD();
@@ -1625,13 +1634,15 @@ const BATTLE = (() => {
     const w = D.WORLDS[level.world - 1];
     const next = level.n < w.levels ? level.n + 1 : null;
     const m = el(`<div class="bt-modal"><div class="bt-panel ${won ? 'won' : 'lost'}">
-      <h2>${won ? 'Victory!' : 'Defeat'}</h2>
+      <h2>${won ? 'Victory!' : r.retreated ? 'Retreated' : 'Defeat'}</h2>
       <div class="bt-result-star ${starNow ? 'on' : ''}">★</div>
       <div class="bt-dim">${won ? `Won in ${fmt(time)}` : battle.piles.you <= 0 ? 'They took your coin pile.' : 'You retreated.'} · star under ${fmt(level.starTime)}${starNow ? (newStar ? ': earned!' : '') : ''}</div>
-      ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}. It battles in every world.</span></div></div>`).join('')}
-      ${rewards.length ? `<div class="bt-rewards">${rewards.map((x) => `<div>${x}</div>`).join('')}${rewards.some((x) => x.includes('free spin')) ? '<div class="bt-dim">Use free spins from the Battle tab.</div>' : ''}</div>` : ''}
-      ${ach.length ? `<div class="bt-rewards ach">${ach.map((a) => `<div>🏆 ${a}</div>`).join('')}</div>` : ''}
-      ${r.newFoes ? `<div class="bt-dim">${r.newFoes} new ${r.newFoes > 1 ? 'foes' : 'foe'} in the wiki.</div>` : ''}
+      ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}, won for: ${D.LEGENDS[id].how.toLowerCase()}. It battles in every world.</span></div></div>`).join('')}
+      ${rewards.length ? `<div class="bt-rewards"><div class="bt-rw-head">${won ? 'Level rewards' : 'Rewards'}</div>${rewards.map((x) => `<div>${x}</div>`).join('')}</div>` : ''}
+      ${ach.length ? `<div class="bt-rewards ach">${ach.map((a) => `<div><b>🏆 ${a.name}</b>${a.notes.length ? `<span>${a.notes.join(' · ')}</span>` : ''}</div>`).join('')}</div>` : ''}
+      ${newPerks.length ? `<div class="bt-rewards perk">${newPerks.map((p) => `<div><b>${PERK_LOOK[p.id].icon} New perk: ${p.name}</b><span>${PERK_LOOK[p.id].short}. Choose it on a level's screen.</span></div>`).join('')}</div>` : ''}
+      ${[...rewards, ...ach.flatMap((a) => a.notes)].some((x) => x.includes('free spin')) ? '<div class="bt-dim">Use free spins from the Battle tab.</div>' : ''}
+      ${r.newFoeIds && r.newFoeIds.length ? `<div class="bt-dim">New in the Foe Wiki: ${r.newFoeIds.map((id) => D.ENEMIES[id].name).join(', ')}.</div>` : ''}
       <div class="bt-row">
         <button class="bt-btn" data-a="map">Levels</button>
         <button class="bt-btn" data-a="retry">${won ? 'Play again' : 'Try again'}</button>
@@ -1648,7 +1659,8 @@ const BATTLE = (() => {
       run = null;
       if (r.onDone) r.onDone();
     };
-    m.querySelector('[data-a=map]').addEventListener('click', () => { click(); leave(); });
+    // Levels: back to the world's level grid (the level's own screen closes too).
+    m.querySelector('[data-a=map]').addEventListener('click', () => { click(); leave(); const top = sheets[sheets.length - 1]; if (top && sheets.length > 1) top.close(); });
     m.querySelector('[data-a=retry]').addEventListener('click', () => { click(); const deck = r.battle.cards.map((c) => c.id); leave(); start(level, deck, r.onDone); });
     const nb = m.querySelector('[data-a=next]');
     if (nb) nb.addEventListener('click', () => { click(); leave(); const top = sheets[sheets.length - 1]; if (top) top.close(); openLevel(w, next, r.onDone); });
@@ -1694,7 +1706,8 @@ const BATTLE = (() => {
     }
   }
 
-  function checkAchievements(notes, level = null) {
+  /** Achievements now earned, each with what it paid ({ name, notes }). */
+  function checkAchievements(level = null) {
     const b = B();
     const got = [];
     // Twice round, so earning the last of the others earns the one for all of them.
@@ -1703,8 +1716,9 @@ const BATTLE = (() => {
       for (const a of D.ACHIEVEMENTS) {
         if (b.ach[a.id] || !a.test(t)) continue;
         b.ach[a.id] = Date.now();
-        got.push(a.name);
-        grant(a.reward, notes, a.name, level);
+        const notes = [];
+        grant(a.reward, notes, '', level);
+        got.push({ name: a.name, notes });
       }
     }
     return got;
@@ -1783,7 +1797,7 @@ const BATTLE = (() => {
     if (a.id.startsWith('clear_')) return [t.clears, num];
     if (a.id.startsWith('stars_')) return [t.stars, num];
     if (a.id.startsWith('boss_')) return [t.bosses, num];
-    if (a.id.startsWith('world_')) return num <= 3 ? [t.worlds, num] : [t.lgWorlds, num - 3];
+    if (a.id.startsWith('world_')) return [Object.keys(B().best).filter((k) => k.startsWith(`${num}-`)).length, D.WORLDS[num - 1].levels];
     if (a.id === 'flawless') return [t.flawless, 1];
     if (a.id === 'flawless_10') return [t.flawless, 10];
     if (a.id === 'foes_all') return [t.seen, D.ENEMY_LIST.length];
@@ -1883,7 +1897,7 @@ const BATTLE = (() => {
     D.LEGEND_LIST.forEach((l, i) => {
       const got = !!b.legends[l.id];
       const card = el(`<div class="beastopedia-card bt-bp-legend ${got ? '' : 'locked'}" data-legend-id="${l.id}">
-        <div class="beastopedia-card-num"><span>L${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-${l.rarity.toLowerCase()}" style="${l.rarity !== 'DARK_MATTER' ? `color:${RARITIES[l.rarity].color};` : ''}font-weight:bold;font-size:8px;text-transform:uppercase;${got ? '' : 'opacity:0.45;'}">${RARITIES[l.rarity].name}</span></div>
+        <div class="beastopedia-card-num" style="justify-content:center"><span class="beastopedia-card-rarity rarity-${l.rarity.toLowerCase()}" style="${l.rarity !== 'DARK_MATTER' ? `color:${RARITIES[l.rarity].color};` : ''}font-weight:bold;font-size:8px;text-transform:uppercase;${got ? '' : 'opacity:0.45;'}">${RARITIES[l.rarity].name}</span></div>
         <div class="beastopedia-card-icon"><img alt="" style="width:86%;height:86%;object-fit:contain"></div>
         <div class="beastopedia-card-name" style="font-size:9px;margin-top:4px;text-align:center;">${got ? l.name : '???'}</div>
       </div>`);

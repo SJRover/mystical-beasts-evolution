@@ -675,6 +675,12 @@ const ENEMY_ART = (() => {
     }
     ellipse(ctx, wHand[0], wHand[1], 2.9, 2.9, P.skin, L, 1);
     if (look.glow) glow(ctx, 0, top + 10, bw * 1.6, look.trim, 0.35 + 0.15 * Math.sin(pose.t * 6));
+    // A hollow chest: a dark hole with a glow and echoes rippling out of it.
+    if (look.hollow) {
+      glow(ctx, 0, top + 11, bw * 1.3, look.trim, 0.55 + 0.2 * Math.sin(pose.t * 3));
+      ellipse(ctx, 0, top + 11, bw * 0.42, 6.5, '#05030a', look.trim, 1.4);
+      for (let i = 0; i < 2; i++) { const k = (pose.t * 0.8 + i * 0.5) % 1; ctx.globalAlpha *= 1 - k; ellipse(ctx, 0, top + 11, bw * (0.42 + k * 0.6), 6.5 + k * 6, null, look.trim, 1); ctx.globalAlpha /= Math.max(0.01, 1 - k); }
+    }
     ctx.restore();
     ctx.restore();
   }
@@ -1085,7 +1091,7 @@ const ENEMY_ART = (() => {
     if (silhouette) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-in';
-      ctx.fillStyle = '#2a2440';
+      ctx.fillStyle = '#5a5480';
       ctx.fillRect(0, 0, size, size);
     }
     const url = c.toDataURL();

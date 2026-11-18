@@ -146,7 +146,7 @@ const BATTLE_DATA = (() => {
     if (bonus) {
       const top = Math.max(...STATS.map((k) => s[k]));
       const tied = STATS.filter((k) => s[k] === top);
-      const pick = tied[Math.floor(seeded(hash(id + '|rarity'))() * tied.length)];
+      const pick = tied.length === STATS.length ? tied[Math.floor(seeded(hash(id + '|rarity'))() * tied.length)] : order(id).find((k) => tied.includes(k));
       s[pick] += bonus;
     }
     for (let k = 1; k <= prestige; k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
@@ -212,7 +212,7 @@ const BATTLE_DATA = (() => {
   foe(1, 7, 'night_hound', 'Night Hound', 'runner', SH('#3b2f5c', '#ff4d6d', { plan: 'quad', size: 0.9, spikes: true }), 'A long, lean shape that runs on all fours and never blinks.');
   foe(1, 8, 'shade_guard', 'Shade Guard', 'tank', SH('#3a4a5c', '#ffd6a0', { plan: 'biped', size: 1, head: 'helm', weapon: 'spear', shield: 'tower' }), 'Hides behind a tall shield of solid gloom and pokes over the top.');
   foe(1, 9, 'shade_bats', 'Bat Swarm', 'swarm', SH('#4b2e5c', '#ff6be0', { plan: 'float', size: 0.75, body: 'bat' }), 'A cloud of tiny shadow bats that moves as one and squeaks like a hinge.');
-  foe(1, 10, 'hollow_giant', 'Hollow Giant', 'boss', SH('#5c4a2f', '#ffb347', { plan: 'biped', size: 2.3, build: 'heavy', weapon: 'club', boss: true }), 'A giant with nothing inside but echoes. Its swing clears a whole lane. Boss.');
+  foe(1, 10, 'hollow_giant', 'Hollow Giant', 'boss', SH('#5c4a2f', '#ffb347', { plan: 'biped', size: 2.3, build: 'heavy', weapon: 'hammer', hat: 'horns', cape: '#1a1420', hollow: true, boss: true }), 'A giant with nothing inside but echoes. Its swing clears a whole lane. Boss.');
   foe(1, 11, 'moon_witch', 'Moon Witch', 'caster', SH('#4a3a7a', '#d6b8ff', { plan: 'biped', size: 0.9, hat: 'wizard', weapon: 'staff', cape: '#1d1630' }), 'Hums to the moon and throws pale bolts from the back line.');
   foe(1, 12, 'shade_crawler', 'Crawler', 'runner', SH('#2f4a4a', '#7affd4', { plan: 'crawler', size: 0.85 }), 'Too many legs, all of them fast. It skitters straight for your coins.');
   foe(1, 13, 'black_knight', 'Black Knight', 'tank', SH('#3c3c4a', '#ff5c5c', { plan: 'biped', size: 1.1, head: 'helm', weapon: 'sword', shield: 'round', armor: true }), 'Armour with nobody inside, still keeping its oath to someone long gone.');

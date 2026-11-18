@@ -1402,9 +1402,12 @@ function gameLoop() {
   const width = WORLD.worldSize().w;
   const height = WORLD.worldSize().h;
 
-  // 1. Move and update active beasts on field
+  // 1. Move and update active beasts on field (1.4: not during a battle, when the meadow is hidden:
+  // no wandering, no plague clocks or spreading, no shadow attacks)
+  const meadowPaused = document.body.classList.contains('bt-in-battle');
   for (let i = state.beastsOnField.length - 1; i >= 0; i--) {
     const b = state.beastsOnField[i];
+    if (meadowPaused) continue;
     
     // Wander direction changes
     if (now > b.lastWalkChange) {

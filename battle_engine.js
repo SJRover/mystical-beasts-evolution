@@ -17,6 +17,8 @@ const BattleEngine = (() => {
   const SIGHT = 380;
   const SIGHT_SIDE = 200;
   const MAX_YOURS = 10;
+  /** From this reach (Range 3 and up) a unit's blows are drawn as shots. */
+  const SHOT_REACH = 74;
   /** The top of your safe zone, where beasts can be placed. */
   const ZONE_Y = 1600;
   const DYING = 0.7;
@@ -105,6 +107,7 @@ const BattleEngine = (() => {
       const role = BATTLE_DATA.ROLES[e.role];
       const elite = !!s.elite && e.role !== 'boss';
       const u = unitFrom('foe', e.id, BATTLE_DATA.enemyStats(e.id, this.level.points), BATTLE_DATA.enemyRadius(e.id) * (elite ? 1.15 : 1), { hpMul: role.hp || 1, multi: role.multi || 1, boss: e.role === 'boss', elite });
+      u.shooter = e.role === 'ranged' || e.role === 'caster';
       if (s.announce) this.events.push({ type: 'wave', text: s.announce });
       // Out of their camp around the pile (the middle half of the width), so it is defended.
       const fx = 0.25 + 0.5 * s.x;
@@ -292,7 +295,7 @@ const BattleEngine = (() => {
           .sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y));
         hit.push(...others.slice(0, u.multi - 1));
       }
-      this.events.push({ type: 'swing', unit: u, heavy, targets: hit, ranged: u.reach >= 90 });
+      this.events.push({ type: 'swing', unit: u, heavy, targets: hit, ranged: u.reach >= SHOT_REACH || u.shooter });
       for (const o of hit) this.hurt(o, dmg, u, heavy);
     }
 
@@ -328,7 +331,7 @@ const BattleEngine = (() => {
     }
   }
 
-  return { ARENA, PILE_R, PILES, HOME, MAX_YOURS, ZONE_Y, DYING, Battle };
+  return { ARENA, PILE_R, PILES, HOME, MAX_YOURS, ZONE_Y, SHOT_REACH, DYING, Battle };
 })();
 
 if (typeof module !== 'undefined') module.exports = BattleEngine;

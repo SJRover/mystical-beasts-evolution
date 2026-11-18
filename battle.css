@@ -56,7 +56,8 @@
 
 .bt-chest { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px; background: linear-gradient(180deg, #3a2a10, #22180a); border: 2px solid var(--bt-line); margin-bottom: 12px; }
 .bt-chest.done { opacity: 0.6; }
-.bt-chest-icon { width: 44px; height: 38px; flex: none; border-radius: 8px; background: linear-gradient(180deg, #c8862a 0 45%, #8a5a1a 45%); border: 3px solid #ffd43b; box-shadow: inset 0 -6px 0 rgba(0,0,0,0.2); }
+.bt-chest-icon { width: 48px; height: 42px; flex: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+.bt-rule-key { margin: 10px 2px 0; text-align: center; }
 .bt-chest b { display: block; }
 .bt-chest span { font-size: 12px; color: #e8d8b0; }
 .bt-chest em { margin-left: auto; font-style: normal; font-weight: 800; color: var(--bt-gold); font-size: 13px; white-space: nowrap; }
@@ -154,8 +155,8 @@ body.bt-in-battle .modal-overlay { z-index: 6000; }
 .bt-cardbtn.ready { box-shadow: 0 0 12px var(--rc, #fff); }
 .bt-cardbtn:not(.ready) img { filter: grayscale(0.6) brightness(0.8); }
 .bt-cardbtn.full { border-style: dashed; }
-.bt-cs { display: flex; justify-content: center; gap: 2px; margin-top: 3px; }
-.bt-cs i { font-style: normal; font-size: 10px; font-weight: 800; min-width: 13px; padding: 0 1px; border-radius: 4px; text-align: center; background: rgba(0,0,0,0.45); }
+.bt-cs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 2px; margin: 3px 1px 0; padding: 2px; border-radius: 6px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); }
+.bt-cs i { font-style: normal; font-size: 9.5px; line-height: 1.25; font-weight: 800; text-align: center; border-radius: 3px; background: rgba(0,0,0,0.4); }
 .bt-cs i.atk { color: #ff8a6a; } .bt-cs i.hp { color: #ff6a8a; } .bt-cs i.spd { color: #7ae0ff; } .bt-cs i.rng { color: #c8a0ff; }
 @media (max-height: 700px) { .bt-cs { display: none; } }
 .bt-hud-btn.fast { background: var(--bt-gold); color: #2a1a00; }
@@ -175,6 +176,14 @@ body.bt-in-battle .modal-overlay { z-index: 6000; }
 .bt-rewards { margin: 12px 0 6px; padding: 8px; border-radius: 12px; background: rgba(255,212,59,0.1); border: 1px solid var(--bt-line); font-weight: 700; font-size: 14px; }
 .bt-rewards div + div { margin-top: 4px; }
 .bt-rewards.ach { background: rgba(120,200,255,0.1); border-color: rgba(120,200,255,0.45); }
+.bt-rewards.ach div, .bt-rewards.perk div { text-align: left; }
+.bt-rewards.ach b, .bt-rewards.perk b { display: block; }
+.bt-rewards.ach span, .bt-rewards.perk span { display: block; font-size: 12px; font-weight: 600; color: #d8e4f4; }
+.bt-rewards.perk { background: rgba(255,140,60,0.1); border-color: rgba(255,160,80,0.5); }
+.bt-rw-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--bt-gold); }
+/* The game's warnings show over the battle sheets (they were hidden under them), not over a battle. */
+#toast-container { z-index: 7600 !important; }
+body.bt-in-battle #toast-container { display: none !important; }
 .bt-foe-card img { width: 140px; height: 140px; display: block; margin: 0 auto 4px; background: rgba(255,255,255,0.06); border-radius: 18px; }
 .bt-foe-card p { font-size: 14px; color: #e4e8f4; margin: 10px 0; }
 .bt-foe-card .bt-stats { justify-content: center; margin-bottom: 4px; }

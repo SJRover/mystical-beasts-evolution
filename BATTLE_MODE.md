@@ -349,6 +349,41 @@ errors. What it found, and what was done:
 - Not changed: a player with fewer than six beasts can battle with what they have (World 1 level 1
   is made to be won with Sparky alone).
 
+## Reviewer playtest 2 (18 Nov, a Tier 8 player, World 1 levels 9 to 15, 375 by 812)
+
+Won every level first try (0:42 to 1:32), pile never touched; only level 14 (quick cards) felt
+like a fight. No game errors. What it found, and what was done:
+
+- Their pile and the boss were under the top bar in the opening view, so battles ended out of
+  sight: the battle opens on the whole field, and zoomed in the camera may go a little past the
+  ends. Hearts never go under the top bar (the boss's was under the clock).
+- No one shot in World 1 (the Dusk Archer's reach was under the 90 needed): blows are drawn as
+  shots from Range 3 up, and every shooter or caster enemy shoots. Drawing only; damage unchanged.
+- Warnings were hidden under the battle sheets (not allowed, locked level, locked perk, seven
+  beasts): the game's toasts now show over them (not over a battle).
+- The meadow's plague ran unseen during battles and killed most of the field, and income fell
+  with it: the meadow now stands still during a battle (no wandering, plague or shadow attacks);
+  income carries on.
+- The stats under the cards were 24 numbers in a row: each card has a small plate, A H / S R.
+- The blue zone was not blue: it is tinted, edged and labelled "YOUR ZONE".
+- Fights at their pile were murky: shadow folk arrive in purple smoke, not black; damage numbers
+  sit beside the target, not on its heart; an emptied enemy heart is slate, not red-brown.
+- Results: each achievement now lists its own rewards; new perks are announced; new foes are
+  named; a legend says what won it; a retreat says "Retreated"; Levels goes back to the grid.
+- World achievements counted worlds ("0/2" for one world): they count that world's levels won.
+- The Hollow Giant looked like the Shadow Brute: horns, a cape, a hammer and a hollow, glowing
+  chest. A boss level hides its boss's name until played.
+- The world chest is a drawn chest; the rule badges have a key under the grid; unknown enemies'
+  silhouettes are lighter so they show on dark tiles.
+- Legend tiles in the Beastopedia: the rarity alone at the top (the number ran into it).
+- Terrapin (a turtle) had Speed as its best stat because a tie went to a random stat: ties now go
+  to the stat the beast's look leans to (only an all-equal beast is random). Terrapin is 2/4/2/1.
+  Aeris (a bird) with Health 6 is the rule as written (its rarity bonus goes to its highest
+  stat, Health), so left.
+- Too easy for a Tier 8 player: World 1 is balanced for the collection a player would have by
+  then (Tier 3 to 4 at level 10, Tier 17 at its end), so a player far ahead of that walks through
+  it. Not changed; Sam to decide (see the report).
+
 ## Bugs found
 
 - Ten beasts played at one marker stood on one spot (looked like three): fixed, they ease apart.
