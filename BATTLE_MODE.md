@@ -281,7 +281,7 @@ Sam's first two (17 Nov): `PrimeSolarSystemCasualBattleMusicVariant1.mp3` (Prime
 `LowGravityBattleBossLevelMusic.mp3` (Low Gravity boss levels). Then (18 Nov) Prime casual
 variants 2 to 4 and `PrimeSolarSystemVictoryMusic.mp3` and `PrimeSolarSystemDefeatMusic.mp3`
 (the list first needed "Battle" in a name; it now takes "Victory" or "Defeat" alone too). Still
-to come if Sam wants them: Low Gravity casual tracks, a Prime boss track, Low Gravity victory and
+to come if Sam wants them: more Low Gravity casual tracks (the first, `LowGravityBattleLevelMusicVariant1.mp3`, came in on 18 Nov), a Prime boss track, Low Gravity victory and
 defeat music (until then those use the Prime ones). A
 Prime boss track would be, for example, `PrimeSolarSystemBattleBossLevelMusic.mp3`; until there
 is one, Prime boss levels play the casual tracks. With no battle music at all, a battle keeps the
