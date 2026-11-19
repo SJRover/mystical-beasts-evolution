@@ -42,6 +42,7 @@ const BattleEngine = (() => {
       // Specials and their effects: stunned or frozen until, shielded until, dashing until, a
       // war cry's boost until (and how much), a heavy first blow owed.
       stunUntil: -1, frozen: false, shieldUntil: -1, dashUntil: -1, buffUntil: -1, buff: 1, forceHeavy: false,
+      baseSpeed: n.speed, slowUntil: -1,
     };
   }
 
@@ -57,13 +58,16 @@ const BattleEngine = (() => {
       // band (five of yours on the field at most).
       const kind = (level.rule || {}).kind;
       this.cards = deck.map((c) => {
-        const stats = BATTLE_DATA.beastStats(c.id, c.prestige || 0);
+        // Synced down: as a beast no higher than the rule's tier and no rarer than it lets in.
+        const sync = c.sync || null;
+        const stats = sync ? BATTLE_DATA.syncStats(c.id, sync) : BATTLE_DATA.beastStats(c.id, c.prestige || 0);
+        const tier = sync && sync.tier ? Math.min(sync.tier, BATTLE_DATA.T(c.id).tier) : BATTLE_DATA.T(c.id).tier;
         return {
-          id: c.id, prestige: c.prestige || 0, stats, cooldown: BATTLE_DATA.cooldownOf(c.id) * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0,
-          cost: BATTLE_DATA.costOf(c.id),
+          id: c.id, prestige: c.prestige || 0, stats, sync, cooldown: tier * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0,
+          cost: BATTLE_DATA.costOfTier(tier),
           // An evolved form: its special, once a battle, and one of it on the field at a time.
           evolved: !!c.evolved, ability: c.evolved ? BATTLE_DATA.abilityOf(c.id) : null, abilityUsed: false, unit: null,
-          area: BATTLE_DATA.attackKind(c.id, c.prestige || 0) === 'area' ? 0.5 : 0,
+          area: BATTLE_DATA.attackKind(c.id, c.prestige || 0) === 'area' ? 0.5 : 0, // (by look; a synced one keeps its kind)
         };
       });
       this.maxYours = kind === 'few' ? 5 : MAX_YOURS;
@@ -97,29 +101,30 @@ const BattleEngine = (() => {
     /** Whether card `i` can be played now. */
     canDeploy(i) {
       const c = this.cards[i];
-      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.maxYours && this.mana >= c.cost && !(c.evolved && this.inPlay(i));
+      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.maxYours && this.mana >= c.cost;
     }
 
-    /** Whether card `i`'s beast is on the field now (an evolved form's, for its special). */
-    inPlay(i) {
-      const u = this.cards[i] && this.cards[i].unit;
-      return !!u && u.state !== 'dying' && u.hp > 0 && this.units.includes(u);
+    /** Card `i`'s beasts on the field now. */
+    onField(i) {
+      return this.units.filter((u) => u.side === 'you' && u.card === i && u.state !== 'dying' && u.hp > 0);
     }
-    /** Whether card `i`'s special can be set off now. */
+    /** Whether card `i`'s special can be set off now (an evolved form with one of it on the field). */
     canSpecial(i) {
       const c = this.cards[i];
-      return !this.result && !!c && c.evolved && !c.abilityUsed && this.inPlay(i);
+      return !this.result && !!c && c.evolved && !c.abilityUsed && this.onField(i).length > 0;
     }
 
     /**
-     * An evolved form's special (battle_data.js ABILITIES), once a battle: tap its card again while
-     * it is on the field.
+     * An evolved form's special (battle_data.js ABILITIES), once a battle for each evolved card:
+     * Sam (18 Nov), tap one of that beast on the field and it does its special there. Without a
+     * beast given, its newest one on the field.
      */
-    special(i) {
+    special(i, who = null) {
       if (!this.canSpecial(i)) return false;
-      const c = this.cards[i], u = c.unit;
+      const c = this.cards[i];
+      const u = who && who.card === i && this.onField(i).includes(who) ? who : this.onField(i).slice(-1)[0];
       c.abilityUsed = true;
-      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying');
+      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed);
       const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
       const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
       const nearest = (list, R, k) => near(list, R).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y)).slice(0, k);
@@ -128,11 +133,11 @@ const BattleEngine = (() => {
       let at = null;
       switch (c.ability) {
         case 'blast': for (const o of near(foes, 190)) { this.hurt(o, L * 4, u, true); hit.push(o); } break;
-        case 'freeze': for (const o of near(foes, 210)) { o.stunUntil = Math.max(o.stunUntil, now + 2.5); o.frozen = true; hit.push(o); } break;
+        case 'freeze': for (const o of nearest(foes, 200, 5)) { o.stunUntil = Math.max(o.stunUntil, now + 2.5); o.frozen = true; hit.push(o); } break;
         case 'gust': for (const o of near(foes, 230)) { o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y - dir * 170)); o.stunUntil = Math.max(o.stunUntil, now + 0.6); o.frozen = false; hit.push(o); } break;
         case 'quake': for (const o of near(foes, 210)) { this.hurt(o, L * 2, u, true); o.stunUntil = Math.max(o.stunUntil, now + 1.6); o.frozen = false; hit.push(o); } break;
         case 'heal': for (const o of near(friends, 240)) { o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.4); hit.push(o); } break;
-        case 'gravity': for (const o of near(foes, 280)) { o.x += (u.x - o.x) * 0.6; o.y += (u.y - o.y) * 0.6; this.hurt(o, L * 1.5, u, false); o.stunUntil = Math.max(o.stunUntil, now + 1); o.frozen = false; hit.push(o); } break;
+        case 'gravity': for (const o of nearest(foes, 220, 5)) { o.x += (u.x - o.x) * 0.6; o.y += (u.y - o.y) * 0.6; this.hurt(o, L * 1.2, u, false); o.stunUntil = Math.max(o.stunUntil, now + 1); o.frozen = false; hit.push(o); } break;
         case 'starfall': for (const o of nearest(foes, 450, 4)) { this.hurt(o, L * 3, u, true); hit.push(o); } break;
         case 'rally': for (const o of near(friends, 280)) { o.buffUntil = now + 5; o.buff = 1.5; hit.push(o); } break;
         case 'dash': u.dashUntil = now + 1.8; u.forceHeavy = true; break;
@@ -168,6 +173,7 @@ const BattleEngine = (() => {
       u.card = i;
       c.unit = u;
       this.mana -= c.cost;
+      if (this.firstDeployAt == null) this.firstDeployAt = this.time;
       let x = Math.max(r + 10, Math.min(ARENA.w - r - 10, xFrac * ARENA.w));
       const y = yAt == null ? PILES.you.y - 30 : Math.max(ZONE_Y + r * 0.5, Math.min(ARENA.h - r - 8, yAt));
       // Not on top of your own coin pile: to whichever side of it was nearer.
@@ -195,6 +201,12 @@ const BattleEngine = (() => {
       u.shooter = e.role === 'ranged' || e.role === 'caster';
       u.champ = champ;
       u.weak = (s.mul || 1) < 1;
+      // Its ability (battle_data.js TRAITS), on a clock of its own.
+      u.trait = BATTLE_DATA.traitOf(e.id);
+      if (u.trait === 'burrow') u.burrowed = true;
+      if (u.trait === 'cloak') u.cloakAt = this.time + 2 + s.x * 3;
+      if (u.trait === 'heal') u.healAt = this.time + 3;
+      if (u.trait === 'summon') u.summonAt = this.time + 6;
       if (s.announce) this.events.push({ type: 'wave', text: s.announce, champ });
       // Out of their camp around the pile (the middle half of the width), so it is defended; a
       // horde or a garrison across the whole width, in rows.
@@ -203,6 +215,9 @@ const BattleEngine = (() => {
       const gap = PILE_R + u.r + 6;
       if (!s.row && Math.abs(u.x - PILES.foe.x) < gap) u.x = PILES.foe.x + (u.x < PILES.foe.x ? -gap : gap);
       u.y = PILES.foe.y + 50 + (s.row || 0) * 58;
+      // In from a side half way down, or out of a portal in the middle of the field.
+      if (s.side) { u.x = s.side === 'L' ? u.r + 12 : ARENA.w - u.r - 12; u.y = 640 + s.x * 360; }
+      else if (s.portal) { u.y = 640 + s.x * 300; this.events.push({ type: 'portal', unit: u }); }
       this.units.push(u);
       this.seen.add(e.id);
       this.events.push({ type: 'spawn', unit: u });
@@ -227,6 +242,7 @@ const BattleEngine = (() => {
       }
       this.time += dt;
       this.mana = Math.min(this.manaMax, this.mana + this.manaRegen * dt);
+      if (this.mana >= this.manaMax) this.manaFilled = true;
       // Enemies arrive on the level's schedule, when there is room; the schedule repeats (without
       // its boss) for as long as the battle goes on.
       const foeCount = this.foes.length;
@@ -272,7 +288,7 @@ const BattleEngine = (() => {
      * ground and the other is moved. Two passes a step.
      */
     spread(dt) {
-      const live = this.units.filter((u) => u.state !== 'dying');
+      const live = this.units.filter((u) => u.state !== 'dying' && !u.burrowed);
       const planted = (u) => u.state === 'fight' || u.state === 'capture';
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < live.length; i++) {
@@ -280,7 +296,8 @@ const BattleEngine = (() => {
             const a = live[i], b = live[j];
             const same = a.side === b.side;
             const dx = b.x - a.x, dy = b.y - a.y;
-            const d = Math.hypot(dx, dy), min = (a.r + b.r) * (same ? 0.95 : 0.9);
+            const squeeze = same && (a.squeezeUntil > this.time || b.squeezeUntil > this.time);
+            const d = Math.hypot(dx, dy), min = (a.r + b.r) * (same ? (squeeze ? 0.45 : 0.95) : 0.9);
             if (d >= min) continue;
             const push = Math.min(min - d, 300 * dt);
             let nx = d > 0.01 ? dx / d : (a.uid < b.uid ? 1 : -1), ny = d > 0.01 ? dy / d : 0;
@@ -299,11 +316,51 @@ const BattleEngine = (() => {
       }
     }
 
+    /** Whether a unit can be seen and hit: not underground, not invisible. */
+    visible(o) { return !o.burrowed && !(o.cloakUntil > this.time); }
+
+    /** An enemy's ability on its clock: cloaking, healing, summoning. */
+    traitTick(u) {
+      const now = this.time;
+      if (u.trait === 'cloak' && now >= u.cloakAt) { u.cloakUntil = now + 3; u.cloakAt = now + 9; this.events.push({ type: 'trait', kind: 'cloak', unit: u }); }
+      if (u.trait === 'heal' && now >= u.healAt) {
+        u.healAt = now + 4;
+        const mended = this.units.filter((o) => o.side === u.side && o.state !== 'dying' && o.hp < o.maxHp && Math.hypot(o.x - u.x, o.y - u.y) < 220);
+        for (const o of mended) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.12);
+        if (mended.length) this.events.push({ type: 'trait', kind: 'heal', unit: u, targets: mended });
+      }
+      if (u.trait === 'summon' && now >= u.summonAt) {
+        u.summonAt = now + 10;
+        const small = BATTLE_DATA.ENEMY_LIST.filter((x) => x.world === this.level.world && x.role === 'swarm' && x.debut <= this.level.n);
+        if (small.length && this.foes.length < this.level.maxEnemies + 4) {
+          const kind = small[(u.uid + Math.floor(now)) % small.length];
+          for (const sd of [-1, 1]) {
+            this.spawnFoe({ foe: kind.id, x: 0.5, mul: 0.6 });
+            const m = this.units[this.units.length - 1];
+            m.x = Math.max(m.r + 10, Math.min(ARENA.w - m.r - 10, u.x + sd * (u.r + m.r + 6)));
+            m.y = u.y + 10;
+          }
+          this.events.push({ type: 'trait', kind: 'summon', unit: u });
+        }
+      }
+    }
+
     think(u, dt) {
       // Stunned or frozen: nothing until it wears off (the blow it was winding up waits too).
       if (u.stunUntil > this.time) return;
       u.frozen = false;
-      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying');
+      if (u.trait) this.traitTick(u);
+      // Slowed, or charging (a rush of 1.2 seconds): its speed for now.
+      if (u.charging && !(u.chargeUntil > this.time)) u.charging = false;
+      u.speed = u.baseSpeed * (u.slowUntil > this.time ? 0.6 : 1) * (u.charging ? 2.5 : 1);
+      // Underground: on to the middle of the field, then up.
+      if (u.burrowed) {
+        const dir0 = u.side === 'you' ? -1 : 1;
+        u.y += dir0 * u.speed * 1.2 * dt;
+        if ((u.side === 'foe' && u.y > 1050) || (u.side === 'you' && u.y < 950)) { u.burrowed = false; this.events.push({ type: 'trait', kind: 'surface', unit: u }); }
+        return;
+      }
+      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && this.visible(o));
       // The nearest enemy within reach (edge to edge).
       let best = null, bd = Infinity;
       for (const o of foes) {
@@ -317,7 +374,12 @@ const BattleEngine = (() => {
           u.target = best;
         }
         u.capturing = false;
-        u.swing -= dt;
+        u.charging = false;
+        if (u.reach < SHOT_REACH && bd > 6 && !best.boss) {
+          const dx = best.x - u.x, dy = best.y - u.y, dd = Math.hypot(dx, dy) || 1, st = Math.min(bd - 4, u.baseSpeed * 0.5 * dt);
+          u.x += (dx / dd) * st; u.y += (dy / dd) * st;
+        }
+        u.swing -= dt * (u.slowUntil > this.time ? 0.6 : 1);
         if (u.swing <= 0) {
           u.swing += 1;
           this.attack(u, foes);
@@ -337,6 +399,10 @@ const BattleEngine = (() => {
       u.state = 'walk';
       u.capturing = false;
       const dir = u.side === 'you' ? -1 : 1;
+      if (!(u.checkAt > this.time)) {
+        if (u.checkAt !== undefined && Math.hypot(u.x - u.checkX, u.y - u.checkY) < 12 && foes.some((o) => Math.hypot(o.x - u.x, o.y - u.y) - o.r - u.r < 220)) u.squeezeUntil = this.time + 1.2;
+        u.checkAt = this.time + 0.5; u.checkX = u.x; u.checkY = u.y;
+      }
       // 1.4 (Sam, 18 Nov: units got stuck behind their own side and could not get at the enemy):
       // one of our own just in front, fighting or slower, is stepped round, to the side with the
       // enemy (or the more room), so it finds a space to attack from.
@@ -373,12 +439,7 @@ const BattleEngine = (() => {
           const d = Math.hypot(o.x - u.x, o.y - u.y);
           if (d < nd) { nd = d; near = o; }
         }
-        if (near) {
-          const dx = near.x - u.x, dy = near.y - u.y, d = Math.hypot(dx, dy) || 1;
-          u.x += (dx / d) * u.speed * dt * slow;
-          u.y += (dy / d) * u.speed * dt * slow;
-          return;
-        }
+        if (near) { this.approach(u, near, dt, foes); return; }
       }
       // An enemy just ahead and not far to the side draws a unit across to meet it (a front line
       // forms where the armies meet); far to the side, they pass each other by.
@@ -388,9 +449,18 @@ const BattleEngine = (() => {
         const dx = Math.abs(o.x - u.x);
         if (dy > -u.r && dy < SIGHT && dx < SIGHT_SIDE + o.r && dy + dx < ad) { ad = dy + dx; ahead = o; }
       }
-      if (ahead && !block) {
-        const step = Math.min(Math.abs(ahead.x - u.x), u.speed * 0.6 * dt);
-        u.x += Math.sign(ahead.x - u.x) * step;
+      if (ahead && u.trait === 'leap' && !u.leapt && Math.hypot(ahead.x - u.x, ahead.y - u.y) < u.r + ahead.r + 80) {
+        const from = { x: u.x, y: u.y };
+        u.leapt = true;
+        u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y - 160, u.y + dir * (ahead.r * 2 + u.r + 150)));
+        this.events.push({ type: 'trait', kind: 'leap', unit: u, from });
+        return;
+      }
+      if (ahead && u.trait === 'charge' && !u.charged) { u.charged = true; u.charging = true; u.chargeUntil = this.time + 1.2; u.forceHeavy = true; this.events.push({ type: 'trait', kind: 'charge', unit: u }); }
+      if (ahead) {
+        this.approach(u, ahead, dt, foes);
+        u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
+        return;
       }
       const home = u.side === 'you' ? pile.y + HOME : pile.y - HOME;
       const inHome = u.side === 'you' ? u.y <= home : u.y >= home;
@@ -405,6 +475,37 @@ const BattleEngine = (() => {
       u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
     }
 
+    /**
+     * Go for an enemy by the clearest spot round it, so a unit comes in beside its own side's
+     * fighters instead of queuing behind them (Sam, 18 Nov: units got stuck behind each other and
+     * could not attack): spots round the enemy facing the unit, the nearest with none of its own
+     * side standing in it.
+     */
+    approach(u, tgt, dt, foes = []) {
+      // This enemy and the next two nearest: whichever has a free spot nearest wins, so a unit
+      // whose enemy is surrounded by its own side goes for another instead of waiting behind them.
+      const wide = u.squeezeUntil > this.time;
+      const near3 = foes.filter((o) => o !== tgt && Math.hypot(o.x - u.x, o.y - u.y) < SIGHT + (wide ? 260 : 120)).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y)).slice(0, wide ? 4 : 2);
+      let bx = tgt.x, by = tgt.y, best = Infinity;
+      for (const [k, e] of [tgt, ...near3].entries()) {
+        const ring = e.r + u.r + Math.min(u.reach, 40) * 0.6;
+        const base = Math.atan2(u.y - e.y, u.x - e.x);
+        for (const off of [0, 0.55, -0.55, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2]) {
+          const a = base + off;
+          const px = e.x + Math.cos(a) * ring, py = e.y + Math.sin(a) * ring;
+          if (px < u.r + 6 || px > ARENA.w - u.r - 6) continue;
+          let crowd = 0;
+          for (const o of this.units) if (o !== u && o.state !== 'dying' && o !== e && Math.hypot(o.x - px, o.y - py) < o.r + u.r * 0.8) crowd++;
+          const score = crowd * 10000 + Math.hypot(px - u.x, py - u.y) + Math.abs(off) * 20 + k * 60;
+          if (score < best) { best = score; bx = px; by = py; }
+        }
+      }
+      const dx = bx - u.x, dy = by - u.y, d = Math.hypot(dx, dy) || 1;
+      const step = Math.min(d, u.speed * dt);
+      u.x = Math.max(u.r + 4, Math.min(ARENA.w - u.r - 4, u.x + (dx / d) * step));
+      u.y += (dy / d) * step;
+    }
+
     attack(u, foes) {
       u.swings++;
       const heavy = u.forceHeavy || u.swings % this.heavyEvery === 0 || (u.side === 'foe' && u.swings % 5 === 0);
@@ -415,21 +516,29 @@ const BattleEngine = (() => {
       // The target first, then (bosses) the nearest others in reach.
       const hit = [u.target];
       if (u.multi > 1) {
-        const others = foes.filter((o) => o !== u.target && Math.hypot(o.x - u.x, o.y - u.y) - u.r - o.r <= u.reach)
+        const others = foes.filter((o) => o !== u.target && this.visible(o) && Math.hypot(o.x - u.x, o.y - u.y) - u.r - o.r <= u.reach)
           .sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y));
         hit.push(...others.slice(0, u.multi - 1));
       }
       // An area blow: everything near the target takes part of it too.
       let splash = [];
-      if (u.area) splash = foes.filter((o) => !hit.includes(o) && Math.hypot(o.x - u.target.x, o.y - u.target.y) - o.r <= 70);
+      if (u.area) splash = foes.filter((o) => !hit.includes(o) && this.visible(o) && Math.hypot(o.x - u.target.x, o.y - u.target.y) - o.r <= 70);
       this.events.push({ type: 'swing', unit: u, heavy, targets: hit, ranged: u.reach >= SHOT_REACH || u.shooter, splash });
+      if (u.cloakUntil > this.time) u.cloakUntil = this.time;
       for (const o of hit) this.hurt(o, dmg, u, heavy);
       for (const o of splash) this.hurt(o, dmg * u.area, u, false);
+      if (u.trait === 'slow') for (const o of hit) o.slowUntil = this.time + 2;
+      if (u.trait === 'knock' && heavy) for (const o of [...hit, ...splash]) {
+        if (o.state === 'dying' || o.boss) continue;
+        o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y + (o.side === 'you' ? 90 : -90)));
+        o.stunUntil = Math.max(o.stunUntil, this.time + 0.3);
+      }
     }
 
     hurt(o, dmg, by, heavy) {
       if (o.state === 'dying') return;
       if (o.shieldUntil > this.time) dmg *= 0.2;
+      if (o.side === 'foe' && this.units.some((a) => a.trait === 'aura' && a !== o && a.state !== 'dying' && a.side === 'foe' && Math.hypot(a.x - o.x, a.y - o.y) < 180)) dmg *= 0.75;
       o.hp -= dmg;
       o.lastHurt = this.time;
       this.events.push({ type: 'hit', unit: o, by, dmg, heavy });

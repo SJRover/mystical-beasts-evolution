@@ -1316,5 +1316,7 @@ const ENEMY_ART = (() => {
     return url;
   }
 
-  return { draw, still, palette, glowSprite, styleOf };
+  /** A still already made, or null. */
+  const stillReady = (id, size = 96, silhouette = false) => stills.get(`${id}|${size}|${silhouette}`) || null;
+  return { draw, still, stillReady, palette, glowSprite, styleOf };
 })();

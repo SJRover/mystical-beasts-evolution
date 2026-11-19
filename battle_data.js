@@ -92,7 +92,7 @@ const BATTLE_DATA = (() => {
     { id: 'fold_fox', name: 'Fold Fox', tier: 5, rarity: 'RARE', element: 'FIRE', motion: 'walk', stats: { atk: 2, hp: 1, spd: 5, rng: 1 }, need: { clears: 15 }, how: 'Win 15 levels', title: 'the Scout', lore: 'Quick as a page turning, its scarf streaming behind it. It gets to a coin pile before anyone has noticed it go.' },
     { id: 'origami_frog', name: 'Origami Frog', tier: 3, rarity: 'SUPER_RARE', element: 'WATER', motion: 'hop', stats: { atk: 4, hp: 2, spd: 1, rng: 1 }, need: { role: 'swarm', kills: 150 }, how: 'Defeat 150 swarm enemies', title: 'the Samurai', lore: 'A small frog with a sharp sword and a big kick, ready again in three seconds.' },
     { id: 'origami_turtle', name: 'Origami Turtle', tier: 6, rarity: 'SUPER_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 1, hp: 8, spd: 1, rng: 1 }, need: { lowTierWin: true }, how: 'Win a level from level 5 on with no beast above Tier 3', title: 'the Old Sage', lore: 'It has walked every road under that straw hat. It barely hits at all and barely gets hurt at all, so it holds a lane for ages.' },
-    { id: 'kite_ray', name: 'Kite Ray', tier: 7, rarity: 'ULTRA_RARE', element: 'WIND', motion: 'fly', stats: { atk: 2, hp: 2, spd: 5, rng: 4 }, need: { flawless: 5 }, how: 'Win 5 battles with your coin pile full', title: 'the Sky Pilot', lore: 'Goggles on and ribbons flying, it flies on a string nobody holds, darting in and out.' },
+    { id: 'kite_ray', name: 'Kite Ray', tier: 7, rarity: 'ULTRA_RARE', element: 'WIND', motion: 'fly', stats: { atk: 2, hp: 2, spd: 5, rng: 4 }, need: { flawless: 5 }, how: 'Win 5 levels from level 5 on with your coin pile full', title: 'the Sky Pilot', lore: 'Goggles on and ribbons flying, it flies on a string nobody holds, darting in and out.' },
     { id: 'paper_tiger', name: 'Paper Tiger', tier: 8, rarity: 'SUPER_RARE', element: 'FIRE', motion: 'walk', stats: { atk: 9, hp: 1, spd: 2, rng: 1 }, need: { bosses: 3 }, how: 'Beat 3 bosses', title: 'the Brawler', lore: 'It ties on its headband and roars. Its bite is far worse than its bark, but one good poke and it tears.' },
     { id: 'lantern_koi', name: 'Lantern Koi', tier: 9, rarity: 'ULTRA_RARE', element: 'LIGHT', motion: 'swim', stats: { atk: 3, hp: 2, spd: 2, rng: 8 }, need: { seen: 75 }, how: 'Meet 75 kinds of enemy', title: 'the Lantern Bearer', lore: 'It swims through the air with its lantern held high, throwing its light a long way.' },
     { id: 'folded_stag', name: 'Folded Stag', tier: 10, rarity: 'ULTRA_RARE', element: 'EARTH', motion: 'walk', stats: { atk: 6, hp: 8, spd: 1, rng: 1 }, need: { world: 1, kills: 400 }, how: 'Defeat 400 shadow folk (World 1)', title: 'the Shrine Guardian', lore: 'The keeper of the forest shrine, with sacred rope and paper streamers at its neck. It is slow and proud, with antlers creased sharp enough to cut.' },
@@ -158,8 +158,8 @@ const BATTLE_DATA = (() => {
     return {
       maxHp: 60 * s.hp,
       light: 3 * s.atk,
-      speed: Math.min(190, 82 + 22 * Math.sqrt(Math.max(0, s.spd - 1))),
-      reach: 40 + 26 * Math.sqrt(Math.max(0, s.rng - 1)),
+      speed: Math.min(260, 70 + 16 * Math.max(0, s.spd - 1)),
+      reach: Math.min(340, 34 + 20 * Math.max(0, s.rng - 1)),
     };
   }
 
@@ -184,7 +184,19 @@ const BATTLE_DATA = (() => {
    * Tier 14 and up beat about 40% more than Tier 6 to 10, and the best still cost the most.
    */
   const MANA = { max: 50, start: 25, regen: 2 };
-  const costOf = (id) => Math.max(1, Math.round((T(id) || { tier: 1 }).tier / 2 + 0.5));
+  const costOfTier = (tier) => Math.round(2 + 0.75 * tier);
+  const costOf = (id) => costOfTier((T(id) || { tier: 1 }).tier);
+  /** A beast's stats synced down to a tier and rarity (Sync down), at prestige 0. */
+  function syncStats(id, cap) {
+    const t = BEAST_TEMPLATES[id];
+    if (!t) return beastStats(id, 0);
+    const tier = cap.tier ? Math.min(cap.tier, t.tier) : t.tier;
+    const rarity = cap.rarity && RANKS.indexOf(t.rarity) > RANKS.indexOf(cap.rarity) ? cap.rarity : t.rarity;
+    const s = share(Math.max(0, tier - 1), order(id), { atk: 1, hp: 1, spd: 1, rng: 1 });
+    const bonus = RARITY_BONUS[rarity] || 0;
+    if (bonus) { const top = Math.max(...STATS.map((k) => s[k])); s[order(id).find((k) => s[k] === top)] += bonus; }
+    return s;
+  }
 
   /**
    * How a beast fights (Sam, 18 Nov: "it should say whether beasts are single or area or ranged
@@ -196,9 +208,51 @@ const BATTLE_DATA = (() => {
   const AREA_LOOK = /titan|colossus|giant|glaciator|pyroclasm|magmadon|kraken|hydra|slime|leviathan|gaia|bark|amethyst|volcanis|ent_|supergiant|chitin|arachno/;
   function attackKind(id, prestige = 0) {
     const s = beastStats(id, prestige);
-    if (40 + 26 * Math.sqrt(Math.max(0, s.rng - 1)) >= 74) return 'ranged';
+    if (34 + 20 * Math.max(0, s.rng - 1) >= 74) return 'ranged';
     return AREA_LOOK.test(id) ? 'area' : 'single';
   }
+  /**
+   * Enemy abilities, by who they are: leapers jump over your front line once; cloakers turn
+   * invisible for a few seconds now and then (nothing can target them, and a blow shows them);
+   * burrowers travel underground to the middle of the field and come up there; healers mend those
+   * round them; shield bearers make those near them take a quarter less; summoners call up a pair
+   * of small ones; chargers rush their first target and hit it hard; frost and stares slow what
+   * they hit; heavy hammers and clubs knock beasts back.
+   */
+  const TRAITS = {
+    leap: { icon: '🦘', name: 'Leaps', text: 'Jumps over your front line once.' },
+    cloak: { icon: '👻', name: 'Cloaks', text: 'Turns invisible for a few seconds now and then.' },
+    burrow: { icon: '🕳', name: 'Burrows', text: 'Travels underground to the middle of the field.' },
+    heal: { icon: '✚', name: 'Heals', text: 'Mends the enemies round it.' },
+    aura: { icon: '🛡', name: 'Shields', text: 'Enemies near it take a quarter less.' },
+    summon: { icon: '🥚', name: 'Summons', text: 'Calls up a pair of small ones.' },
+    charge: { icon: '🐂', name: 'Charges', text: 'Rushes its first target and hits it hard.' },
+    slow: { icon: '❄', name: 'Slows', text: 'What it hits moves and strikes slower.' },
+    knock: { icon: '💢', name: 'Knocks back', text: 'Its heavy blows push beasts back.' },
+  };
+  const TRAIT_WORDS = [
+    ['leap', /goblin|imp|satyr|ninja|jester|hopper|harpy|jet_|dust_devil|powder|comet_imps/],
+    ['cloak', /cloaker|thief|phase|void_hunter|night_blade|smuggl|wraith|mirror/],
+    ['burrow', /crawler|mite|serpent|digger/],
+    ['heal', /priest|oracle|siren|singularity_monk|silent_monk|mountain_monk|^monk$|navigator|bard/],
+    ['aura', /paladin|command_bot|hive_guard|captain|commander|orbit_guard|shield_drone|herald/],
+    ['summon', /night_mother|warlock|brood|hive_empress|necro|star_mage|nebula_witch|eclipse_cultist/],
+    ['charge', /cavalier|minotaur|berserker|gladiator|viking|chimera|boarder|siege_crew|regolith/],
+    ['slow', /gorgon|witch|banshee|lunar_wraith|frost|gravity_mage|psi_floater|echo/],
+  ];
+  const traitCache = {};
+  function traitOf(id) {
+    if (id in traitCache) return traitCache[id];
+    const e = ENEMIES[id];
+    let t = null;
+    if (e && e.role !== 'boss') {
+      for (const [k, re] of TRAIT_WORDS) if (re.test(id)) { t = k; break; }
+      if (!t && enemyAttackKind(id) === 'area') t = 'knock';
+    }
+    traitCache[id] = t;
+    return t;
+  }
+
   /** An enemy's: shooters and casters from afar; bosses three at once; heavy hammers and clubs an area. */
   function enemyAttackKind(id) {
     const e = ENEMIES[id];
@@ -257,12 +311,12 @@ const BATTLE_DATA = (() => {
    */
   const ROLES = {
     grunt: { order: ['atk', 'hp', 'spd', 'rng'], split: [0.3, 0.3, 0.25, 0.15], points: 1 },
-    tank: { order: ['hp', 'atk', 'spd', 'rng'], split: [0.62, 0.25, 0.08, 0.05], points: 1.15 },
-    runner: { order: ['spd', 'atk', 'hp', 'rng'], split: [0.5, 0.28, 0.17, 0.05], points: 0.9 },
-    ranged: { order: ['rng', 'atk', 'hp', 'spd'], split: [0.42, 0.33, 0.15, 0.1], points: 0.95 },
-    caster: { order: ['rng', 'atk', 'spd', 'hp'], split: [0.45, 0.4, 0.1, 0.05], points: 0.95 },
-    brute: { order: ['atk', 'hp', 'spd', 'rng'], split: [0.52, 0.33, 0.1, 0.05], points: 1.1 },
-    swarm: { order: ['spd', 'atk', 'hp', 'rng'], split: [0.4, 0.3, 0.2, 0.1], points: 0.5 },
+    tank: { order: ['hp', 'atk', 'spd', 'rng'], split: [0.62, 0.25, 0.08, 0.05], points: 1.15, floor: { hp: 3 } },
+    runner: { order: ['spd', 'atk', 'hp', 'rng'], split: [0.5, 0.28, 0.17, 0.05], points: 0.9, floor: { spd: 3 } },
+    ranged: { order: ['rng', 'atk', 'hp', 'spd'], split: [0.42, 0.33, 0.15, 0.1], points: 0.95, floor: { rng: 3 } },
+    caster: { order: ['rng', 'atk', 'spd', 'hp'], split: [0.45, 0.4, 0.1, 0.05], points: 0.95, floor: { rng: 3 } },
+    brute: { order: ['atk', 'hp', 'spd', 'rng'], split: [0.52, 0.33, 0.1, 0.05], points: 1.1, floor: { atk: 3 } },
+    swarm: { order: ['spd', 'atk', 'hp', 'rng'], split: [0.4, 0.3, 0.2, 0.1], points: 0.5, floor: { spd: 2 } },
     boss: { order: ['hp', 'atk', 'rng', 'spd'], split: [0.42, 0.36, 0.14, 0.08], points: 1.7, hp: 4, multi: 3 },
   };
 
@@ -500,6 +554,7 @@ const BATTLE_DATA = (() => {
     const rem = raw.map((x, i) => [x - whole[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]);
     for (let k = 0; left > 0; k = (k + 1) % 4, left--) whole[rem[k][1]]++;
     role.order.forEach((k, i) => { s[k] += whole[i]; });
+    if (role.floor) for (const [k, v] of Object.entries(role.floor)) s[k] = Math.max(s[k], v);
     return s;
   }
   /** How big an enemy stands (radius, arena units). */
@@ -814,6 +869,18 @@ const BATTLE_DATA = (() => {
       add(20.5, pick(), 0.32);
       add(20.5, pick(), 0.68);
     }
+    if (pattern !== 'horde' && pattern !== 'champion') {
+      // An opening group at once, across their camp.
+      const m = Math.min(5, 2 + Math.floor(n / 10) + (st - 1));
+      for (let i = 0; i < m; i++) add(0.6 + i * 0.25, pick(), 0.15 + (0.7 * i) / Math.max(1, m - 1), i ? {} : { announce: n > 3 ? 'Here they come!' : null });
+    }
+    if (n >= 4) for (const s of spawns) {
+      if (s.boss || s.champ || s.wide || s.t < 3) continue;
+      const e = E.find((x) => x.id === s.foe);
+      const flier = e.look && e.look.plan === 'float';
+      if ((e.role === 'runner' || e.role === 'swarm' || flier) && r() < 0.14 + 0.14 * k) s.side = r() < 0.5 ? 'L' : 'R';
+      else if ((e.role === 'caster' || e.role === 'ranged') && r() < 0.1 + 0.1 * k) s.portal = true;
+    }
     spawns.sort((a, b) => a.t - b.t);
     // Defenders who come out when their coin pile is being emptied (at 10 s and at 5 s left).
     const rally = onlyRally || (n < 2 ? [pick().id] : [pick().id, pick().id, n > 10 ? pick().id : null, n > 25 ? pick().id : null].filter(Boolean));
@@ -858,7 +925,7 @@ const BATTLE_DATA = (() => {
   const clearMinutes = (world, n) => 2 + Math.floor(n / 5) + (world - 1) * 4;
 
   const ACHIEVEMENTS = [
-    { id: 'first_win', name: 'First Blood', desc: 'Win your first battle.', test: (b) => b.clears >= 1, reward: { crates: 2 } },
+    { id: 'first_win', name: 'First Blood', desc: 'Win your first battle.', test: (b) => b.clears >= 1, reward: { crates: 1 } },
     { id: 'clear_10', name: 'Warming Up', desc: 'Clear 10 levels.', test: (b) => b.clears >= 10, reward: { crates: 5 } },
     { id: 'clear_40', name: 'Seasoned', desc: 'Clear 40 levels.', test: (b) => b.clears >= 40, reward: { premium: 2, cap: 15 } },
     { id: 'clear_80', name: 'Veteran', desc: 'Clear 80 levels.', test: (b) => b.clears >= 80, reward: { premium: 4, cap: 18 } },
@@ -873,10 +940,10 @@ const BATTLE_DATA = (() => {
     { id: 'world_1', name: 'Dawn', desc: 'Clear the Shadow Wilds.', test: (b) => b.worlds >= 1, reward: { premium: 3, cap: 15 } },
     { id: 'world_2', name: 'Uncrowned', desc: 'Clear the Iron Kingdom.', test: (b) => b.worlds >= 2, reward: { premium: 5, cap: 18 } },
     { id: 'world_3', name: 'Invaders Repelled', desc: 'Clear the Star Invasion.', test: (b) => b.worlds >= 3, reward: { premium: 8 } },
-    { id: 'blitz', name: 'Blitz', desc: 'Win any level in under 40 seconds.', test: (b) => b.fastest > 0 && b.fastest < 40, reward: { spins: 2 } },
+    { id: 'blitz', name: 'Blitz', desc: 'Win a level from level 10 on in under 40 seconds.', test: (b) => b.blitz, reward: { spins: 2 } },
     { id: 'underdog', name: 'Underdog', desc: 'Beat a boss with no beast above Tier 8.', test: (b) => b.underdog, reward: { premium: 3, cap: 15 } },
-    { id: 'flawless', name: 'Untouched', desc: 'Win with your coin pile full.', test: (b) => b.flawless >= 1, reward: { crates: 5 } },
-    { id: 'flawless_10', name: 'Fortress', desc: 'Win 10 battles with your coin pile full.', test: (b) => b.flawless >= 10, reward: { premium: 3, cap: 15 } },
+    { id: 'flawless', name: 'Untouched', desc: 'Win a level from level 5 on with your coin pile full.', test: (b) => b.flawless >= 1, reward: { crates: 3 } },
+    { id: 'flawless_10', name: 'Fortress', desc: 'Win 10 levels from level 5 on with your coin pile full.', test: (b) => b.flawless >= 10, reward: { premium: 3, cap: 15 } },
     { id: 'foes_50', name: 'Field Notes', desc: 'Meet 50 kinds of enemy.', test: (b) => b.seen >= 50, reward: { spins: 2 } },
     { id: 'foes_120', name: 'Know Your Enemy', desc: 'Meet 120 kinds of enemy.', test: (b) => b.seen >= 120, reward: { premium: 5, cap: 18 } },
     { id: 'world_4', name: 'Moonrise', desc: 'Clear the Moon Hollows.', test: (b) => b.lgWorlds >= 1, reward: { premium: 3, cap: 15 } },
@@ -885,6 +952,11 @@ const BATTLE_DATA = (() => {
     { id: 'clear_240', name: 'Two Universes', desc: 'Clear all 240 levels.', test: (b) => b.clears >= 240, reward: { premium: 15 } },
     { id: 'boss_24', name: 'Slayer of Kings', desc: 'Beat all 24 bosses.', test: (b) => b.bosses >= 24, reward: { premium: 12 } },
     { id: 'foes_all', name: 'Bestiary Complete', desc: 'Meet every enemy in both systems.', test: (b) => b.seen >= 192, reward: { premium: 8 } },
+    { id: 'perk_fury', name: 'Purebred', desc: 'Win a level from level 5 on with beasts of one element.', test: (b) => !!b.perkWon.fury, reward: { perk: 'fury' } },
+    { id: 'perk_rally', name: 'Trio', desc: 'Win a level from level 10 on bringing only three beasts.', test: (b) => !!b.perkWon.rally, reward: { perk: 'rally' } },
+    { id: 'perk_fortify', name: 'Iron Vault', desc: 'Beat a boss with your coin pile full.', test: (b) => !!b.perkWon.fortify, reward: { perk: 'fortify' } },
+    { id: 'perk_wellspring', name: 'Never Idle', desc: 'Win a level from level 10 on without your mana ever filling up.', test: (b) => !!b.perkWon.wellspring, reward: { perk: 'wellspring' } },
+    { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing nothing in the first 20 seconds.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */
@@ -892,18 +964,18 @@ const BATTLE_DATA = (() => {
 
   /** Perks: one before a battle. */
   const PERKS = [
-    { id: 'fury', name: 'Fury', desc: 'Every third swing is a heavy one, not every fifth.', opts: { fury: true }, unlock: (t) => t.bosses >= 1, how: 'Beat a boss' },
-    { id: 'rally', name: 'Rally', desc: 'Cards rest a quarter less.', opts: { rest: 0.75 }, unlock: (t) => t.stars >= 25, how: 'Earn 25 stars' },
-    { id: 'fortify', name: 'Fortify', desc: 'Your coin pile holds 20 seconds.', opts: { pile: 20 }, unlock: (t) => t.flawless >= 1, how: 'Win with your pile full' },
-    { id: 'wellspring', name: 'Wellspring', desc: 'Mana fills a quarter faster.', opts: { manaRegen: 1.25 }, unlock: (t) => t.clears >= 12, how: 'Win 12 levels' },
-    { id: 'deep_pool', name: 'Deep Pool', desc: 'Hold up to 65 mana.', opts: { manaMax: 65 }, unlock: (t) => t.stars >= 15, how: 'Earn 15 stars' },
+    { id: 'fury', name: 'Fury', desc: 'Every third swing is a heavy one, not every fifth.', opts: { fury: true }, unlock: (t) => !!(t.perkWon || {}).fury, how: 'Win from level 5 on with beasts of one element' },
+    { id: 'rally', name: 'Rally', desc: 'Cards rest a quarter less.', opts: { rest: 0.75 }, unlock: (t) => !!(t.perkWon || {}).rally, how: 'Win from level 10 on bringing only three beasts' },
+    { id: 'fortify', name: 'Fortify', desc: 'Your coin pile holds 20 seconds.', opts: { pile: 20 }, unlock: (t) => !!(t.perkWon || {}).fortify, how: 'Beat a boss with your coin pile full' },
+    { id: 'wellspring', name: 'Wellspring', desc: 'Mana fills a quarter faster.', opts: { manaRegen: 1.25 }, unlock: (t) => !!(t.perkWon || {}).wellspring, how: 'Win from level 10 on without your mana ever filling up' },
+    { id: 'deep_pool', name: 'Deep Pool', desc: 'Hold up to 65 mana.', opts: { manaMax: 65 }, unlock: (t) => !!(t.perkWon || {}).deep_pool, how: 'Win from level 10 on playing nothing in the first 20 seconds' },
   ];
 
   return {
     PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, DECK_RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
     STATS, STAT_NAMES, RARITY_BONUS, ROLES, ENEMIES, ENEMY_LIST: E, WORLDS, BOSS_EVERY, ACHIEVEMENTS, STAR_TIMES, LEVEL_POINTS,
     hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, beastRadius,
-    MANA, costOf, attackKind, enemyAttackKind, ABILITIES, abilityOf,
+    MANA, costOf, costOfTier, syncStats, attackKind, enemyAttackKind, ABILITIES, abilityOf, TRAITS, traitOf,
     enemyStats, enemyRadius, level, levelPoints, difficulty, clearMinutes,
   };
 })();

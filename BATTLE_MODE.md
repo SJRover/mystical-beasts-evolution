@@ -44,11 +44,15 @@ From points to the battle:
 |---|---|
 | Health h | 60 × h hit points (fights between equals last about ten seconds) |
 | Attack a | a light attack of 3 × a every second; every fifth swing is a heavy attack of five times that (with the Fury perk, every third) |
-| Speed s | 62 + 18 × √(s − 1) units a second (the arena is 1000 wide by 2000 tall; a Speed 1 beast takes about 28 s from pile to pile) |
-| Range r | reaches 40 + 26 × √(r − 1) units beyond the target's edge; 90 or more fights from afar with a shot |
+| Speed s | 70 + 16 × (s − 1) units a second, at most 260 (the arena is 1000 wide by 2000 tall; a Speed 1 beast takes about 25 s from pile to pile, a Speed 8 one about 10 s) |
+| Range r | reaches 34 + 20 × (r − 1) units beyond the target's edge, at most 340; 74 or more (Range 3 and up) fights from afar with a shot |
 
-Speed and Range grow more slowly the higher they go, so a beast with huge stats does not race
-across the map or hit from the other end of it.
+Seventh round (Sam, 19 Nov: high and low Range, Health, Speed and Attack felt alike): Speed and
+Range now count in a straight line, point for point (they had a square root). A Range 6 beast now
+shoots from about four times as far as a Range 1 one, and a Speed 8 runner is two and a half
+times as fast as a Speed 1 tank, so levels can ask for reach, speed or something tough at the
+front. (For a while they also took their full share of a beast's points; high tiers came out
+frail, a Tier 15 Legendary flier with Health 2 for 13 mana, so they are back to half.)
 
 ## A battle
 
@@ -59,8 +63,13 @@ across the map or hit from the other end of it.
   (below) that limits who may come keeps its own six.
 - **Mana** (fifth round, Sam's idea, like Clash Royale's elixir and Battle Cats' wallet, so the
   best cards cannot just be played over and over): a bar over the cards; you hold at most 50,
-  start with 25, and it fills 10 every 5 seconds. A beast costs about half its tier (Tier 1 one,
-  Tier 10 six, Tier 20 eleven), shown on its card; cards also still recharge. Sam suggested a
+  start with 25, and it fills 10 every 5 seconds. A beast costs 2 plus three quarters of its tier,
+  rounded (Tier 1 three, Tier 5 six, Tier 10 ten, Tier 20 seventeen), shown on its card and in the
+  Beastopedia; cards also still recharge. (Half its tier until Sam, 18 Nov, found it too cheap,
+  then 0.7 × tier until he found spamming all ten still too easy, 19 Nov. With the expected six
+  played as fast as mana allows, beasts out averaged 6.3 with the field full a third of the time
+  at 0.7 × tier, and 4.3 with it full 14% of the time now. The flat 2 makes cheap spam dearest,
+  so merging up is worth more.) Sam suggested a
   beast's whole tier; tested that way a Tier 6 six beat as strong enemies as a Tier 14 one, so
   merging up would not have helped (at half, Tier 14 and up beat about 40% more). The Wellspring
   perk fills mana a quarter faster, Deep Pool holds 65, and Mana spring levels (9, 19, 29, 39 of
@@ -70,10 +79,14 @@ across the map or hit from the other end of it.
   near the target, with no extra reach or attack) or Ranged (Range 3 and up, one enemy from afar).
   Shown on the level screen, a mark on each card, and in the Rules. Enemies too: shooters and
   casters ranged, heavy hammers and clubs area, bosses three at once.
-- **Evolved forms** (fifth round): the same stats as the beast, plus a special, once a battle. Up
-  to three evolved forms in a six (the ✦ under a beast you have evolved swaps it in), one of each
-  on the field at a time; tap its card again while it is out to set the special off, like a Clash
-  Royale champion. The special comes from how it is built and its best stat, else its element:
+- **Evolved forms** (fifth round): the same stats as the beast, plus a special, once a battle for
+  each evolved card. Seventh round (Sam, 19 Nov): the left three slots of the six, on a violet
+  plate, are the special slots; a beast you have evolved has its special only there (in the
+  right three it battles without one, and nothing about specials shows). Drag a slot onto
+  another to swap them. The card plays copies like any other; Sam (18 Nov): tap one of them on
+  the field and it does its special there. A gold ring pulses round them while it is ready, and the card names it.
+  (It was first a second tap on the card with one copy out at a time; the strategy bots won fewer
+  levels with evolved forms that way, as fewer beasts were out.) The special comes from how it is built and its best stat, else its element:
   Leap (foxes, cats, wolves, lions, dinosaurs: onto the nearest enemy ahead, stunning those it
   lands among), Dash (Speed: three times as fast, the first blow heavy), Shield (Health: a fifth of
   the damage for five seconds), Volley (Range: the five nearest enemies), or by element Blast
@@ -152,6 +165,35 @@ across the map or hit from the other end of it.
   in battle time, so playing at 2× does not make a star harder.
 - The coin pile is an open chest behind a heap of coins, with stacks, gems and, while full, a
   crown. Yours is wood lined blue; theirs iron lined red. It shrinks in eight steps as it empties.
+
+- **Sync down** (seventh round, Sam's idea): on a Quick cards or Plain stock level that leaves you
+  fewer allowed beasts than the six, a Sync down button under the slots lets every beast come as
+  the rule's own version (no higher than its tier, no rarer than Rare, no prestige), so a player
+  far along can still fill a six. It only shows when it is needed. The other rules ask for at
+  least so much Range, Speed or Health, which prestige only helps with, so they never need it.
+- **Enemy abilities** (seventh round, Sam: "jumping abilities or abilities where they bypass
+  some enemies, go invisible for a few seconds", from Clash Royale and Battle Cats). By who they
+  are (battle_data.js TRAITS): Leaps (goblins, imps, ninjas: over your front line once), Cloaks
+  (thieves, wraiths: invisible three seconds in nine; nothing can target them; a blow shows them),
+  Burrows (crawlers, serpents: underground to the middle of the field, a moving mound), Heals
+  (priests, monks: 12% to those round them every 4 s), Shields (captains, paladins: those near
+  them take a quarter less), Summons (warlocks, brood mothers: two small ones every 10 s), Charges
+  (cavaliers, minotaurs: rush the first target, a heavy blow), Slows (witches, frost: what they hit
+  moves and strikes slower for 2 s) and Knocks back (heavy hammers and clubs: push a beast back).
+  Shown on the enemy's card in the level screen and Foe wiki, and in Battle Rules.
+- **Where enemies come from** (seventh round, Sam: battles were clumps by their pile): every level
+  but hordes and champions opens with a group at once across their camp, so the first clash is in
+  the middle; from level 4, runners, swarms and fliers now and then come in from a side half way
+  down, and shooters and casters now and then step out of a portal in the middle of the field.
+- **Each enemy role itself from the start** (seventh round): enemy stats come from a level's
+  points, so at World 1's first levels every enemy was 1/1/1/1 and "fast" thieves walked. Now a
+  role has a floor in its own stat whatever the level: runners Speed 3, shooters and casters
+  Range 3 (so they really shoot), tanks Health 3, brutes Attack 3, swarms Speed 2.
+- **Room to attack** (Sam, 18 and 19 Nov): a unit heads for the free spot round its enemy or the
+  next two nearest; a fighter at arm's length steps in close so there is room behind it; and a
+  unit that has hardly moved for half a second with an enemy close squeezes past its own side for
+  a second and looks wider for a free spot. On six test levels, beasts stood stuck near an enemy
+  for 281 s before slot-seeking, 23 s after it and the stat change, 8.6 s now.
 
 ## Stars and rewards
 
@@ -283,10 +325,49 @@ Beastopedia after the two solar systems, and a reveal in the results when one is
 
 ## Achievements
 
-28 battle achievements, in groups (battles won, stars, bosses, worlds, feats, foes met, Grand
-Master), and 16 merge achievements (below), on one sheet with a Battle and Merge switch. Each shows
-a medal that stays a dark silhouette until earned, a progress bar, and its reward as pictures
-(crates, premium crates with their top tier, spins, the legend or Relic it gives).
+33 battle achievements, in groups (battles won, stars, bosses, worlds, feats, foes met, perks,
+Grand Master), and 16 merge achievements (below), on one sheet with a Battle and Merge switch. Each
+shows a medal that stays a dark silhouette until earned, a progress bar, and its reward as pictures
+(crates, premium crates with their top tier, spins, the perk, legend or Relic it gives).
+
+Seventh round (Sam, 19 Nov: the first level gave too much, two free spins among it): winning
+World 1 level 1 fast and untouched used to earn First Blood (2 crates), Blitz (2 spins, any level
+under 40 s) and Untouched (5 crates, and the Fortify perk) at once. Now First Blood gives 1 crate,
+Blitz needs a level from 10 on, and Untouched (3 crates) and Fortress count only levels from 5 on.
+
+**Perks** (seventh round, Sam: they came too easily and should be won "in obscure ways, like with
+one type of beast only"). Each is an achievement in the Perks group, with its own drawn icon (a
+flame, an hourglass with arrows, a shield with a coin, a fountain, a deep drop):
+
+| Perk | What it does | Won by |
+|---|---|---|
+| Fury | every third swing heavy | Purebred: a win from level 5 on with beasts of one element (three or more) |
+| Rally | cards rest a quarter less | Trio: a win from level 10 on bringing only three beasts (on a level that allows six) |
+| Fortify | your pile holds 20 s | Iron Vault: beat a boss with your coin pile full |
+| Wellspring | mana fills a quarter faster | Never Idle: a win from level 10 on without your mana ever filling up |
+| Deep Pool | hold 65 mana | Patience: a win from level 10 on playing nothing in the first 20 seconds |
+
+(They were: beat a boss, 25 stars, win with your pile full, 12 wins, 15 stars.) The engine records
+when you first play a beast and whether mana ever filled (battle_engine.js firstDeployAt,
+manaFilled).
+
+## Freezes (seventh round)
+
+Sam (19 Nov): the game froze for a while opening a level, swapping a beast, mid battle, on Next
+level and leaving battle mode. Profiled in Edge at 375 by 812 with the full Prime collection
+(scratchpad perf/probe.mjs, a CPU profile and long tasks per step):
+
+- Every beast picture is an SVG drawn onto a canvas with a blurred glow and encoded as a PNG, on
+  the main thread. A level screen asked for all of them at once (72 Prime beasts: 0.6 s of
+  encoding on a fast PC, several times that on a phone), and the ones still coming in landed
+  during the countdown and battle. Now pictures are drawn a few at a time between frames
+  (art.js queuePaint, about 8 ms a turn, battle sprites first), encoded with toBlob where the
+  browser can, and the level screen's list only asks for the ones on screen or nearly. Enemy
+  pictures on the world sheet, a level's enemies and the Foe Wiki (192) do the same.
+- The meadow's crystal magnet looked up every crystal in the page every frame, and in battle,
+  where the page changes every frame, that meant a search of the whole page each time (about 10%
+  of the time in battle). Now the game keeps its own list of crystals and sweeps only when the
+  pointer, the view, the magnet or the crystals have changed (853 ms per 8 s of battle to 4 ms).
 
 ## Relics and the merge achievements (fifth round)
 
@@ -429,10 +510,38 @@ their own six can beat. Margins under the most the deck beats (fifth round, the 
 too easy): 0.65 on levels 1 to 3, 0.82 to level 8, then 0.85 rising to 0.92, bosses 0.93. The
 search for the most starts just under the level before's. The bot plays with mana like anyone.
 
+The reference six (seventh round) is the one Best six gives (battle.js powerOf: Attack × Health ×
+(1 + 0.12 × (Speed + Range))) among the beasts the player is expected to have, not simply the
+highest tiers. The highest Low Gravity tiers were fast, frail fliers, and a six of them lost to
+anything, so calibration had taken late World 4 levels down to the fewest, weakest enemies there
+can be, which a player pressing Best six walked through.
+
 What that gives in World 1 (the bot, playing simply), after the fifth round (mana, faster units,
 sidestepping): the expected deck wins every level, each in at least three of five ways; a deck
 three tiers weaker wins 16 of 40 (21 before mana, 33 before the fourth round). Star times run from
 40 seconds to the cap of 2:30.
+
+After the seventh round (dearer mana, straight-line Speed and Range, enemy abilities and role
+floors, the opening group, side entries and portals, room to attack, the Best six reference),
+six ways of playing (scratchpad strategies.mjs: spam everything, cheapest first, save mana for a
+wave, defend then push, spam with specials used on crowds, sneak down the emptier lane), wins of
+40 with the expected six and with one three tiers weaker:
+
+| World | spam | cheap | save | defend | evolved | lane | three tiers weaker (best way) |
+|---|---|---|---|---|---|---|---|
+| 1 | 34 | 29 | 38 | 35 | 31 | 17 | 29 |
+| 2 | 35 | 37 | 39 | 39 | 36 | 10 | 39 |
+| 3 | 37 | 33 | 38 | 40 | 39 | 14 | 40 |
+| 4 | 36 | 33 | 35 | 37 | 35 | 12 | 31 |
+| 5 | 34 | 34 | 36 | 36 | 34 | 14 | 36 |
+| 6 | 35 | 34 | 37 | 38 | 34 | 11 | 38 |
+
+Saving mana for a wave and defending then pushing win the most; spamming does well but not
+best; slipping down an empty lane mostly fails. In Worlds 2, 3, 5 and 6 a six three tiers weaker
+does about as well, as the expected six there is already Tier 20 and prestige counts for more.
+Levels fewer than two ways won (1-6, 1-35, 4-30, 5-33), or only in over two and a half minutes
+(1-2, 1-22, 2-36, 4-14, 5-9), were eased 8% at a time (scratchpad ease2.mjs, ease3.mjs) and their
+stars set at nine tenths of the fastest win. The fastest wins average 61 to 79 seconds a world.
 
 Stalemates: a deck that is too weak often neither wins nor loses (the bot holds its half and never
 breaks through). An overtime rule was tried and taken out (see Bugs found); a person can change
@@ -678,8 +787,21 @@ like a fight. No game errors. What it found, and what was done:
 - [ ] The 30-second App Store trailer and new iPhone and iPad screenshots of battle mode (after
   this round is played and tested, as Sam asked).
 
+### Sam's notes of 19 Nov (seventh round)
+
+- [x] Beasts make space so everyone finds a spot to attack (squeezing past their own side when
+  stuck, stepping in close, a wider search).
+- [x] Tapping a beast in the Beastopedia opens its card again.
+- [x] The left three slots are the special slots; evolved beasts in the right three have none.
+- [x] Bigger steps per point for Speed and Range, so stats feel different.
+- [x] An opening group, side entries and portals, and enemy abilities.
+- [x] The meadow's music no longer starts again on a tap in battle.
+- [x] Battle Rules in Settings folded behind an arrow, each part opening on its own.
+- [x] Low Gravity stars green.
+- [x] Drag to swap slots in the six.
+- [x] Sync down on rule levels that leave too few beasts.
+
 ## Ideas for later
 
-- Knockback on heavy hits, as in Battle Cats, to make fights swing back and forth.
-- Enemy traits (armoured: half damage from light attacks; flying: only Range 3 and up can hit it).
+- Armoured enemies (half damage from light attacks) and fliers only Range 3 and up can hit.
 - Daily or weekly challenge levels.

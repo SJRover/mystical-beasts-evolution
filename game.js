@@ -288,7 +288,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Click starts audio
   document.body.addEventListener('click', () => {
-    if (audio && !audio.musicPlaying) {
+    if (audio && !audio.musicPlaying && !document.body.classList.contains('bt-in-battle')) {
       audio.startMusic();
     }
   });
@@ -1688,6 +1688,8 @@ function dropEssenceCrystalOnGround(beastId, pctX, pctY, evolved = false) {
   const crystal = document.createElement('div');
   
   crystal.className = 'essence-crystal anim-float';
+  crystalSerial++;
+  crystalSet.add(crystal);
   
   const landX = Math.max(5, Math.min(pctX + (Math.random() * 8 - 4), 90));
   const landY = Math.max(30, Math.min(pctY + (Math.random() * 10 - 5), 75));
@@ -1802,8 +1804,23 @@ function autoVacuumCrystals() {
 }
 
 // Magnet sweeps
+// A live list kept by the browser: no search of the whole page every frame (1.4: in battle the
+// page is large and the search ran every frame for nothing).
+// The crystals on the field, kept as they are made (1.4: looking them up in the page every frame
+// made the browser search the whole page each time, as the battle screen changes it every frame).
+// Crystals do not move: the sweep only has something new to find when the pointer, the view, the
+// magnet or the crystals have changed.
+var crystalSerial = 0;
+var crystalSet = new Set();
+let magnetKey = '';
 function sweepMagnetCrystals() {
-  const crystals = document.querySelectorAll('.essence-crystal');
+  if (!crystalSet.size) return;
+  for (const c of crystalSet) if (!c.isConnected) crystalSet.delete(c);
+  if (!crystalSet.size) return;
+  const key = `${mouseX}|${mouseY}|${crystalSerial}|${crystalSet.size}|${playgroundRect.left}|${playgroundRect.top}|${playgroundRect.width}|${playgroundRect.height}|${state.upgrades.essenceMagnet}`;
+  if (key === magnetKey) return;
+  magnetKey = key;
+  const crystals = Array.from(crystalSet);
   const magnetRadius = UPGRADE_CONFIGS.essenceMagnet.getValue(state.upgrades.essenceMagnet);
 
   crystals.forEach(c => {
@@ -2804,7 +2821,7 @@ function triggerDiscoveryModal(beastId) {
   document.getElementById('discovery-beast-lore').innerText = template.lore;
   
   const svgContainer = document.getElementById('discovery-beast-svg-container');
-  svgContainer.innerHTML = getBeastSVG(beastId, false);
+  svgContainer.innerHTML = getBeastSVG(beastId, !!(template.relic && (state.unlockedEvolved || []).includes(beastId)));
 
   if (audio) audio.playUnlock(template.rarity);
 
@@ -3435,7 +3452,7 @@ function buyUpgrade(upgradeId, cost) {
 
 /** 1.4: a species' road to its evolved form, under its card in the Beastopedia. */
 function evolveBadge(id) {
-  if (isBossBeast(id)) return '';
+  if (isBossBeast(id) || isRelic(id)) return '';
   const n = (state.evolveProgress || {})[id] || 0;
   const got = (state.unlockedEvolved || []).includes(id);
   if (!n && !got) return '';
@@ -3603,9 +3620,10 @@ function updateDetailsModalContent() {
   const lore = document.getElementById('details-beast-lore');
   if (!evoLine && lore) { evoLine = document.createElement('div'); evoLine.id = 'details-beast-evolve'; evoLine.className = 'details-evolve'; lore.after(evoLine); }
   if (evoLine) {
-    const n = (state.evolveProgress || {})[beastId] || 0;
-    const got = (state.unlockedEvolved || []).includes(beastId);
-    evoLine.style.display = isBossBeast(beastId) ? 'none' : '';
+    // (Relics never go in an incubator, so they have no count.)
+    const n = (state.evolveProgress || {})[detailsBeastId] || 0;
+    const got = (state.unlockedEvolved || []).includes(detailsBeastId);
+    evoLine.style.display = isBossBeast(detailsBeastId) || isRelic(detailsBeastId) ? 'none' : '';
     evoLine.textContent = `${got ? 'Evolved form found. ' : ''}Incubations towards the next evolved one: ${n} of ${EVOLVE_NEEDED}.`;
   }
   document.getElementById('details-beast-svg-container').innerHTML = getBeastSVG(detailsBeastId, detailsStateEvolved, false);
@@ -4860,7 +4878,7 @@ function showWarning(title, desc) {
   if (!container) return;
 
   const toast = document.createElement('div');
-  toast.className = 'toast-alert';
+  toast.className = 'toast-alert warn';
   toast.style.borderColor = '#ff6b6b'; // Red alert border
   
   toast.innerHTML = `

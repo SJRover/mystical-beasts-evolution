@@ -742,8 +742,24 @@ const ART = (() => {
   // ---------------------------------------------------------------- pictures for the field
   const cache = new Map();
   const pending = new Map();
+  const paintJobs = [];
+  let paintTimer = 0;
+  function runPaint() {
+    paintTimer = 0;
+    const t0 = performance.now();
+    do {
+      const job = paintJobs.shift();
+      try { job(); } catch (e) { console.error(e); }
+    } while (paintJobs.length && performance.now() - t0 < 8);
+    if (paintJobs.length) paintTimer = setTimeout(runPaint, 16);
+  }
+  /** Run `fn` soon, between frames, within a few milliseconds' share; `urgent` jumps the queue. */
+  function queuePaint(fn, urgent = false) {
+    if (urgent) paintJobs.unshift(fn); else paintJobs.push(fn);
+    if (!paintTimer) paintTimer = setTimeout(runPaint, 0);
+  }
   /** A picture (data URL) of the beast or its aura at `px` pixels square, made once. */
-  function picture(kind, id, evolved, infected, px, noGround = false, glow = false) {
+  function picture(kind, id, evolved, infected, px, noGround = false, glow = false, urgent = false) {
     const bucket = Math.min(640, Math.max(96, Math.ceil(px / 64) * 64));
     const key = `${kind}|${id}|${evolved ? 1 : 0}|${infected ? 1 : 0}|${bucket}|${noGround ? 1 : 0}|${glow ? 1 : 0}`;
     if (cache.has(key)) return Promise.resolve(cache.get(key));
@@ -753,7 +769,7 @@ const ART = (() => {
     if (!svg) return Promise.resolve('');
     const job = new Promise((resolve) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = () => queuePaint(() => {
         const c = document.createElement('canvas');
         c.width = c.height = bucket;
         const ctx = c.getContext('2d');
@@ -768,11 +784,11 @@ const ART = (() => {
           ctx.shadowColor = 'rgba(0,0,0,0)';
         }
         ctx.drawImage(img, 0, 0, bucket, bucket);
-        const url = c.toDataURL('image/png');
-        cache.set(key, url);
-        pending.delete(key);
-        resolve(url);
-      };
+        const done = (url) => { cache.set(key, url); pending.delete(key); resolve(url); };
+        // Encoded off to the side where the browser can (toBlob), else as before.
+        if (c.toBlob && typeof URL !== 'undefined' && URL.createObjectURL) c.toBlob((b) => done(b ? URL.createObjectURL(b) : c.toDataURL('image/png')), 'image/png');
+        else done(c.toDataURL('image/png'));
+      }, urgent);
       img.onerror = () => { pending.delete(key); resolve(''); };
       img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     });
@@ -839,7 +855,7 @@ const ART = (() => {
       `</svg>`;
   }
 
-  return { beast, aura, inline, picture, cached, motion, glowColour, coin, crate, shade, mix, RARITY };
+  return { beast, aura, inline, picture, cached, motion, glowColour, coin, crate, shade, mix, RARITY, queuePaint };
 })();
 
 // The menus, toasts and modals all draw beasts through getBeastSVG: from here on, the new art.

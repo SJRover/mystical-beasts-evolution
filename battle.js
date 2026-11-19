@@ -75,7 +75,7 @@ const BATTLE = (() => {
     return {
       clears: Object.keys(b.best).length, stars: Object.keys(b.stars).length, bosses: Object.keys(b.bosses).length,
       worlds, lgWorlds, seen: Object.keys(b.seen).length, flawless: b.flawless || 0, fastest: b.fastest || 0, underdog: !!b.underdog,
-      kills, killsOf: b.kills, killsByRole, killsByWorld, lowTierWin: !!b.lowTierWin, achDone, achTotal,
+      kills, killsOf: b.kills, killsByRole, killsByWorld, lowTierWin: !!b.lowTierWin, achDone, achTotal, blitz: !!b.blitz, perkWon: b.perkWon || {},
     };
   }
 
@@ -84,15 +84,40 @@ const BATTLE = (() => {
   /** A beast's picture (a data URL), made once; a Folded Legend's from legends_art.js. */
   function beastPic(id, px = 160, evolved = false) {
     const key = id + '|' + px + (evolved ? '|e' : '');
-    if (!pics.has(key)) pics.set(key, D.LEGENDS[id] ? LEGEND_ART.picture(id, px, false) : ART.picture('beast', id, !!evolved, false, px, true, true));
+    // Battle sprites (256) first: the battle waits for them.
+    if (!pics.has(key)) pics.set(key, D.LEGENDS[id] ? LEGEND_ART.picture(id, px, false) : ART.picture('beast', id, !!evolved, false, px, true, true, px >= 256));
     return pics.get(key);
+  }
+  const picReady = new Map();
+  /** Set an img to a beast's picture: at once if it is made, else when made. */
+  function fillPic(img, px) {
+    const id = img.dataset.pic, evo = !!img.dataset.evo, key = id + '|' + px + (evo ? '|e' : '');
+    if (picReady.has(key)) { img.src = picReady.get(key); return; }
+    beastPic(id, px, evo).then((u) => { picReady.set(key, u); img.src = u; });
+  }
+  /**
+   * An enemy's picture as an img: at once if it is made, else a blank one that fillStills() fills
+   * when it scrolls into view, a few between frames (the Foe Wiki holds 192).
+   */
+  const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  function stillImg(id, size, sil = false, cls = '') {
+    const ready = ENEMY_ART.stillReady(id, size, !!sil);
+    return ready ? `<img${cls ? ` class="${cls}"` : ''} src="${ready}" alt="">` : `<img${cls ? ` class="${cls}"` : ''} data-still="${id}|${size}|${sil ? 1 : 0}" src="${BLANK}" alt="">`;
+  }
+  function fillStills(root) {
+    const imgs = root.querySelectorAll('img[data-still]');
+    if (!imgs.length) return;
+    const paint = (img) => ART.queuePaint(() => { if (!img.isConnected) return; const [id, size, sil] = img.dataset.still.split('|'); img.src = ENEMY_ART.still(id, Number(size), sil === '1'); img.removeAttribute('data-still'); });
+    if (typeof IntersectionObserver !== 'function') { imgs.forEach(paint); return; }
+    const io = new IntersectionObserver((ents) => { for (const en of ents) if (en.isIntersecting) { io.unobserve(en.target); paint(en.target); } }, { rootMargin: '300px 0px' });
+    imgs.forEach((img) => io.observe(img));
   }
   /** A deck entry: a beast's id, with a star on the end for its evolved form. */
   const baseOf = (x) => String(x).replace(/\*$/, '');
   const isEvo = (x) => String(x).endsWith('*');
   const evolvedOwned = (id) => !D.LEGENDS[id] && ((state.unlockedEvolved || []).includes(id));
   /** How a beast or enemy fights, as a little label. */
-  const KIND = { single: ['⚔', 'Single'], area: ['💥', 'Area'], ranged: ['🎯', 'Ranged'] };
+  const KIND = { single: ['⚔️', 'Single'], area: ['💥', 'Area'], ranged: ['🎯', 'Ranged'] };
   const kindChip = (k) => `<span class="bt-kindchip ${k}">${KIND[k][0]} ${KIND[k][1]}</span>`;
   function rarityColour(id) { const t = D.T(id); return (RARITIES[t.rarity] || {}).color || '#fff'; }
   function statChips(s) {
@@ -116,6 +141,14 @@ const BATTLE = (() => {
       tough: `Only beasts with Health ${v} or more.`,
     }[rule.kind];
   }
+  const PERK_SVG = {
+    fury: '<path d="M24 4C28 12 36 16 36 28C36 38 30 44 24 44C18 44 12 38 12 29C12 22 16 18 19 14C19 20 21 23 24 24C22 16 22 10 24 4Z" fill="#ff7a2a" stroke="#4a1a00" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 22C27 27 30 30 30 35C30 39 27 42 24 42C21 42 18 39 18 35C18 31 21 29 24 22Z" fill="#ffd43b"/><path d="M16 30C16 26 18 23 20 21" stroke="#ffe8a0" stroke-width="2" fill="none" stroke-linecap="round"/>',
+    rally: '<path d="M14 10H32C32 18 26 21 26 24C26 27 32 30 32 38H14C14 30 20 27 20 24C20 21 14 18 14 10Z" fill="#cfefff" stroke="#2a1a0a" stroke-width="2.2" stroke-linejoin="round"/><path d="M17 13H29C28 18 24 20 23 23C22 20 18 18 17 13Z" fill="#ffd43b"/><path d="M16 37C17 32 21 30 23 29C25 30 29 32 30 37Z" fill="#ffd43b"/><rect x="10" y="5" width="26" height="5" rx="2" fill="#8a5a2a" stroke="#2a1a0a" stroke-width="2"/><rect x="10" y="38" width="26" height="5" rx="2" fill="#8a5a2a" stroke="#2a1a0a" stroke-width="2"/><path d="M36 17l5 7l-5 7M31 17l5 7l-5 7" stroke="#5cc8ff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+    fortify: '<path d="M24 4L40 10V22C40 33 33 40 24 44C15 40 8 33 8 22V10Z" fill="#3a8aff" stroke="#10204a" stroke-width="2.4" stroke-linejoin="round"/><path d="M24 8L36 12.5V22C36 31 31 36.5 24 40Z" fill="#2a6ad8"/><circle cx="24" cy="23" r="8" fill="#ffd43b" stroke="#8a5a00" stroke-width="2"/><circle cx="24" cy="23" r="4.2" fill="none" stroke="#c8901a" stroke-width="1.8"/>',
+    wellspring: '<path d="M24 32V15" stroke="#5cc8ff" stroke-width="4" stroke-linecap="round"/><path d="M24 15C18 13 14 18 13 27M24 15C30 13 34 18 35 27" stroke="#9ae6ff" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M24 3C27 7 28 9 28 11A4 4 0 0 1 20 11C20 9 21 7 24 3Z" fill="#5cc8ff" stroke="#10304a" stroke-width="1.8"/><path d="M9 33H39L36 43H12Z" fill="#9a9ab8" stroke="#2a2a3a" stroke-width="2.2" stroke-linejoin="round"/><ellipse cx="24" cy="33" rx="15" ry="3.6" fill="#5cc8ff" stroke="#2a2a3a" stroke-width="2"/>',
+    deep_pool: '<path d="M24 4C31 14 38 21 38 30A14 14 0 0 1 10 30C10 21 17 14 24 4Z" fill="#2a6ad8" stroke="#0a1a4a" stroke-width="2.4" stroke-linejoin="round"/><path d="M12 28q3-3 6 0t6 0t6 0t6 0" stroke="#9ae6ff" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M13 34q3-3 6 0t6 0t6 0t5 0" stroke="#5cc8ff" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M19 15C17 18 16 20 15.5 22" stroke="#cfefff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+  };
+  const perkIcon = (id) => `<svg class="bt-perk-svg" viewBox="0 0 48 48" aria-hidden="true">${PERK_SVG[id] || ''}</svg>`;
   const PERK_LOOK = {
     fury: { icon: '🔥', short: 'Heavy hit every 3rd swing' },
     rally: { icon: '⏩', short: 'Cards recharge 25% faster' },
@@ -226,7 +259,7 @@ const BATTLE = (() => {
         <div class="bt-world-art" style="background-image:url(${worldArt(w)})"></div>
         <div class="bt-world-body">
           <div class="bt-world-name">World ${w.id}: ${w.name}</div>
-          <div class="bt-world-meta">${open ? `${done >= w.levels ? 'All won' : `Level ${Math.min(w.levels, done + 1)} of ${w.levels}`} · <span class="bt-gold">★ ${stars}/${w.levels}</span>` : lockText(w)}</div>
+          <div class="bt-world-meta">${open ? `${done >= w.levels ? 'All won' : `Level ${Math.min(w.levels, done + 1)} of ${w.levels}`} · <span class="${w.system === 'low_gravity' ? 'bt-lgstar' : 'bt-gold'}">★ ${stars}/${w.levels}</span>` : lockText(w)}</div>
           <div class="bt-bar"><i style="width:${(done / w.levels) * 100}%"></i></div>
         </div>
         <div class="bt-world-go">${open ? '▶' : '🔒'}</div>
@@ -278,8 +311,9 @@ const BATTLE = (() => {
   function sheet(title, sub = '') {
     const s = el(`<div class="bt-sheet"><div class="bt-sheet-head"><button class="bt-back" aria-label="Back">‹</button><div class="bt-sheet-title">${title}<small>${sub}</small></div></div><div class="bt-sheet-body"></div></div>`);
     document.body.appendChild(s);
+    document.body.classList.add('bt-sheets-open');
     requestAnimationFrame(() => s.classList.add('on'));
-    const close = () => { s.classList.remove('on'); setTimeout(() => s.remove(), 220); const i = sheets.indexOf(api); if (i >= 0) sheets.splice(i, 1); };
+    const close = () => { s.classList.remove('on'); setTimeout(() => s.remove(), 220); const i = sheets.indexOf(api); if (i >= 0) sheets.splice(i, 1); if (!sheets.length) document.body.classList.remove('bt-sheets-open'); };
     s.querySelector('.bt-back').addEventListener('click', () => { click(); close(); });
     const api = { el: s, body: s.querySelector('.bt-sheet-body'), close };
     sheets.push(api);
@@ -290,6 +324,7 @@ const BATTLE = (() => {
   // ------------------------------------------------------------------ a world's levels
   function openWorld(w) {
     const sh = sheet(`World ${w.id}: ${w.name}`);
+    if (w.system === 'low_gravity') sh.el.classList.add('lg');
     const draw = () => {
       const b = B();
       let stars = 0;
@@ -305,7 +340,7 @@ const BATTLE = (() => {
         const feat = lv.bossFoe || lv.fresh || lv.spawns[0].foe;
         const known = (b.played[id] || won) && b.seen[feat];
         tiles += `<button class="bt-level ${open ? '' : 'locked'} ${won ? 'won' : ''} ${lv.boss ? 'boss' : ''}" data-n="${n}">
-          <img class="bt-level-art" src="${ENEMY_ART.still(feat, 96, !known)}" alt="">
+          ${stillImg(feat, 96, !known, 'bt-level-art')}
           <span class="bt-level-n">${n}</span>
           ${lv.boss ? '<span class="bt-level-boss">BOSS</span>' : ''}
           ${lv.rule ? `<span class="bt-level-rule" title="${D.RULES[lv.rule.kind].name}">${RULE_ICON[lv.rule.kind]}</span>` : ''}
@@ -317,6 +352,7 @@ const BATTLE = (() => {
       sh.body.innerHTML = `
         <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>Every star here wins a ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.</span></div><em>${chest}</em></div>
         <div class="bt-levels">${tiles}</div>`;
+      fillStills(sh.body);
       sh.body.querySelectorAll('.bt-level').forEach((btn) => btn.addEventListener('click', () => {
         const n = Number(btn.dataset.n);
         if (!levelOpen(w, n)) { showWarning('Level locked', `Win level ${n - 1} first.`); return; }
@@ -335,14 +371,26 @@ const BATTLE = (() => {
   /** A level with a rule keeps its own six, so your usual six is not lost. */
   const limits = (level) => !!(level && level.rule && D.DECK_RULES.includes(level.rule.kind));
   const deckKey = (sys, level) => (limits(level) ? `${sys}|${level.rule.kind}|${level.rule.value}` : sys);
-  function bestDeck(sys, level) {
-    const six = owned(sys).filter((id) => allowedIn(level, id)).sort((a, c) => powerOf(c) - powerOf(a)).slice(0, deckMax(level));
-    // Up to three of them as their evolved forms, where you have those.
-    let evo = 0;
-    return six.map((id) => (evo < MAX_EVOLVED && evolvedOwned(id) ? (evo++, id + '*') : id));
+  function bestDeck(sys, level, fits = (id) => allowedIn(level, id)) {
+    const six = owned(sys).filter(fits).sort((a, c) => powerOf(c) - powerOf(a)).slice(0, deckMax(level));
+    // Evolved beasts first, into the ability slots.
+    return [...six.filter(evolvedOwned), ...six.filter((id) => !evolvedOwned(id))];
   }
-  /** Evolved forms in a six at most (Sam, 18 Nov). */
-  const MAX_EVOLVED = 3;
+  /** The ability slots: the left three of the six (Sam, 19 Nov). */
+  const ABILITY_SLOTS = 3;
+  const hasSpecial = (id, i) => i < ABILITY_SLOTS && evolvedOwned(id);
+  /**
+   * Sync down (Sam, 19 Nov): when a level's rule leaves you fewer beasts than it allows, your
+   * beasts can battle as the rule's own level (no higher than its tier, no rarer than it lets in),
+   * so they all count. Only for rules a weaker version can meet: quick cards and plain stock.
+   */
+  function syncCap(level) {
+    const r = level && level.rule;
+    if (!r) return null;
+    if (r.kind === 'quick') return { tier: r.value, rarity: null };
+    if (r.kind === 'rarity') return { tier: null, rarity: 'RARE' };
+    return null;
+  }
   function foesOf(level) {
     const ids = [...new Set([...level.spawns.map((s) => s.foe), ...(level.rally || []), ...(level.garrison || []).map((s) => s.foe)])];
     return ids.sort((a, c) => (D.ENEMIES[a].role === 'boss') - (D.ENEMIES[c].role === 'boss') || D.ENEMIES[a].debut - D.ENEMIES[c].debut);
@@ -361,44 +409,52 @@ const BATTLE = (() => {
     const key = deckKey(sys, level);
     const max = deckMax(level);
     const mine = owned(sys);
-    let deck = (b.decks[key] || (limits(level) ? [] : b.decks[sys]) || []).filter((x) => mine.includes(baseOf(x)) && allowedIn(level, baseOf(x)) && (!isEvo(x) || evolvedOwned(baseOf(x)))).slice(0, max);
-    if (!deck.length) deck = bestDeck(sys, level);
+    const cap = syncCap(level);
+    if (!b.sync) b.sync = {};
+    const synced = () => !!(cap && b.sync[level.id]);
+    // Allowed here: by the rule, or by anything once synced down.
+    const ok = (id) => allowedIn(level, id) || (synced() && !D.LEGENDS[id]);
+    let deck = (b.decks[key] || (limits(level) ? [] : b.decks[sys]) || []).map(baseOf).filter((id, i, a) => a.indexOf(id) === i && mine.includes(id) && ok(id)).slice(0, max);
+    if (!deck.length) deck = bestDeck(sys, level, ok);
     if (!b.pickSort) b.pickSort = { key: 'tier', dir: -1, rarity: 'all' };
     const sort = b.pickSort;
     const known = !!b.played[level.id] || cleared(level.id);
     const sh = sheet(level.boss ? `${n}. ${known ? level.name : 'Boss level'}` : `${w.name} ${n}`, level.boss ? (known ? 'Boss level' : 'Who is it? Play to find out') : D.PATTERNS[level.pattern].name);
+    if (sys === 'low_gravity') sh.el.classList.add('lg');
+    let io = null;
     const draw = () => {
       const played = !!b.played[level.id] || cleared(level.id);
       const foes = foesOf(level).map((id) => {
         const known = played && !!b.seen[id];
         const e = D.ENEMIES[id];
-        return `<div class="bt-foe ${known ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${id}"><img src="${ENEMY_ART.still(id, 112, !known)}" alt=""><span>${known ? e.name : '???'}</span></div>`;
+        const tr = known && D.traitOf(id) ? D.TRAITS[D.traitOf(id)] : null;
+        return `<div class="bt-foe ${known ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${id}">${stillImg(id, 112, !known)}${tr ? `<i class="bt-foe-trait" title="${tr.name}">${tr.icon}</i>` : ''}<span>${known ? e.name : '???'}</span></div>`;
       }).join('');
       const slots = [0, 1, 2, 3, 4, 5].map((i) => {
         if (i >= max) return '<div class="bt-slot barred"><span>✕</span></div>';
-        const x = deck[i];
-        if (!x) return '<div class="bt-slot empty"><span>+</span></div>';
-        const id = baseOf(x);
+        const id = deck[i];
+        const abil = i < ABILITY_SLOTS ? ' ability' : '';
+        if (!id) return `<div class="bt-slot empty${abil}" data-slot="${i}"><span>+</span></div>`;
         const t = D.T(id);
-        return `<button class="bt-slot ${t.legend ? 'legend' : ''} ${isEvo(x) ? 'evo' : ''}" data-id="${id}" style="--rc:${rarityColour(id)}"><img data-pic="${id}" ${isEvo(x) ? 'data-evo="1"' : ''} alt=""><b>T${t.tier}</b>${isEvo(x) ? '<em>✦</em>' : ''}${prestigeOf(id) ? `<i>P${prestigeOf(id)}</i>` : ''}</button>`;
+        const sp = hasSpecial(id, i);
+        return `<button class="bt-slot${abil} ${t.legend ? 'legend' : ''} ${sp ? 'evo' : ''}" data-id="${id}" data-slot="${i}" style="--rc:${rarityColour(id)}"><img data-pic="${id}" ${evolvedOwned(id) ? 'data-evo="1"' : ''} alt=""><b>T${synced() && cap.tier ? Math.min(t.tier, cap.tier) : t.tier}</b>${sp ? `<em>${D.ABILITIES[D.abilityOf(id)].icon}</em>` : ''}${prestigeOf(id) && !synced() ? `<i>P${prestigeOf(id)}</i>` : ''}</button>`;
       }).join('');
       let pool = mine.filter((id) => sort.rarity === 'all' || D.T(id).rarity === sort.rarity);
       pool.sort((a, c) => (sortValue(a, sort.key) - sortValue(c, sort.key)) * sort.dir);
-      pool = [...pool.filter((id) => allowedIn(level, id)), ...pool.filter((id) => !allowedIn(level, id))];
+      pool = [...pool.filter((id) => ok(id)), ...pool.filter((id) => !ok(id))];
       const list = pool.map((id) => {
         const t = D.T(id);
         const s = D.beastStats(id, prestigeOf(id));
-        const inDeck = deck.includes(id) || deck.includes(id + '*');
-        const ok = allowedIn(level, id);
+        const inDeck = deck.includes(id);
+        const allowed = ok(id);
         const ab = evolvedOwned(id) ? D.ABILITIES[D.abilityOf(id)] : null;
-        const evoOn = deck.includes(id + '*');
-        return `<button class="bt-pick ${inDeck ? 'in' : ''} ${ok ? '' : 'barred'} ${t.legend ? 'legend' : ''}" data-id="${id}">
+        return `<button class="bt-pick ${inDeck ? 'in' : ''} ${allowed ? '' : 'barred'} ${t.legend ? 'legend' : ''}" data-id="${id}">
           <img data-pic="${id}" alt="">
           <div class="bt-pick-body"><div class="bt-pick-name">${t.name}${prestigeOf(id) ? ` <i class="bt-prest">Prestige ${prestigeOf(id)}</i>` : ''}${t.legend ? ' <i class="bt-prest legend">Legend</i>' : ''}</div>
-          <div class="bt-pick-meta"><span style="color:${rarityColour(id)}">Tier ${t.tier} ${RARITIES[t.rarity].name}</span> · 💧${D.costOf(id)} · ${D.cooldownOf(id)}s${ok ? '' : ' · <b class="bt-no">not allowed here</b>'}</div>
+          <div class="bt-pick-meta"><span style="color:${rarityColour(id)}">Tier ${t.tier} ${RARITIES[t.rarity].name}</span> · 💧${D.costOf(id)} · ${D.cooldownOf(id)}s${allowed ? '' : ' · <b class="bt-no">not allowed here</b>'}</div>
           <div class="bt-stats">${statChips(s)}${kindChip(D.attackKind(id, prestigeOf(id)))}</div>
-          ${ab ? `<span class="bt-evo-toggle ${evoOn ? 'on' : ''}" data-evo="${id}">✦ Evolved: ${ab.icon} ${ab.name}</span>` : ''}</div>
-          <div class="bt-pick-tick">${ok ? (inDeck ? '✓' : '+') : '✕'}</div>
+          ${ab ? `<span class="bt-evo-chip">✦ Evolved: ${ab.icon} ${ab.name} <small>in a left slot</small></span>` : ''}</div>
+          <div class="bt-pick-tick">${allowed ? (inDeck ? '✓' : '+') : '✕'}</div>
         </button>`;
       }).join('');
       const best = b.best[level.id];
@@ -409,17 +465,19 @@ const BATTLE = (() => {
         <div class="bt-card">
           <div class="bt-card-row"><div><b>Enemies</b></div><div class="bt-goal"><span class="bt-gold">★</span> win in under ${fmt(level.starTime)}${best ? `<br><span class="bt-dim">best ${fmt(best)}${b.stars[level.id] ? ' ★' : ''}</span>` : ''}</div></div>
           <div class="bt-foes">${foes}</div>
-          <div class="bt-tags"><span class="bt-tag">${pat.name}</span>${theme ? `<span class="bt-tag">${theme.name}</span>` : ''}</div>
+          <div class="bt-tags"><span class="bt-tag" data-tip="${pat.tip}">${pat.name} ⓘ</span>${theme ? `<span class="bt-tag" data-tip="${theme.tip}">${theme.name} ⓘ</span>` : ''}</div>
           ${cleared(level.id) ? '' : `<div class="bt-dim bt-reward">First win: essence${level.boss ? ' and a premium crate' : ''}</div>`}
         </div>
         ${rule}
         <div class="bt-card">
           <div class="bt-card-row"><div><b>Your ${max === 6 ? 'six' : 'three'}</b></div><button class="bt-btn small" id="bt-auto">Best ${max === 6 ? 'six' : 'three'}</button></div>
+          <div class="bt-slot-key"><span>✦ special slots</span><span>drag to swap</span></div>
           <div class="bt-slots">${slots}</div>
+          ${cap && (synced() || mine.filter((id) => allowedIn(level, id)).length < max) ? `<button class="bt-sync ${synced() ? 'on' : ''}" id="bt-sync">${synced() ? '✓ Synced down' : '⇩ Sync down'}<small>${synced() ? 'Your beasts battle as ' + (cap.tier ? 'Tier ' + cap.tier + ' at most.' : 'Commons and Rares.') : 'Too few of yours meet the rule. Synced, they battle as ' + (cap.tier ? 'Tier ' + cap.tier : 'Rare') + ' versions.'}</small></button>` : ''}
         </div>
         <div class="bt-card bt-perk-card">
           <div class="bt-card-row"><b>Perk</b></div>
-          <div class="bt-perks">${D.PERKS.map((p) => { const open = p.unlock(totals()); const L = PERK_LOOK[p.id]; return `<button class="bt-perk ${b.perk === p.id && open ? 'on' : ''} ${open ? '' : 'locked'}" data-perk="${p.id}"><span class="bt-perk-icon">${open ? L.icon : '🔒'}</span><b>${p.name}</b><span>${open ? L.short : p.how}</span></button>`; }).join('')}</div>
+          <div class="bt-perks">${D.PERKS.map((p) => { const open = p.unlock(totals()); const L = PERK_LOOK[p.id]; return `<button class="bt-perk ${b.perk === p.id && open ? 'on' : ''} ${open ? '' : 'locked'}" data-perk="${p.id}"><span class="bt-perk-icon">${perkIcon(p.id)}${open ? '' : '<i class="bt-perk-lock">🔒</i>'}</span><b>${p.name}</b><span>${open ? L.short : p.how}</span></button>`; }).join('')}</div>
         </div>
         <div class="bt-sortbar">
           <div class="bt-sorts">${SORTS.map(([k, name]) => `<button class="bt-sort ${sort.key === k ? 'on' : ''}" data-k="${k}">${name}</button>`).join('')}<button class="bt-sort dir" data-dir="1">${sort.dir < 0 ? '↓ High' : '↑ Low'}</button></div>
@@ -427,35 +485,70 @@ const BATTLE = (() => {
         </div>
         <div class="bt-picks">${list || '<div class="bt-dim">No beasts match.</div>'}</div>
         <div class="bt-go-bar"><button class="bt-go" ${deck.length ? '' : 'disabled'}>Battle!</button></div>`;
-      sh.body.querySelectorAll('img[data-pic]').forEach((img) => beastPic(img.dataset.pic, 128, !!img.dataset.evo).then((u) => { img.src = u; }));
+      // Pictures only for what is on screen (or nearly): the list can hold a hundred beasts.
+      if (io) io.disconnect();
+      io = typeof IntersectionObserver === 'function' ? new IntersectionObserver((ents) => { for (const en of ents) if (en.isIntersecting) { io.unobserve(en.target); fillPic(en.target, 128); } }, { rootMargin: '300px 0px' }) : null;
+      sh.body.querySelectorAll('img[data-pic]').forEach((img) => { if (io && img.closest('.bt-picks')) io.observe(img); else fillPic(img, 128); });
+      fillStills(sh.body);
       sh.body.querySelectorAll('.bt-foe').forEach((f) => f.addEventListener('click', () => { if (played && b.seen[f.dataset.id]) { click(); openFoe(f.dataset.id); } }));
       const toggle = (id) => {
-        if (!allowedIn(level, id)) { showWarning('Not allowed here', ruleText(level.rule)); return; }
-        if (deck.includes(id) || deck.includes(id + '*')) deck = deck.filter((x) => baseOf(x) !== id);
+        if (!ok(id)) { showWarning('Not allowed here', ruleText(level.rule)); return; }
+        if (deck.includes(id)) deck = deck.filter((x) => x !== id);
         else if (deck.length < max) deck.push(id);
         else { showWarning(`${max === 6 ? 'Six' : 'Three'} at most`, 'Take a beast out first.'); return; }
         b.decks[key] = deck.slice();
         click();
         draw();
       };
-      // An evolved form in or out (three at most); it joins the six if it was not in it.
-      const toggleEvo = (id) => {
-        if (!allowedIn(level, id)) { showWarning('Not allowed here', ruleText(level.rule)); return; }
-        const i = deck.findIndex((x) => baseOf(x) === id);
-        if (i >= 0 && isEvo(deck[i])) deck[i] = id;
-        else {
-          if (deck.filter(isEvo).length >= MAX_EVOLVED) { showWarning('Three evolved at most', 'Swap one back first.'); return; }
-          if (i >= 0) deck[i] = id + '*';
-          else if (deck.length < max) deck.push(id + '*');
-          else { showWarning(`${max === 6 ? 'Six' : 'Three'} at most`, 'Take a beast out first.'); return; }
-        }
+      sh.body.querySelectorAll('.bt-tag[data-tip]').forEach((tg) => tg.addEventListener('click', () => { click(); showWarning(tg.textContent.replace(' ⓘ', ''), tg.dataset.tip + '.'); }));
+      sh.body.querySelectorAll('.bt-pick').forEach((p) => p.addEventListener('click', () => toggle(p.dataset.id)));
+      // Slots: a tap takes the beast out; a drag onto another slot swaps the two (Sam, 19 Nov),
+      // so you choose which three have their specials.
+      sh.body.querySelectorAll('.bt-slot[data-id]').forEach((slot) => {
+        let down = null;
+        slot.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, moved: false }; try { slot.setPointerCapture(e.pointerId); } catch (err) { /* not ours */ } });
+        slot.addEventListener('pointermove', (e) => {
+          if (!down) return;
+          const dx = e.clientX - down.x, dy = e.clientY - down.y;
+          if (!down.moved && Math.hypot(dx, dy) < 8) return;
+          down.moved = true;
+          slot.classList.add('dragging');
+          slot.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
+        });
+        const end = (e) => {
+          if (!down) return;
+          const moved = down.moved;
+          down = null;
+          slot.classList.remove('dragging');
+          slot.style.transform = '';
+          if (!moved) { toggle(slot.dataset.id); return; }
+          slot.style.visibility = 'hidden';
+          const under = document.elementFromPoint(e.clientX, e.clientY);
+          slot.style.visibility = '';
+          const to = under && under.closest('.bt-slot[data-slot]');
+          const a = Number(slot.dataset.slot), c = to ? Number(to.dataset.slot) : -1;
+          if (c < 0 || c === a || c >= max) return;
+          const next = deck.slice();
+          const moving = next[a];
+          if (c >= next.length) { next.splice(a, 1); next.push(moving); }
+          else { next[a] = next[c]; next[c] = moving; }
+          deck = next.filter(Boolean);
+          b.decks[key] = deck.slice();
+          click();
+          draw();
+        };
+        slot.addEventListener('pointerup', end);
+        slot.addEventListener('pointercancel', () => { down = null; slot.classList.remove('dragging'); slot.style.transform = ''; });
+      });
+      const syncBtn = sh.body.querySelector('#bt-sync');
+      if (syncBtn) syncBtn.addEventListener('click', () => {
+        b.sync[level.id] = !b.sync[level.id];
+        if (!b.sync[level.id]) deck = deck.filter((id) => allowedIn(level, id));
         b.decks[key] = deck.slice();
         click();
         draw();
-      };
-      sh.body.querySelectorAll('.bt-evo-toggle').forEach((p) => p.addEventListener('click', (e) => { e.stopPropagation(); toggleEvo(p.dataset.evo); }));
-      sh.body.querySelectorAll('.bt-pick, .bt-slot[data-id]').forEach((p) => p.addEventListener('click', () => toggle(p.dataset.id)));
-      sh.body.querySelector('#bt-auto').addEventListener('click', () => { deck = bestDeck(sys, level); b.decks[key] = deck.slice(); click(); draw(); });
+      });
+      sh.body.querySelector('#bt-auto').addEventListener('click', () => { deck = bestDeck(sys, level, ok); b.decks[key] = deck.slice(); click(); draw(); });
       sh.body.querySelectorAll('.bt-sort').forEach((btn) => btn.addEventListener('click', () => {
         click();
         if (btn.dataset.dir) sort.dir = -sort.dir; else sort.key = btn.dataset.k;
@@ -473,7 +566,7 @@ const BATTLE = (() => {
         if (!deck.length) return;
         click();
         saveGame();
-        const go = () => start(level, deck, () => { draw(); if (onChange) onChange(); renderTab(); });
+        const go = () => start(level, deck, () => { draw(); if (onChange) onChange(); renderTab(); }, synced() ? cap : null);
         if (!b.howSeen) openHow(go); else go();
       });
     };
@@ -483,15 +576,15 @@ const BATTLE = (() => {
   // ================================================================== the battle
   let run = null;
 
-  function start(level, deck, onDone) {
+  function start(level, deck, onDone, sync = null) {
     if (run) return;
-    const cards = deck.map((x) => ({ id: baseOf(x), prestige: prestigeOf(baseOf(x)), evolved: isEvo(x) }));
+    const cards = deck.map(baseOf).map((id, i) => ({ id, prestige: sync ? 0 : prestigeOf(id), evolved: hasSpecial(id, i), sync }));
     const perk = D.PERKS.find((p) => p.id === B().perk && p.unlock(totals()));
     const battle = new BE.Battle(level, cards, perk ? { ...perk.opts, perk: perk.id } : {});
     // Played once (won, lost or left), a level shows who is in it.
     B().played[level.id] = true;
     const rule = level.rule ? ` · ${D.RULES[level.rule.kind].name}` : '';
-    const screen = el(`<div id="battle-screen">
+    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : ''}">
       <canvas id="bt-canvas"></canvas>
       <div class="bt-hud">
         <button class="bt-hud-btn" id="bt-pause" aria-label="Pause">❚❚</button>
@@ -503,7 +596,7 @@ const BATTLE = (() => {
       <div class="bt-deck">
         <div class="bt-deck-info"><span id="bt-count">0/10 on the field</span><span id="bt-star"></span></div>
         <div class="bt-mana"><div class="bt-mana-fill" id="bt-mana-fill"></div><span id="bt-mana-n">💧 0</span></div>
-        <div class="bt-cards">${battle.cards.map((c, i) => `<div class="bt-cardcell ${c.evolved ? 'evo' : ''}"><button class="bt-cardbtn" data-i="${i}" style="--rc:${rarityColour(c.id)}"><img alt=""><b>T${D.T(c.id).tier}</b><i class="bt-cost">${c.cost}</i><i class="bt-kind">${KIND[D.attackKind(c.id, c.prestige)][0]}</i>${c.evolved ? `<span class="bt-special">${D.ABILITIES[c.ability].icon} ${D.ABILITIES[c.ability].name}</span>` : ''}<div class="bt-cd"></div><span class="bt-cd-n"></span></button><div class="bt-cs">${miniStats(c.stats)}</div></div>`).join('')}</div>
+        <div class="bt-cards">${battle.cards.map((c, i) => `<div class="bt-cardcell ${c.evolved ? 'evo' : ''}"><button class="bt-cardbtn" data-i="${i}" style="--rc:${rarityColour(c.id)}"><img alt=""><b>T${c.sync && c.sync.tier ? Math.min(D.T(c.id).tier, c.sync.tier) : D.T(c.id).tier}</b><i class="bt-cost">${c.cost}</i><i class="bt-kind">${KIND[D.attackKind(c.id, c.prestige)][0]}</i>${c.evolved ? `<span class="bt-special">${D.ABILITIES[c.ability].icon} ${D.ABILITIES[c.ability].name}</span>` : ''}<div class="bt-cd"></div><span class="bt-cd-n"></span></button><div class="bt-cs">${miniStats(c.stats)}</div></div>`).join('')}</div>
       </div>
     </div>`);
     document.body.appendChild(screen);
@@ -521,8 +614,9 @@ const BATTLE = (() => {
     };
     resize();
     run.bg = paintArena(level);
-    cards.forEach((c, i) => beastPic(c.id, 128, c.evolved).then((u) => { run && (run.cardEls[i].querySelector('img').src = u); }));
-    Promise.all(cards.map((c) => beastPic(c.id, 256, c.evolved).then((u) => loadSprite(c.evolved ? c.id + '*' : c.id, u)))).then(() => { if (run) { run.ready = true; sfx('count'); } });
+    // An evolved beast looks evolved in either kind of slot (only the left three have the special).
+    cards.forEach((c, i) => beastPic(c.id, 128, evolvedOwned(c.id)).then((u) => { run && (run.cardEls[i].querySelector('img').src = u); }));
+    Promise.all(cards.map((c) => beastPic(c.id, 256, evolvedOwned(c.id)).then((u) => loadSprite(evolvedOwned(c.id) ? c.id + '*' : c.id, u)))).then(() => { if (run) { run.ready = true; sfx('count'); } });
     bindBattleInput();
     if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.music(level.boss, level.n, D.WORLDS[level.world - 1].system, level.world);
     window.addEventListener('resize', resize);
@@ -658,7 +752,10 @@ const BATTLE = (() => {
     const end = (e) => {
       if (tapAt && ptrs.size === 1 && performance.now() - tapAt.t < 400) {
         const x = ax(e.clientX), y = ay(e.clientY);
-        if (inZone(y) && x > 10 && x < W - 10) { setMarker(x, y); sfx('tap'); }
+        // One of your evolved beasts tapped on the field: its special, there (Sam, 18 Nov).
+        const hero = specialAt(x, y);
+        if (hero) run.battle.special(hero.card, hero);
+        else if (inZone(y) && x > 10 && x < W - 10) { setMarker(x, y); sfx('tap'); }
         else if (y > 0 && x > 10 && x < W - 10) { run.marker = Math.max(0.02, Math.min(0.98, x / W)); run.markPulse = 1; run.laneT = 1.2; sfx('tap'); }
       }
       ptrs.delete(e.pointerId);
@@ -668,6 +765,17 @@ const BATTLE = (() => {
     cv.addEventListener('pointerup', end);
     cv.addEventListener('pointercancel', end);
     cv.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, run.cam.zoom * (e.deltaY < 0 ? 1.12 : 0.89)); }, { passive: false });
+  }
+  /** Your evolved beast at a tapped point (arena units) whose special is ready, if any. */
+  function specialAt(x, y) {
+    const b = run.battle;
+    let best = null, bd = Infinity;
+    for (const u of b.units) {
+      if (u.side !== 'you' || !u.evolved || u.state === 'dying' || !b.canSpecial(u.card)) continue;
+      const d = Math.hypot(u.x - x, u.y - u.r - y);
+      if (d < u.r * 1.5 + 26 / run.cam.zoom && d < bd) { bd = d; best = u; }
+    }
+    return best;
   }
   function zoomAt(px, py, z) {
     const bx = ax(px), by = ay(py);
@@ -682,13 +790,6 @@ const BATTLE = (() => {
     if (run.countdown > 0) { toast('Get ready…'); return; }
     const b = run.battle;
     const c = b.cards[i];
-    // An evolved form on the field: a tap is its special (once a battle), like a Clash Royale champion.
-    if (c && c.evolved && b.inPlay(i)) {
-      if (b.special(i)) return;
-      toast(`${D.ABILITIES[c.ability].name} is used for this battle`);
-      sfx('nope');
-      return;
-    }
     if (!b.canDeploy(i)) {
       if (b.result) return;
       if (b.yours.length >= b.maxYours) toast(`${b.maxYours} on the field at most`);
@@ -805,7 +906,7 @@ const BATTLE = (() => {
   /** An evolved form's special: its name over it, and its own burst. */
   function specialFx(ev) {
     const u = ev.unit, a = ev.ability, A = D.ABILITIES[a];
-    text(u.x, u.y - u.r * 2.4, `${A.icon} ${A.name}!`, '#ffe066');
+    run.fx.push({ kind: 'text', x: u.x, y: u.y - u.r * 2.4, s: `${A.icon} ${A.name}!`, col: '#ffe066', life: 1.6, max: 1.6, big: true });
     sfx('special');
     const R = { blast: 190, freeze: 210, gust: 230, quake: 210, heal: 240, gravity: 280, rally: 280 }[a];
     const col = { blast: '#ff7a2a', freeze: '#9ae8ff', gust: '#eaffff', quake: '#c8a070', heal: '#7af0a0', gravity: '#b080ff', rally: '#ff6a5a', starfall: '#ffe066', dash: '#ffffff', shield: '#9ad8ff', volley: '#ffe8a0', leap: '#d8c8a8' }[a];
@@ -825,18 +926,39 @@ const BATTLE = (() => {
     if (a === 'leap' && ev.from) { burst(ev.from.x, ev.from.y, '#d8c8a8', 10, 120, 'smoke'); ring(u.x, u.y, 140, col); burst(u.x, u.y, '#d8c8a8', 16, 200, 'smoke'); }
     if (a === 'dash') burst(u.x, u.y, '#ffffff', 14, 160, 'smoke');
   }
+  /** An enemy's ability as it happens: a leap's dust, coming up from underground, a heal, a summons. */
+  function traitFx(ev) {
+    const u = ev.unit, T = D.TRAITS[ev.kind === 'surface' ? 'burrow' : ev.kind];
+    if (ev.kind === 'leap') { burst(ev.from.x, ev.from.y, '#c8b8a0', 10, 120, 'smoke'); ring(u.x, u.y, u.r * 2, '#ffd08a'); }
+    if (ev.kind === 'surface') { burst(u.x, u.y, '#8a6a48', 18, 180, 'smoke'); ring(u.x, u.y, u.r * 2.2, '#a88a68'); run.shake = Math.max(run.shake, 4); }
+    if (ev.kind === 'heal') { ring(u.x, u.y, 220, '#7af0a0'); for (const o of ev.targets) burst(o.x, o.y - o.r, '#7af0a0', 4, 70, 'star'); }
+    if (ev.kind === 'summon') { ring(u.x, u.y, u.r * 2.6, '#c070ff'); burst(u.x, u.y, '#c070ff', 12, 140, 'wisp'); }
+    if (ev.kind === 'cloak') burst(u.x, u.y - u.r, '#d8e0ff', 8, 90, 'wisp');
+    if (T && ev.kind !== 'cloak') run.fx.push({ kind: 'text', x: u.x, y: u.y - u.r * 2.6, s: `${T.icon} ${T.name}!`, col: '#ffb0b0', life: 1.2, max: 1.2, big: true });
+  }
   /** Over a unit: frozen (an icy sheen), stunned (stars going round), shielded (a bubble), roused by
    * a war cry (a red glow), dashing (streaks behind). */
   function statusFx(ctx, u, t, z) {
     const now = run.battle.time;
     const x = sx(u.x), y = sy(u.y), R = u.r * z;
+    if (u.side === 'you' && u.evolved && run.battle.canSpecial(u.card)) {
+      const k = (t * 1.4) % 1;
+      ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = Math.max(2, 3.5 * z);
+      ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.ellipse(x, y, R * 1.2, R * 0.42, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.ellipse(x, y, R * (1.2 + k), R * (0.42 + k * 0.35), 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.95; ctx.fillStyle = '#ffe680'; ctx.font = `800 ${Math.max(11, 18 * z)}px sans-serif`; ctx.textAlign = 'center';
+      ctx.fillText('✦', x + R * 1.1, y - R * 2.2 + Math.sin(t * 5) * 3);
+      ctx.globalAlpha = 1;
+    }
     if (u.stunUntil > now) {
       if (u.frozen) { ctx.globalAlpha = 0.45; ctx.drawImage(ENEMY_ART.glowSprite('#bfefff'), x - R * 1.6, y - R * 3, R * 3.2, R * 3.2); ctx.globalAlpha = 1; }
       else for (let i = 0; i < 3; i++) { const a = t * 6 + (i * Math.PI * 2) / 3; ctx.fillStyle = '#ffe066'; ctx.font = `${Math.max(9, 14 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('★', x + Math.cos(a) * R * 0.9, y - R * 2.6 + Math.sin(a) * R * 0.3); }
     }
     if (u.shieldUntil > now) { ctx.globalAlpha = 0.28 + 0.08 * Math.sin(t * 6); ctx.fillStyle = '#9ad8ff'; ctx.beginPath(); ctx.ellipse(x, y - R * 1.2, R * 1.5, R * 1.7, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.8; ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = Math.max(1.5, 2.5 * z); ctx.stroke(); ctx.globalAlpha = 1; }
     if (u.buffUntil > now) { ctx.globalAlpha = 0.35; ctx.drawImage(ENEMY_ART.glowSprite('#ff6a5a'), x - R * 1.5, y - R * 2.6, R * 3, R * 3); ctx.globalAlpha = 1; }
-    if (u.dashUntil > now) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1.5, 3 * z); for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * R * 0.5, y + R * 0.4); ctx.lineTo(x + i * R * 0.5, y + R * 2.4); ctx.stroke(); } }
+    if (u.slowUntil > now) { ctx.globalAlpha = 0.35; ctx.drawImage(ENEMY_ART.glowSprite('#7ab8ff'), x - R * 1.3, y - R * 2.4, R * 2.6, R * 2.6); ctx.globalAlpha = 1; }
+    if (u.trait === 'aura') { ctx.globalAlpha = 0.22 + 0.08 * Math.sin(t * 3); ctx.strokeStyle = '#8ad8ff'; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.ellipse(x, y, 180 * z, 180 * z * 0.35, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+    if (u.dashUntil > now || u.charging) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1.5, 3 * z); for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * R * 0.5, y + R * 0.4); ctx.lineTo(x + i * R * 0.5, y + R * 2.4); ctx.stroke(); } }
   }
 
   function events(list) {
@@ -853,6 +975,8 @@ const BATTLE = (() => {
           break;
         case 'wave': run.banner = { text: ev.text, t: 2.2, max: 2.2, champ: !!ev.champ }; sfx('rally'); break;
         case 'special': specialFx(ev); break;
+        case 'portal': ring(u.x, u.y, u.r * 2.4, '#b080ff'); burst(u.x, u.y - u.r, '#b080ff', 16, 160, 'wisp'); break;
+        case 'trait': traitFx(ev); break;
         case 'swing':
           if (ev.ranged) {
             const style = shotStyle(u);
@@ -893,7 +1017,7 @@ const BATTLE = (() => {
           if (u.boss) { run.shake = 14; ring(u.x, u.y, 260, '#ffffff'); }
           break;
         case 'capture': sfx(u.side === 'foe' ? 'alarm' : 'coins'); if (u.side === 'foe') toast('An enemy is taking your coins!'); break;
-        case 'rally': sfx('rally'); text(500, 300, 'Their defenders come out!', '#ff8a8a'); break;
+        case 'rally': sfx('rally'); run.banner = { text: 'Their defenders come out!', t: 1.8, max: 1.8 }; break;
         case 'end': {
           const pile = ev.side === 'foe' ? BE.PILES.foe : BE.PILES.you;
           if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.play('explosion');
@@ -1369,11 +1493,11 @@ const BATTLE = (() => {
     ctx.globalAlpha = 1;
     // Units, back to front.
     const units = [...battle.units].sort((a, c) => a.y - c.y);
-    for (const u of units) { (u.side === 'you' ? drawBeast : drawFoe)(ctx, u, t); if (u.state !== 'dying') statusFx(ctx, u, t, z); }
+    for (const u of units) { (u.side === 'you' ? drawBeast : drawFoe)(ctx, u, t); if (u.state !== 'dying' && !u.burrowed) statusFx(ctx, u, t, z); }
     for (const s of run.shots) if (s.t >= 0) drawShot(ctx, s, z, t);
     // Hearts over everyone still standing, over the top of each one's head.
     for (const u of units) {
-      if (u.state === 'dying') continue;
+      if (u.state === 'dying' || u.burrowed || u.cloakUntil > battle.time) continue;
       const hgt = u.side === 'you' ? u.r * 2.85 : u.r * (D.ENEMIES[u.kind].look.plan === 'float' ? 3.0 : 3.5);
       const size = Math.max(15, Math.min(u.boss ? 42 : 30, u.r * z * (u.boss ? 0.9 : 0.85)));
       const size2 = u.champ ? Math.min(40, size * 1.25) : size;
@@ -1559,7 +1683,7 @@ const BATTLE = (() => {
    * swimmers roll into it. Ranged beasts rise as their shot gathers and kick back as it goes.
    */
   function drawBeast(ctx, u, t) {
-    const sk = u.evolved ? u.kind + '*' : u.kind;
+    const sk = evolvedOwned(u.kind) ? u.kind + '*' : u.kind;
     const img = run.sprites[sk];
     if (!img) return;
     const z = run.cam.zoom;
@@ -1730,6 +1854,16 @@ const BATTLE = (() => {
   function drawFoe(ctx, u, t) {
     const z = run.cam.zoom;
     const e = D.ENEMIES[u.kind];
+    if (u.burrowed) {
+      // A mound of earth on the move, with a spray of dirt.
+      const x = sx(u.x), y = sy(u.y), R = u.r * z;
+      ctx.fillStyle = '#5a4430'; ctx.beginPath(); ctx.ellipse(x, y, R * 1.1, R * 0.5, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#7a5e40'; ctx.beginPath(); ctx.ellipse(x, y - R * 0.12, R * 0.8, R * 0.32, 0, Math.PI, Math.PI * 2); ctx.fill();
+      if (Math.random() < 0.15) burst(u.x, u.y, '#8a6a48', 1, 50, 'smoke');
+      return;
+    }
+    const ghost = u.cloakUntil > run.battle.time;
+    if (ghost) ctx.globalAlpha = 0.22 + 0.08 * Math.sin(t * 9);
     const ph = swingPhase(u);
     const heavyNow = ph >= 0 && (ph < 0.45 ? nextIsHeavy(u) : u.lastHeavy);
     const pose = {
@@ -1757,6 +1891,7 @@ const BATTLE = (() => {
     if ((u.boss || e.look.build === 'heavy') && u.state === 'walk' && Math.abs(Math.sin((pose.walk) * Math.PI * 2)) > 0.97) burst(u.x + (Math.random() - 0.5) * u.r, u.y, '#a89880', 1, 40, 'smoke');
     ENEMY_ART.draw(ctx, u.kind, pose, px);
     ctx.restore();
+    if (ghost) ctx.globalAlpha = 1;
   }
 
   function drawFx(ctx, z) {
@@ -1767,7 +1902,7 @@ const BATTLE = (() => {
         ctx.beginPath(); ctx.ellipse(sx(p.x), sy(p.y), p.r * z * (1 - a * 0.7), p.r * z * (1 - a * 0.7) * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
       } else if (p.kind === 'text') {
         ctx.globalAlpha = Math.min(1, a * 1.5);
-        const fs = Math.max(12, 26 * z * 1.2);
+        const fs = Math.max(p.big ? 19 : 12, 26 * z * (p.big ? 1.5 : 1.2));
         ctx.font = `800 ${fs}px Fredoka, sans-serif`; ctx.textAlign = 'center';
         ctx.lineWidth = fs * 0.2; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
         ctx.strokeText(p.s, sx(p.x), sy(p.y)); ctx.fillStyle = p.col; ctx.fillText(p.s, sx(p.x), sy(p.y));
@@ -1820,14 +1955,13 @@ const BATTLE = (() => {
       const c = b.cards[i];
       const left = Math.max(0, c.ready - b.time);
       const frac = left / c.cooldown;
-      const live = c.evolved && b.inPlay(i);
-      btn.style.setProperty('--cd', `${(live ? 0 : frac * 360).toFixed(0)}deg`);
-      btn.querySelector('.bt-cd-n').textContent = !live && left > 0 ? Math.ceil(left) : '';
-      btn.classList.toggle('ready', !live && left <= 0 && b.mana >= c.cost && b.yours.length < b.maxYours && !b.result && run.countdown <= 0);
-      btn.classList.toggle('poor', !live && b.mana < c.cost);
+      btn.style.setProperty('--cd', `${(frac * 360).toFixed(0)}deg`);
+      btn.querySelector('.bt-cd-n').textContent = left > 0 ? Math.ceil(left) : '';
+      btn.classList.toggle('ready', left <= 0 && b.mana >= c.cost && b.yours.length < b.maxYours && !b.result && run.countdown <= 0);
+      btn.classList.toggle('poor', b.mana < c.cost);
       btn.classList.toggle('full', b.yours.length >= b.maxYours);
+      // An evolved card whose beast is out with its special unused: the card names the special.
       btn.classList.toggle('special', b.canSpecial(i) && run.countdown <= 0);
-      btn.classList.toggle('spent', live && c.abilityUsed);
     });
   }
 
@@ -1871,8 +2005,18 @@ const BATTLE = (() => {
       b.best[level.id] = Math.min(b.best[level.id] || Infinity, Math.round(time));
       if (starNow) b.stars[level.id] = true;
       if (level.boss) b.bosses[level.id] = true;
-      if (battle.piles.you >= battle.pileMax.you) b.flawless = (b.flawless || 0) + 1;
+      const full = battle.piles.you >= battle.pileMax.you;
+      if (full && level.n >= 5) b.flawless = (b.flawless || 0) + 1;
       if (!b.fastest || time < b.fastest) b.fastest = Math.round(time);
+      if (level.n >= 10 && time < 40) b.blitz = true;
+      // The perks' challenges (battle_data.js PERKS).
+      const pw = b.perkWon || (b.perkWon = {});
+      const elements = new Set(battle.cards.map((c) => (D.T(c.id) || {}).element));
+      if (level.n >= 5 && battle.cards.length >= 3 && elements.size === 1) pw.fury = true;
+      if (level.n >= 10 && battle.cards.length <= 3 && deckMax(level) === 6) pw.rally = true;
+      if (level.boss && full) pw.fortify = true;
+      if (level.n >= 10 && !battle.manaFilled) pw.wellspring = true;
+      if (level.n >= 10 && (battle.firstDeployAt == null || battle.firstDeployAt >= 20)) pw.deep_pool = true;
       if (level.boss && battle.maxTierUsed <= 8) b.underdog = true;
       if (level.n >= 5 && battle.maxTierUsed <= 3) b.lowTierWin = true;
       if (first) {
@@ -1906,7 +2050,7 @@ const BATTLE = (() => {
       ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}, ${D.LEGENDS[id].title}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}</span></div></div>`).join('')}
       ${rewards.length ? `<div class="bt-rewards"><div class="bt-rw-head">${won ? 'Level rewards' : 'Rewards'}</div>${rewards.map((x) => `<div>${x}</div>`).join('')}</div>` : ''}
       ${ach.length ? `<div class="bt-rewards ach">${ach.map((a) => `<div><b>🏆 ${a.name}</b>${a.notes.length ? `<span>${a.notes.join(' · ')}</span>` : ''}</div>`).join('')}</div>` : ''}
-      ${newPerks.length ? `<div class="bt-rewards perk">${newPerks.map((p) => `<div><b>${PERK_LOOK[p.id].icon} New perk: ${p.name}</b><span>${PERK_LOOK[p.id].short}. Choose it on a level's screen.</span></div>`).join('')}</div>` : ''}
+      ${newPerks.length ? `<div class="bt-rewards perk">${newPerks.map((p) => `<div><b>${perkIcon(p.id)} New perk: ${p.name}</b><span>${PERK_LOOK[p.id].short}. Choose it on a level's screen.</span></div>`).join('')}</div>` : ''}
       ${r.newFoeIds && r.newFoeIds.length ? `<div class="bt-dim">New in the Foe Wiki: ${r.newFoeIds.map((id) => D.ENEMIES[id].name).join(', ')}.</div>` : ''}
       <div class="bt-row">
         <button class="bt-btn" data-a="map">Levels</button>
@@ -1926,7 +2070,7 @@ const BATTLE = (() => {
     };
     // Levels: back to the world's level grid (the level's own screen closes too).
     m.querySelector('[data-a=map]').addEventListener('click', () => { click(); leave(); const top = sheets[sheets.length - 1]; if (top && sheets.length > 1) top.close(); });
-    m.querySelector('[data-a=retry]').addEventListener('click', () => { click(); const deck = r.battle.cards.map((c) => c.id + (c.evolved ? '*' : '')); leave(); start(level, deck, r.onDone); });
+    m.querySelector('[data-a=retry]').addEventListener('click', () => { click(); const deck = r.battle.cards.map((c) => c.id); leave(); start(level, deck, r.onDone, r.battle.cards[0] && r.battle.cards[0].sync); });
     const nb = m.querySelector('[data-a=next]');
     if (nb) nb.addEventListener('click', () => { click(); leave(); const top = sheets[sheets.length - 1]; if (top) top.close(); openLevel(w, next, r.onDone); });
   }
@@ -2059,17 +2203,19 @@ const BATTLE = (() => {
     }
     const row = (icon, name, text) => `<div class="bt-rules-row"><span class="bt-rules-icon">${icon}</span><b>${name}</b><span>${text}</span></div>`;
     const R = D.RULES;
+    const was = sec.querySelector('details.bt-rules-all');
+    const open = was ? was.open : false;
     sec.innerHTML = `
-      <div class="shop-section-title">Battle Rules</div>
+      <details class="bt-rules-all" ${open ? 'open' : ''}><summary class="shop-section-title">Battle Rules <span class="bt-arrow">▸</span></summary>
       <div class="settings-group bt-rules">
         <div class="bt-rules-h">Basics</div>
-        <ul>${HOW.map((s) => `<li>${s}</li>`).join('')}<li>A beast costs mana, about half its tier. You hold 50 and get 10 back every 5 seconds.</li><li>Cards also recharge one second per tier.</li><li>Ten of your beasts on the field at most.</li></ul>
+        <ul>${HOW.map((s) => `<li>${s}</li>`).join('')}<li>Every beast costs mana. A Tier 1 costs 3, a Tier 10 costs 10 and a Tier 20 costs 17. You hold 50 and get 10 back every 5 seconds.</li><li>Cards also recharge one second per tier.</li><li>Ten of your beasts on the field at most.</li></ul>
         <div class="bt-rules-h">How beasts fight</div>
         ${row(KIND.single[0], KIND.single[1], 'Hits one enemy up close')}
         ${row(KIND.area[0], KIND.area[1], 'Hits everything near its target, at half strength')}
         ${row(KIND.ranged[0], KIND.ranged[1], 'Shoots one enemy from afar (Range 3 and up)')}
         <div class="bt-rules-h">Evolved forms</div>
-        <ul><li>Up to three in a six, one of each on the field.</li><li>Tap its card again while it is out for its special, once a battle.</li></ul>
+        <ul><li>An evolved beast in one of the three left slots of your six has its special.</li><li>Tap it on the field (a gold ring shows it is ready) for its special there, once a battle.</li><li>Drag slots to swap them.</li></ul>
         ${Object.values(D.ABILITIES).map((a) => row(a.icon, a.name, a.text)).join('')}
         <div class="bt-rules-h">Level rules</div>
         ${row(RULE_ICON.quick, R.quick.name, 'Low tiers only')}
@@ -2084,16 +2230,29 @@ const BATTLE = (() => {
         <div class="bt-rules-h">Levels</div>
         ${Object.entries(D.PATTERNS).map(([k, p]) => row(PATTERN_ICON[k] || '•', p.name, p.tip)).join('')}
         ${Object.values(D.THEMES).map((p) => row('✦', p.name, p.tip)).join('')}
+        <div class="bt-rules-h">Enemy abilities</div>
+        ${Object.values(D.TRAITS).map((a) => row(a.icon, a.name, a.text)).join('')}
         <div class="bt-rules-h">Perks</div>
-        ${D.PERKS.map((p) => row(PERK_LOOK[p.id].icon, p.name, `${PERK_LOOK[p.id].short}. ${p.how} to unlock.`)).join('')}
-      </div>`;
+        ${D.PERKS.map((p) => row(perkIcon(p.id), p.name, `${PERK_LOOK[p.id].short}. ${p.how} to unlock.`)).join('')}
+        <div class="bt-rules-h">Sync down</div>
+        <ul><li>When a quick cards or plain stock level leaves you too few beasts, Sync down lets yours battle as that level's tier and rarity.</li></ul>
+      </div></details>`;
+    // Each part folds too: its heading opens what is under it.
+    const box = sec.querySelector('.bt-rules');
+    const parts = [];
+    let cur = null;
+    for (const node of [...box.childNodes]) {
+      if (node.nodeType === 1 && node.classList.contains('bt-rules-h')) { cur = document.createElement('details'); cur.className = 'bt-rules-part'; const s = document.createElement('summary'); s.textContent = node.textContent; cur.appendChild(s); parts.push(cur); node.remove(); continue; }
+      if (cur) cur.appendChild(node); else node.remove();
+    }
+    parts.forEach((p) => box.appendChild(p));
   }
   /** The Rules in Settings, opened and scrolled to. */
   function showRules() {
     renderRules();
     const tab = document.getElementById('tab-settings');
     if (tab) tab.click();
-    setTimeout(() => { const s = document.getElementById('settings-rules'); if (s) s.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 120);
+    setTimeout(() => { const s = document.getElementById('settings-rules'); if (s) { const d = s.querySelector('details.bt-rules-all'); if (d) d.open = true; s.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 120);
   }
   function openHow(then) {
     const m = el(`<div class="bt-modal"><div class="bt-panel bt-how"><h2>How to play</h2>
@@ -2113,11 +2272,12 @@ const BATTLE = (() => {
       html += `<div class="bt-system">World ${w.id}: ${w.name} <small>${list.filter((e) => b.seen[e.id]).length}/${list.length}</small></div><div class="bt-wiki">`;
       for (const e of list) {
         const seen = !!b.seen[e.id];
-        html += `<button class="bt-wiki-cell ${seen ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${e.id}"><img src="${ENEMY_ART.still(e.id, 160, !seen)}" alt=""><span>${seen ? e.name : '???'}</span></button>`;
+        html += `<button class="bt-wiki-cell ${seen ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${e.id}">${stillImg(e.id, 160, !seen)}<span>${seen ? e.name : '???'}</span></button>`;
       }
       html += '</div>';
     }
     sh.body.innerHTML = html;
+    fillStills(sh.body);
     sh.body.querySelectorAll('.bt-wiki-cell').forEach((c) => c.addEventListener('click', () => {
       if (!b.seen[c.dataset.id]) { showWarning('Not met yet', 'Meet it in a battle first.'); return; }
       click();
@@ -2134,7 +2294,8 @@ const BATTLE = (() => {
       <h2>${e.name}</h2>
       <div class="bt-diff">${heartsHtml(D.difficulty(id))}</div>
       <div class="bt-dim">World ${e.world}: ${D.WORLDS[e.world - 1].name} · first seen at level ${e.debut} · ${roles[e.role]}</div>
-      <div>${kindChip(D.enemyAttackKind(id))}</div>
+      <div>${kindChip(D.enemyAttackKind(id))}${D.traitOf(id) ? ` <span class="bt-kindchip trait">${D.TRAITS[D.traitOf(id)].icon} ${D.TRAITS[D.traitOf(id)].name}</span>` : ''}</div>
+      ${D.traitOf(id) ? `<div class="bt-dim">${D.TRAITS[D.traitOf(id)].text}</div>` : ''}
       <p>${e.note}</p>
       <div class="bt-stats">${statChips(s)}</div>
       <div class="bt-dim">Defeated: ${kills}</div>
@@ -2166,6 +2327,7 @@ const BATTLE = (() => {
     ['Worlds', '🏰', (a) => a.id.startsWith('world_')],
     ['Feats', '⚡', (a) => ['blitz', 'underdog', 'flawless', 'flawless_10'].includes(a.id)],
     ['Foes met', '📖', (a) => a.id.startsWith('foes_')],
+    ['Perks', '🎖', (a) => a.id.startsWith('perk_')],
     ['Grand Master', '👑', (a) => a.id === 'all_ach'],
   ];
   /** A reward as small pictures: crates, premium crates, spins, or the legend it gives. */
@@ -2176,6 +2338,7 @@ const BATTLE = (() => {
     if (rw.spins) out.push(`<span class="bt-rw"><i>🎡</i>${rw.spins}</span>`);
     if (rw.essence) out.push(`<span class="bt-rw"><i>✨</i>${formatNumber(rw.essence)}</span>`);
     if (rw.legend) out.push(`<span class="bt-rw legend"><img data-legend="${rw.legend}" alt="">${D.LEGENDS[rw.legend].name.replace(/^The /, '')}</span>`);
+    if (rw.perk) out.push(`<span class="bt-rw perk">${perkIcon(rw.perk)}${D.PERKS.find((p) => p.id === rw.perk).name}</span>`);
     if (rw.relic) out.push(`<span class="bt-rw legend relic ${got ? '' : 'hidden'}"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(RELIC_ART.svg(rw.relic, { evolved: !!rw.evolved, noGround: true }))}" alt="">${BEAST_TEMPLATES[rw.relic].name.replace(/^The /, '')}${rw.evolved ? ' ✦' : ''}</span>`);
     return out.join('');
   }
@@ -2192,7 +2355,7 @@ const BATTLE = (() => {
         const got = !!done[a.id];
         const [have, need] = a.count(s, x);
         html += `<div class="bt-ach ${got ? 'done' : ''}">
-          <div class="bt-medal"><span>${icon}</span></div>
+          <div class="bt-medal"><span>${(a.reward || {}).perk ? perkIcon(a.reward.perk) : icon}</span></div>
           <div class="bt-ach-body"><b>${a.name}</b><span>${a.desc}</span>
             ${got ? '<em class="bt-ach-got">Earned</em>' : `<div class="bt-bar"><i style="width:${Math.min(100, (have / need) * 100)}%"></i></div><em>${Math.min(have, need).toLocaleString()}/${need.toLocaleString()}</em>`}</div>
           <div class="bt-ach-rw">${rewardChips(a.reward, got)}</div>
@@ -2220,7 +2383,7 @@ const BATTLE = (() => {
         const pr = achProgress(a, t);
         const pct = pr ? Math.min(100, (pr[0] / pr[1]) * 100) : done ? 100 : 0;
         html += `<div class="bt-ach ${done ? 'done' : ''} ${a.id === 'all_ach' ? 'grand' : ''}">
-          <div class="bt-medal"><span>${icon}</span></div>
+          <div class="bt-medal"><span>${(a.reward || {}).perk ? perkIcon(a.reward.perk) : icon}</span></div>
           <div class="bt-ach-body"><b>${a.name}</b><span>${a.desc}</span>
             ${done ? '<em class="bt-ach-got">Earned</em>' : pr ? `<div class="bt-bar"><i style="width:${pct}%"></i></div><em>${Math.min(pr[0], pr[1])}/${pr[1]}</em>` : ''}</div>
           <div class="bt-ach-rw">${rewardChips(a.reward)}</div>
@@ -2341,7 +2504,7 @@ const BATTLE = (() => {
             if (!id || !D.canBattle(id)) { box.innerHTML = ''; }
             else {
               const p = prestigeOf(id);
-              box.innerHTML = `<div class="bt-details-title">Battle${p ? ` · Prestige ${p}` : ''} · recharges in ${D.cooldownOf(id)}s</div><div class="bt-stats">${statChips(D.beastStats(id, p))}</div>`;
+              box.innerHTML = `<div class="bt-details-title">Battle${p ? ` · Prestige ${p}` : ''} · <b class="bt-mana-cost">💧 ${D.costOf(id)} mana</b> · recharges in ${D.cooldownOf(id)}s</div><div class="bt-stats">${statChips(D.beastStats(id, p))}${kindChip(D.attackKind(id, p))}</div>`;
             }
           }
         } catch (e) { console.error(e); }

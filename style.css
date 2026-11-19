@@ -2902,3 +2902,8 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .evolve-badge span { position: relative; display: block; font-size: 8px; line-height: 11px; text-align: center; color: #fff; font-weight: 800; }
 .evolve-badge.got span { color: #ffe680; }
 .details-evolve { margin-top: 6px; font-size: 12px; color: #d8c8ff; }
+
+/* 1.4: three columns that may shrink, so the third is never cut off (reviewer 3). */
+.beastopedia-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.beastopedia-card { min-width: 0; }
+.beastopedia-card-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

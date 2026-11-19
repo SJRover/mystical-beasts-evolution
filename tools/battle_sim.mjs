@@ -36,13 +36,8 @@ export function refDeck(world, n, tierShift = 0) {
   const maxRank = RANK.indexOf(pr.rarity);
   // Only what the level's rule allows (quick cards, long reach, swift, plain stock, three only).
   const all = Object.keys(T).filter((id) => D.canBattle(id) && D.systemOf(id) === sys && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
-  const deck = [];
-  for (const want of [top, top, top - 1, top - 1, top - 2, top - 3]) {
-    const tier = Math.max(1, want);
-    const options = all.filter((id) => !deck.includes(id) && T[id].tier <= tier && RANK.indexOf(T[id].rarity) <= maxRank)
-      .sort((a, b) => T[b].tier - T[a].tier || RANK.indexOf(T[b].rarity) - RANK.indexOf(T[a].rarity));
-    if (options.length) deck.push(options[0]);
-  }
+  const power = (id) => { const s = D.beastStats(id, pr.prestige); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
+  const deck = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a) || T[b].tier - T[a].tier);
   return deck.slice(0, rule && rule.kind === 'three' ? 3 : 6).map((id) => ({ id, prestige: pr.prestige }));
 }
 

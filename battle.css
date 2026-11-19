@@ -313,3 +313,57 @@ body.bt-in-battle #toast-container { display: none !important; }
 .bt-ach-tabs button { padding: 9px 0; border-radius: 12px; border: 2px solid var(--bt-line); background: rgba(20,28,64,0.9); color: #c4cbe0; font-family: var(--font-game); font-size: 15px; cursor: pointer; }
 .bt-ach-tabs button.on { background: linear-gradient(180deg, #ffd84a, #e8a020); color: #2a1a00; border-color: #fff2b0; }
 .bt-rw.relic img { width: 44px; height: 44px; }
+
+/* Sixth round: ability slots, swapping, Sync down, folding rules, green Low Gravity stars. */
+.bt-slot-key { display: grid; grid-template-columns: 1fr 1fr; font-size: 10px; font-weight: 800; color: #e0c0ff; margin: 0 2px 4px; }
+.bt-slot-key span:last-child { text-align: right; color: #9aa4c4; font-weight: 600; }
+.bt-slot.ability { box-shadow: inset 0 0 0 2px rgba(224,176,255,0.45); background: linear-gradient(180deg, rgba(150,90,255,0.28), rgba(40,30,90,0.6)); }
+.bt-slot.dragging { z-index: 50; position: relative; opacity: 0.9; box-shadow: 0 8px 18px rgba(0,0,0,0.6); }
+.bt-slot { touch-action: none; }
+.bt-sync { display: block; width: 100%; margin-top: 8px; padding: 8px 10px; border-radius: 12px; border: 2px solid #7ad8ff; background: rgba(40,90,160,0.35); color: #fff; font-family: var(--font-game); font-size: 15px; text-align: left; cursor: pointer; }
+.bt-sync small { display: block; font-family: inherit; font-size: 11px; color: #c8e8ff; font-weight: 600; }
+.bt-sync.on { background: linear-gradient(180deg, #2a8ae8, #1a5ab0); }
+.bt-evo-chip { display: inline-block; margin-top: 4px; padding: 2px 8px; border-radius: 9px; border: 1px solid #a070ff; color: #d8c0ff; font-size: 11px; font-weight: 800; background: rgba(120,60,255,0.15); }
+.bt-evo-chip small { color: #a898d8; font-weight: 600; }
+details.bt-rules-all > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+details.bt-rules-all > summary::-webkit-details-marker, details.bt-rules-part > summary::-webkit-details-marker { display: none; }
+details.bt-rules-all .bt-arrow { transition: transform 0.2s; display: inline-block; }
+details.bt-rules-all[open] .bt-arrow { transform: rotate(90deg); }
+details.bt-rules-part { border-bottom: 1px solid rgba(255,255,255,0.08); }
+details.bt-rules-part > summary { list-style: none; cursor: pointer; font-family: var(--font-game); font-size: 13px; color: var(--bt-gold, #ffd43b); padding: 8px 2px; }
+details.bt-rules-part > summary::after { content: "▸"; float: right; color: #9aa4c4; transition: transform 0.2s; }
+details.bt-rules-part[open] > summary::after { transform: rotate(90deg); }
+.bt-lgstar { color: #5af07a; }
+.bt-sheet.lg .bt-gold, .bt-sheet.lg .bt-level-done em, #battle-screen.lg #bt-star .bt-gold, .bt-panel.lg .bt-gold { color: #5af07a; }
+.bt-sheet.lg .bt-level-done em { text-shadow: 0 0 4px rgba(90,240,122,0.8); }
+.bt-tag[data-tip] { cursor: pointer; }
+.bt-foe { position: relative; }
+.bt-foe-trait { position: absolute; right: 4px; top: 4px; font-style: normal; font-size: 13px; filter: drop-shadow(0 1px 1px #000); }
+.bt-kindchip.trait { background: rgba(255,120,120,0.2); color: #ffc0c0; }
+/* The special named over the card stays clear of its tier. */
+.bt-cardbtn.special b { visibility: hidden; }
+.bt-cardbtn .bt-special { top: auto; bottom: 2px; margin: 0 2px; padding: 1px 0; border-radius: 6px; background: rgba(60,30,0,0.85); font-size: 8.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* While battle screens are open, only warnings show over them. */
+body.bt-sheets-open #toast-container .toast-alert:not(.warn) { display: none !important; }
+
+/* The three special slots sit on a violet plate of their own. */
+.bt-slots { padding: 4px; border-radius: 14px; background: linear-gradient(90deg, rgba(150,90,255,0.30) 0, rgba(150,90,255,0.30) calc(50% - 1px), transparent calc(50% - 1px)); }
+.bt-slot.ability.empty { border-color: rgba(200,150,255,0.55); color: #c8a0ff; }
+.bt-slot-key span:first-child { padding-left: 4px; }
+
+/* Low Gravity stars are green everywhere: the chest count and the result star too. */
+.bt-sheet.lg .bt-chest em { color: #5af07a; }
+#battle-screen.lg .bt-result-star.on { color: #5af07a; text-shadow: 0 0 20px rgba(90,240,122,0.8); }
+
+/* A beast's mana cost in the Beastopedia. */
+.bt-mana-cost { color: #7ad8ff; font-weight: 800; }
+
+/* Drawn perk icons; a locked one greyed with a padlock. */
+.bt-perk-icon { position: relative; display: inline-block; width: 34px; height: 34px; }
+.bt-perk-svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.bt-perk.locked .bt-perk-svg { filter: grayscale(1) brightness(0.65); opacity: 0.55; }
+.bt-perk-lock { position: absolute; right: -6px; bottom: -4px; font-style: normal; font-size: 13px; }
+.bt-rules-icon .bt-perk-svg, .bt-rw.perk .bt-perk-svg, .bt-medal .bt-perk-svg { width: 22px; height: 22px; display: inline-block; vertical-align: middle; }
+.bt-medal .bt-perk-svg { width: 28px; height: 28px; }
+.bt-rewards.perk .bt-perk-svg { width: 20px; height: 20px; display: inline-block; vertical-align: -4px; }
+.bt-rw.perk { gap: 4px; }
