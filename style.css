@@ -2907,3 +2907,6 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .beastopedia-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 .beastopedia-card { min-width: 0; }
 .beastopedia-card-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 1.4: the rarity stays on one line (SUPER RARE wrapped over the picture). */
+.beastopedia-card-rarity { white-space: nowrap; letter-spacing: -0.2px; }

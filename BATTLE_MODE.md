@@ -529,19 +529,23 @@ wave, defend then push, spam with specials used on crowds, sneak down the emptie
 
 | World | spam | cheap | save | defend | evolved | lane | three tiers weaker (best way) |
 |---|---|---|---|---|---|---|---|
-| 1 | 34 | 29 | 38 | 35 | 31 | 17 | 29 |
-| 2 | 35 | 37 | 39 | 39 | 36 | 10 | 39 |
-| 3 | 37 | 33 | 38 | 40 | 39 | 14 | 40 |
-| 4 | 36 | 33 | 35 | 37 | 35 | 12 | 31 |
-| 5 | 34 | 34 | 36 | 36 | 34 | 14 | 36 |
-| 6 | 35 | 34 | 37 | 38 | 34 | 11 | 38 |
+| 1 | 35 | 33 | 40 | 37 | 37 | 15 | 32 |
+| 2 | 34 | 37 | 39 | 40 | 38 | 9 | 39 |
+| 3 | 33 | 32 | 39 | 38 | 39 | 11 | 39 |
+| 4 | 36 | 34 | 39 | 38 | 36 | 11 | 32 |
+| 5 | 29 | 34 | 38 | 36 | 37 | 15 | 36 |
+| 6 | 36 | 32 | 38 | 37 | 38 | 9 | 38 |
+
+(After reviewer 4's fixes: hurried enemies never champions, every other one from a side; home
+guard; specials kept when nothing is in reach; more World 1 abilities. Before them the same
+sweep had eased nine levels; this time one, 4-31.)
 
 Saving mana for a wave and defending then pushing win the most; spamming does well but not
 best; slipping down an empty lane mostly fails. In Worlds 2, 3, 5 and 6 a six three tiers weaker
 does about as well, as the expected six there is already Tier 20 and prestige counts for more.
 Levels fewer than two ways won (1-6, 1-35, 4-30, 5-33), or only in over two and a half minutes
 (1-2, 1-22, 2-36, 4-14, 5-9), were eased 8% at a time (scratchpad ease2.mjs, ease3.mjs) and their
-stars set at nine tenths of the fastest win. The fastest wins average 61 to 79 seconds a world.
+stars set at nine tenths of the fastest win. The fastest wins average 58 to 69 seconds a world.
 
 Stalemates: a deck that is too weak often neither wins nor loses (the bot holds its half and never
 breaks through). An overtime rule was tried and taken out (see Bugs found); a person can change
@@ -659,6 +663,45 @@ like a fight. No game errors. What it found, and what was done:
   stat, Health), so left.
 - Too easy for a Tier 8 player: World 1 was balanced for Tier 3 to 4 at level 10. Sam decided
   (fourth round): "a bit harder, like tier 10 beasts by level 10". Done; see Balance.
+
+## Reviewer playtest 4 (19 Nov, after the seventh round, 375 by 812)
+
+Two players: a new one (Tier 3, rising) through World 1 levels 1 to 8, and a Tier 11 player with
+three evolved beasts through levels 14 to 22 and a synced replay of level 4; about 35 battles, no
+page errors. No freezes: the longest task anywhere was 168 ms, at four times CPU slowdown (the
+first Battle tab after a load). Frame rate 79 fps on average at that slowdown on a horde. Melee
+beasts hardly moving near an enemy 9.5% of the time, the longest 3.5 s. Level 1 gave essence and
+one crate. All five perks were won on purpose and announced. Fixed from it:
+
+- **Champion levels became a stream of champions** (32 in four and a half minutes): while your
+  beasts took coins, the "hurry" rule brought the next queued enemy every 2.5 s, and a champion
+  level's queue holds only champions. Now it brings only ordinary enemies, never champions or
+  bosses.
+- **Battles ended in a scrum at their pile** (71% of blows in the top third): every
+  reinforcement came out on their pile. Now every other hurried one comes round from a side half
+  way down, towards your coins.
+- **Home guard:** with ten up at their pile an Imp took your coins and no card could be played.
+  While an enemy takes your coins you may now play two over the limit (the count shows "home
+  guard").
+- **Patience** could only be won on champion levels (opening groups reach your pile within 20 s):
+  now a win from level 10 on playing twelve beasts or fewer.
+- **Sync down:** pressing it fills the six; Best six ranks beasts as they will battle; the list
+  shows synced tier, cost, rest and stats (⇩ T2); Quick cards syncs rarity too (no rarer than
+  Rare), as the rules say.
+- **Call-outs:** banners shrink to fit and sit a third of the way down the field (they ran off
+  the screen and covered their camp); call-outs near one another stack upwards.
+- **A special with nothing in its reach is not used up** ("Nothing in reach"); cards show ✦ and
+  the special's icon (its name was cut off).
+- The world chest says it is for every star in the world; slowed beasts get a stronger blue and
+  a snowflake; portals swirl for a second with "🌀 Portal!"; the Beastopedia's rarity stays on one
+  line; Try again no longer starts the meadow's music; Rally reads "Cards rest 25% less"; Long
+  reach asks for Range 3 or more (where beasts shoot), else the level is Three only.
+- World 1 gets every ability before level 20: Night Hounds charge (7), Black Knights and War
+  Drummers shield (13, 17), Lantern Ghosts heal (14), Scarecrows summon (15).
+
+Not changed: stars stay tight (missed by 1 to 9 s; Sam wants them hard); spamming still wins
+some levels, as it does for the bots; cheap Tier 1 to 4 cards still fill the field in early
+levels, where the enemies are weak.
 
 ## Bugs found
 

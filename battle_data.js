@@ -234,10 +234,10 @@ const BATTLE_DATA = (() => {
     ['leap', /goblin|imp|satyr|ninja|jester|hopper|harpy|jet_|dust_devil|powder|comet_imps/],
     ['cloak', /cloaker|thief|phase|void_hunter|night_blade|smuggl|wraith|mirror/],
     ['burrow', /crawler|mite|serpent|digger/],
-    ['heal', /priest|oracle|siren|singularity_monk|silent_monk|mountain_monk|^monk$|navigator|bard/],
-    ['aura', /paladin|command_bot|hive_guard|captain|commander|orbit_guard|shield_drone|herald/],
-    ['summon', /night_mother|warlock|brood|hive_empress|necro|star_mage|nebula_witch|eclipse_cultist/],
-    ['charge', /cavalier|minotaur|berserker|gladiator|viking|chimera|boarder|siege_crew|regolith/],
+    ['heal', /priest|oracle|siren|singularity_monk|silent_monk|mountain_monk|^monk$|navigator|bard|lantern_ghost/],
+    ['aura', /paladin|command_bot|hive_guard|captain|commander|orbit_guard|shield_drone|herald|black_knight|war_drummer/],
+    ['summon', /night_mother|warlock|brood|hive_empress|necro|star_mage|nebula_witch|eclipse_cultist|scarecrow/],
+    ['charge', /cavalier|minotaur|berserker|gladiator|viking|chimera|boarder|siege_crew|regolith|night_hound/],
     ['slow', /gorgon|witch|banshee|lunar_wraith|frost|gravity_mage|psi_floater|echo/],
   ];
   const traitCache = {};
@@ -700,7 +700,7 @@ const BATTLE_DATA = (() => {
       if (kind === 'range' || kind === 'speed') {
         const vals = have.map((id) => beastStats(id, ex.prestige)[kind === 'range' ? 'rng' : 'spd']).sort((a, c) => c - a);
         value = vals.length >= 3 ? vals[2] : 1;
-        if (value < 2) kind = 'three';
+        if (value < (kind === 'range' ? 3 : 2)) kind = 'three';
       }
       if (kind === 'rarity' && RANKS.indexOf(ex.rarity) <= 1) kind = 'three';
       rule = { kind, value };
@@ -956,7 +956,7 @@ const BATTLE_DATA = (() => {
     { id: 'perk_rally', name: 'Trio', desc: 'Win a level from level 10 on bringing only three beasts.', test: (b) => !!b.perkWon.rally, reward: { perk: 'rally' } },
     { id: 'perk_fortify', name: 'Iron Vault', desc: 'Beat a boss with your coin pile full.', test: (b) => !!b.perkWon.fortify, reward: { perk: 'fortify' } },
     { id: 'perk_wellspring', name: 'Never Idle', desc: 'Win a level from level 10 on without your mana ever filling up.', test: (b) => !!b.perkWon.wellspring, reward: { perk: 'wellspring' } },
-    { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing nothing in the first 20 seconds.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
+    { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing twelve beasts or fewer.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */
@@ -968,7 +968,7 @@ const BATTLE_DATA = (() => {
     { id: 'rally', name: 'Rally', desc: 'Cards rest a quarter less.', opts: { rest: 0.75 }, unlock: (t) => !!(t.perkWon || {}).rally, how: 'Win from level 10 on bringing only three beasts' },
     { id: 'fortify', name: 'Fortify', desc: 'Your coin pile holds 20 seconds.', opts: { pile: 20 }, unlock: (t) => !!(t.perkWon || {}).fortify, how: 'Beat a boss with your coin pile full' },
     { id: 'wellspring', name: 'Wellspring', desc: 'Mana fills a quarter faster.', opts: { manaRegen: 1.25 }, unlock: (t) => !!(t.perkWon || {}).wellspring, how: 'Win from level 10 on without your mana ever filling up' },
-    { id: 'deep_pool', name: 'Deep Pool', desc: 'Hold up to 65 mana.', opts: { manaMax: 65 }, unlock: (t) => !!(t.perkWon || {}).deep_pool, how: 'Win from level 10 on playing nothing in the first 20 seconds' },
+    { id: 'deep_pool', name: 'Deep Pool', desc: 'Hold up to 65 mana.', opts: { manaMax: 65 }, unlock: (t) => !!(t.perkWon || {}).deep_pool, how: 'Win from level 10 on playing twelve beasts or fewer' },
   ];
 
   return {

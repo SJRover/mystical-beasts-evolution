@@ -288,7 +288,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Click starts audio
   document.body.addEventListener('click', () => {
-    if (audio && !audio.musicPlaying && !document.body.classList.contains('bt-in-battle')) {
+    if (audio && !audio.musicPlaying && !document.body.classList.contains('bt-in-battle') && !document.getElementById('battle-screen')) {
       audio.startMusic();
     }
   });

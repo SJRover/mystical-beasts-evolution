@@ -96,12 +96,14 @@ const BattleEngine = (() => {
     }
 
     get yours() { return this.units.filter((u) => u.side === 'you' && u.state !== 'dying'); }
+    /** How many of yours may be out now: the limit, two more while an enemy takes your coins. */
+    get cap() { return this.maxYours + (this.units.some((u) => u.side === 'foe' && u.state === 'capture') ? 2 : 0); }
     get foes() { return this.units.filter((u) => u.side === 'foe' && u.state !== 'dying'); }
 
     /** Whether card `i` can be played now. */
     canDeploy(i) {
       const c = this.cards[i];
-      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.maxYours && this.mana >= c.cost;
+      return !this.result && !!c && this.time >= c.ready && this.yours.length < this.cap && this.mana >= c.cost;
     }
 
     /** Card `i`'s beasts on the field now. */
@@ -123,10 +125,12 @@ const BattleEngine = (() => {
       if (!this.canSpecial(i)) return false;
       const c = this.cards[i];
       const u = who && who.card === i && this.onField(i).includes(who) ? who : this.onField(i).slice(-1)[0];
-      c.abilityUsed = true;
-      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed);
+      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed && !(o.cloakUntil > this.time));
       const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
       const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
+      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480 }[c.ability];
+      if (reach && !near(foes, reach).length) { this.events.push({ type: 'special-miss', unit: u }); return false; }
+      c.abilityUsed = true;
       const nearest = (list, R, k) => near(list, R).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y)).slice(0, k);
       const L = u.light, now = this.time, dir = u.side === 'you' ? -1 : 1;
       const hit = [];
@@ -252,10 +256,15 @@ const BattleEngine = (() => {
         room--;
       }
       // While their pile is being taken, the next of them comes out at once (every 2.5 s at most).
-      if (this.units.some((u) => u.side === 'you' && u.state === 'capture') && this.time >= this.hurry && this.queue.length && room > -2) {
-        const s = this.queue.shift();
-        this.spawnFoe({ ...s, x: 0.5 + (s.x - 0.5) * 0.4 });
-        this.hurry = this.time + 2.5;
+      if (this.units.some((u) => u.side === 'you' && u.state === 'capture') && this.time >= this.hurry && room > -2) {
+        const k = this.queue.findIndex((q) => !q.champ && !q.boss);
+        if (k >= 0) {
+          const s = this.queue.splice(k, 1)[0];
+          this.hurryN = (this.hurryN || 0) + 1;
+          if (this.hurryN % 2 === 0) this.spawnFoe({ ...s, side: this.hurryN % 4 === 0 ? 'L' : 'R' });
+          else this.spawnFoe({ ...s, x: 0.5 + (s.x - 0.5) * 0.4 });
+          this.hurry = this.time + 2.5;
+        }
       }
       if (!this.queue.length) {
         this.loop = this.time;

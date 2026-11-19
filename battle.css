@@ -367,3 +367,7 @@ body.bt-sheets-open #toast-container .toast-alert:not(.warn) { display: none !im
 .bt-medal .bt-perk-svg { width: 28px; height: 28px; }
 .bt-rewards.perk .bt-perk-svg { width: 20px; height: 20px; display: inline-block; vertical-align: -4px; }
 .bt-rw.perk { gap: 4px; }
+
+/* Reviewer 4: the special as an icon on its card; synced tiers in the list. */
+.bt-cardbtn .bt-special { font-size: 12px; text-overflow: clip; }
+.bt-synced { color: #7ad8ff; font-weight: 800; }
