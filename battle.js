@@ -372,8 +372,22 @@ const BATTLE = (() => {
   const limits = (level) => !!(level && level.rule && D.DECK_RULES.includes(level.rule.kind));
   const deckKey = (sys, level) => (limits(level) ? `${sys}|${level.rule.kind}|${level.rule.value}` : sys);
   function bestDeck(sys, level, fits = (id) => allowedIn(level, id), cap = null) {
-    const pw = (id) => { if (!cap) return powerOf(id); const s = D.syncStats(id, cap); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
-    const six = owned(sys).filter(fits).sort((a, c) => pw(c) - pw(a)).slice(0, deckMax(level));
+    const statsOf = (id) => (cap && !D.LEGENDS[id] ? D.syncStats(id, cap) : D.beastStats(id, prestigeOf(id)));
+    const pw = (id) => { const s = statsOf(id); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
+    const pool = owned(sys).filter(fits).sort((a, c) => pw(c) - pw(a));
+    const max = deckMax(level);
+    const body = (id) => (((D.T(id) || {}).svgParams || {}).body) || id;
+    const picked = [];
+    const take = (id) => { if (picked.length < max && !picked.includes(id) && picked.filter((x) => body(x) === body(id)).length < 2) picked.push(id); };
+    if (max >= 6) {
+      const top = pool.slice(0, 14);
+      const tough = (id) => { const s = statsOf(id); return s.hp * Math.sqrt(s.atk); };
+      for (const id of [...top].sort((a, c) => tough(c) - tough(a))) { if (picked.length >= 2) break; take(id); }
+      for (const id of top.filter((x) => statsOf(x).rng >= 3)) { if (picked.length >= 4) break; take(id); }
+    }
+    for (const id of pool) take(id);
+    for (const id of pool) if (picked.length < max && !picked.includes(id)) picked.push(id);
+    const six = picked;
     // Evolved beasts first, into the ability slots.
     return [...six.filter(evolvedOwned), ...six.filter((id) => !evolvedOwned(id))];
   }
@@ -809,6 +823,8 @@ const BATTLE = (() => {
     if (!run) return;
     const t = run.screen.querySelector('#bt-tip');
     t.textContent = text;
+    t.classList.add('low');
+    t.style.bottom = `${Math.round(run.bottom + 10)}px`;
     run.toastUntil = performance.now() + 1700;
     run.tipUntil = 0;
   }
@@ -1478,9 +1494,16 @@ const BATTLE = (() => {
     // title bar covered theirs).
     ctx.textAlign = 'right';
     const lx = x - R - fs * 0.4, ly = cy + fs * 0.35;
-    ctx.strokeText(label, lx, ly);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, lx, ly);
+    // Drawn after the hearts (pileLabel), so a crowd at the pile does not hide it.
+    (run.pileLabels || (run.pileLabels = [])).push({ label, lx, ly, fs });
+  }
+  function pileLabels(ctx) {
+    for (const p of run.pileLabels || []) {
+      ctx.font = `800 ${p.fs}px Fredoka, sans-serif`; ctx.textAlign = 'right';
+      ctx.lineWidth = Math.max(3, p.fs * 0.22); ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      ctx.strokeText(p.label, p.lx, p.ly);
+      ctx.fillStyle = '#ffffff'; ctx.fillText(p.label, p.lx, p.ly);
+    }
   }
 
   function draw(t) {
@@ -1496,6 +1519,7 @@ const BATTLE = (() => {
     if (run.markPulse > 0 || run.drag) { ctx.fillStyle = `rgba(120,210,255,${0.14 * Math.max(run.markPulse, run.drag ? 1 : 0)})`; ctx.fillRect(sx(0), sy(SAFE_Y), W * z, (H - SAFE_Y) * z); }
     pile(ctx, 'foe', battle.piles.foe, battle.pileMax.foe, t);
     pile(ctx, 'you', battle.piles.you, battle.pileMax.you, t);
+    run.pileLabels = [];
     // The marker: where the next beast comes out.
     const mx = sx(run.marker * W), my = sy(run.markY == null ? BE.PILES.you.y - 30 : run.markY);
     const mr = Math.max(14, 40 * z);
@@ -1519,6 +1543,7 @@ const BATTLE = (() => {
       heart(ctx, sx(u.x), hy, size2, u.hp / u.maxHp, u.side === 'you', u.elite, u.champ);
       if (u.champ) crown(ctx, sx(u.x), hy - size2 * 0.62, size2 * 0.62);
     }
+    pileLabels(ctx);
     drawFx(ctx, z);
     // A lane chosen with your zone off the screen: a line down the lane for a moment, and an arrow
     // at the bottom of the view showing where your beasts will come out.
@@ -2063,6 +2088,7 @@ const BATTLE = (() => {
     const next = level.n < w.levels ? level.n + 1 : null;
     const m = el(`<div class="bt-modal"><div class="bt-panel ${won ? 'won' : 'lost'}">
       <h2>${won ? 'Victory!' : r.retreated ? 'Retreated' : 'Defeat'}</h2>
+      ${first && level.n === w.levels && (level.world === 3 || level.world === 6) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : 'You have beaten every world of the Low Gravity solar system!'}</div>` : ''}
       <div class="bt-result-star ${starNow ? 'on' : ''}">★</div>
       <div class="bt-dim">${won ? `Won in ${fmt(time)}` : battle.piles.you <= 0 ? 'They took your coin pile.' : 'You retreated.'} · star under ${fmt(level.starTime)}${starNow ? (newStar ? ': earned!' : '') : ''}</div>
       ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}, ${D.LEGENDS[id].title}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}</span></div></div>`).join('')}

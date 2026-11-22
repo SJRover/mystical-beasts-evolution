@@ -12,10 +12,12 @@ const SIZES = {
   duo_inner: { dir: 'iPhone Duo inner 2007x2853', width: 669, height: 951, scale: 3 },
   duo_outer: { dir: 'iPhone Duo outer 1398x2034', width: 466, height: 678, scale: 3 },
 };
-const SCENES = ['field', 'merge', 'premium', 'biomes', 'zoom', 'spin', 'beastopedia'];
-const pick = process.argv.slice(2);
-const sizes = pick.length ? pick : Object.keys(SIZES);
-const root = new URL('../App Store 1.3/', import.meta.url);
+// `--battle`: the 1.4 battle mode set, iPhone and iPad, into "App Store 1.4/".
+const BATTLE_SET = process.argv.includes('--battle');
+const SCENES = BATTLE_SET ? ['battle', 'specials', 'boss', 'worlds', 'legends'] : ['field', 'merge', 'premium', 'biomes', 'zoom', 'spin', 'beastopedia'];
+const pick = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const sizes = pick.length ? pick : BATTLE_SET ? ['iphone', 'ipad'] : Object.keys(SIZES);
+const root = new URL(BATTLE_SET ? '../App Store 1.4/' : '../App Store 1.3/', import.meta.url);
 
 for (const key of sizes) {
   const S = SIZES[key];

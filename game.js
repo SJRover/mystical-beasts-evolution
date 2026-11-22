@@ -2812,6 +2812,8 @@ function checkDiscovery(beastId) {
 function triggerDiscoveryModal(beastId) {
   const template = BEAST_TEMPLATES[beastId];
   if (!template) return;
+  // 1.4: a discovery made while a battle is on (the meadow keeps going) waits until it is over.
+  if (document.body.classList.contains('bt-in-battle') || document.getElementById('battle-screen')) { setTimeout(() => triggerDiscoveryModal(beastId), 1500); return; }
 
   const rarityLabel = document.getElementById('discovery-beast-rarity');
   rarityLabel.innerText = RARITIES[template.rarity].name;

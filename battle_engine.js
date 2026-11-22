@@ -128,7 +128,7 @@ const BattleEngine = (() => {
       const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed && !(o.cloakUntil > this.time));
       const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
       const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
-      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480 }[c.ability];
+      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480, dash: 520 }[c.ability];
       if (reach && !near(foes, reach).length) { this.events.push({ type: 'special-miss', unit: u }); return false; }
       c.abilityUsed = true;
       const nearest = (list, R, k) => near(list, R).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y)).slice(0, k);

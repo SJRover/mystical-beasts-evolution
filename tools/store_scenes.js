@@ -74,6 +74,82 @@ window.SCENES = (() => {
 
   const S = {};
 
+  const tap = (el) => { const r = el.getBoundingClientRect(); const o = { bubbles: true, pointerId: 7, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, isPrimary: true }; el.dispatchEvent(new PointerEvent('pointerdown', o)); el.dispatchEvent(new PointerEvent('pointerup', o)); };
+  /** A battle on a level (no rule), its earlier levels won, with a six whose first three are evolved. */
+  async function battle(world, n, deck, evolved = 3) {
+    await base({ level: 3, essence: 6.4e12, all: true });
+    const B = BATTLE.B();
+    for (let k = 1; k < n; k++) B.best[`${world}-${k}`] = 60;
+    B.howSeen = true; B.tipSeen = true;
+    for (const id of deck) { if (BATTLE_DATA.LEGENDS[id]) B.legends[id] = true; else if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
+    state.unlockedEvolved = deck.slice(0, evolved).filter((id) => !BATTLE_DATA.LEGENDS[id]);
+    B.decks = {}; B.decks[BATTLE_DATA.WORLDS[world - 1].system] = deck.slice();
+    BATTLE.closeSheets();
+    document.getElementById('sidebar-panel').classList.remove('active');
+    BATTLE.openWorld(BATTLE_DATA.WORLDS[world - 1]); await sleep(300);
+    BATTLE.openLevel(BATTLE_DATA.WORLDS[world - 1], n); await sleep(600);
+    [...document.querySelectorAll('.bt-sheet')].pop().querySelector('.bt-go').click();
+    await sleep(4300);
+  }
+  /** Play ready cards across the lanes for a while (real time). */
+  async function playFor(ms, every = 320, until = null) {
+    const end = Date.now() + ms;
+    let k = 0;
+    while (Date.now() < end) {
+      const run = BATTLE.run;
+      if (!run || run.battle.result || (until && until(run.battle))) break;
+      const cards = [...document.querySelectorAll('.bt-cardbtn.ready')];
+      if (cards.length) { run.marker = [0.3, 0.7, 0.5, 0.2, 0.8][k++ % 5]; tap(cards[0]); }
+      await sleep(every);
+    }
+  }
+  const leave = () => { if (BATTLE.run) { BATTLE.run.battle.result = 'lost'; } document.querySelectorAll('#battle-screen, .bt-modal').forEach((e) => e.remove()); document.body.classList.remove('bt-in-battle'); };
+
+  S.battle = async () => {
+    await battle(1, 8, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi']);
+    await playFor(9000);
+    caption('Battle mode\nis here!', 17);
+    S._release = leave;
+  };
+  S.specials = async () => {
+    await battle(1, 13, ['leviathan', 'eclipse', 'aqualion', 'siren', 'fold_phoenix', 'origami_dragon']);
+    await playFor(9000, 300);
+    const b = BATTLE.run.battle;
+    for (let i = 0; i < 3; i++) if (b.canSpecial(i)) { b.special(i); break; }
+    await sleep(350);
+    caption('Evolved beasts\nhave specials', 17);
+    S._release = leave;
+  };
+  S.boss = async () => {
+    await battle(1, 10, ['ragnarok', 'aurelion', 'voidwalker', 'infinity', 'paper_kirin', 'thousand_cranes']);
+    await playFor(60000, 450, (b) => b.units.some((u) => u.boss && u.y > 520));
+    await playFor(2500, 450);
+    caption('Beat the bosses', 17);
+    S._release = leave;
+  };
+  S.worlds = async () => {
+    await base({ level: 3, essence: 6.4e12, all: true });
+    for (let k = 1; k <= 40; k++) BATTLE.B().best['1-' + k] = 60;
+    for (let k = 1; k <= 26; k++) BATTLE.B().best['2-' + k] = 60;
+    for (let k = 1; k <= 30; k++) if (k % 3) BATTLE.B().stars['1-' + k] = true;
+    document.getElementById('sidebar-panel').classList.add('active');
+    switchTab('sanctuary');
+    BATTLE.renderTab();
+    await sleep(900);
+    caption('Six worlds\nto conquer', 79);
+  };
+  S.legends = async () => {
+    await base({ level: 3, essence: 6.4e12, all: true });
+    for (const l of BATTLE_DATA.LEGEND_LIST.slice(0, 11)) BATTLE.B().legends[l.id] = true;
+    document.getElementById('sidebar-panel').classList.add('active');
+    switchTab('sanctuary');
+    BATTLE.renderTab();
+    BATTLE.openLegends();
+    await sleep(1200);
+    caption('Win Folded\nLegends', 79);
+    S._release = () => BATTLE.closeSheets();
+  };
+
   S.field = async () => {
     await base({ level: 0, essence: 1.24e6 });
     scatter([['sparky'], ['ember'], ['dewdrop'], ['cinder'], ['zephyr'], ['pyreling', 1], ['aqualet'], ['terrapin'], ['ignis'], ['torrent'], ['sylph'], ['aven'], ['magmadon'], ['nebulon']]);
@@ -186,6 +262,6 @@ window.SCENES = (() => {
     await S[name]();
     return document.querySelectorAll('.beast-container').length;
   }
-  return { run, caption, names: ['field', 'merge', 'premium', 'spin', 'biomes', 'zoom', 'beastopedia'] };
+  return { run, caption, base, scatter, coins, battle, names: ['field', 'merge', 'premium', 'spin', 'biomes', 'zoom', 'beastopedia', 'battle', 'specials', 'boss', 'worlds', 'legends'] };
 })();
 'ok';

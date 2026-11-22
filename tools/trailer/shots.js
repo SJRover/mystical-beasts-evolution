@@ -89,13 +89,16 @@ window.TRAILER = (() => {
 
   // 5. The Battle tab: its painted worlds.
   S.worlds = async () => {
+    for (let k = 1; k <= 40; k++) BATTLE.B().best['1-' + k] = 60;
+    for (let k = 1; k <= 26; k++) BATTLE.B().best['2-' + k] = 60;
+    for (let k = 1; k <= 30; k++) if (k % 3) BATTLE.B().stars['1-' + k] = true;
     document.getElementById('tab-sanctuary').click();
     await wait(300);
     BATTLE.renderTab();
     await wait(800);
     const box = document.getElementById('content-sanctuary');
     const scroller = [box, ...box.querySelectorAll('*')].find((e) => e.scrollHeight > e.clientHeight + 40 && getComputedStyle(e).overflowY !== 'visible') || box.closest('.sidebar-content') || document.scrollingElement;
-    act = (f) => { if (f === 0) caption('Battle!', 79); scroller.scrollTop = f * 4; };
+    act = (f) => { if (f === 0) caption('Battle mode\nis here!', 79); scroller.scrollTop = f * 4; };
   };
 
   /** Start a battle on a level with a deck, everything on the field already won. */
@@ -105,7 +108,9 @@ window.TRAILER = (() => {
     for (let k = 1; k < n; k++) BATTLE.B().best[`${world}-${k}`] = 60;
     BATTLE.B().howSeen = true;
     BATTLE.B().tipSeen = true;
-    for (const id of deck) if (!state.unlockedBeasts.includes(id) && !BATTLE_DATA.LEGENDS[id]) state.unlockedBeasts.push(id);
+    for (const id of deck) { if (BATTLE_DATA.LEGENDS[id]) BATTLE.B().legends[id] = true; else if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
+    state.unlockedEvolved = deck.slice(0, 3).filter((id) => !BATTLE_DATA.LEGENDS[id]);
+    BATTLE.closeSheets();
     BATTLE.openWorld(BATTLE_DATA.WORLDS[world - 1]);
     await wait(300);
     BATTLE.openLevel(BATTLE_DATA.WORLDS[world - 1], n);
@@ -115,8 +120,14 @@ window.TRAILER = (() => {
     document.querySelectorAll('.bt-sheet').forEach((s) => s.remove());
     BATTLE.openLevel(BATTLE_DATA.WORLDS[world - 1], n);
     await wait(500);
-    document.querySelector('.bt-sheet:last-child .bt-go').click();
+    [...document.querySelectorAll('.bt-sheet')].pop().querySelector('.bt-go').click();
     await wait(400);
+  }
+  /** One of the special slots' beasts on the field does its special. */
+  function special() {
+    const b = BATTLE.run && BATTLE.run.battle;
+    if (!b) return;
+    for (let i = 0; i < 3; i++) if (b.canSpecial(i)) { b.special(i); return; }
   }
   /** Play the ready cards across the lanes every `every` frames. */
   function playCards(f, every = 9) {
@@ -137,14 +148,33 @@ window.TRAILER = (() => {
 
   // 7. A horde.
   S.horde = async () => {
-    await battle(1, 13, ['phoenix', 'leviathan', 'eclipse', 'siren', 'fold_phoenix', 'origami_dragon']);
-    act = (f) => playCards(f, 6);
+    await battle(1, 13, ['leviathan', 'eclipse', 'aqualion', 'siren', 'fold_phoenix', 'origami_dragon']);
+    act = (f) => { playCards(f, 6); if (f === 0) caption('Use specials', 17); if (f === 30 || f === 75) special(); if (f === 60) caption(''); };
   };
 
   // 8. A boss: it arrives, then the win.
   S.boss = async () => {
     await battle(1, 10, ['ragnarok', 'aurelion', 'voidwalker', 'infinity', 'paper_kirin', 'thousand_cranes']);
-    act = (f) => playCards(f, 6);
+    act = (f) => { playCards(f, 6); if (f === 0) caption('Beat the bosses', 17); if (f === 50) caption(''); if (f === 70) special(); };
+  };
+
+  // 9. The end card over the battle: the icon, the name, and the news.
+  S.end = async () => {
+    caption('');
+    const d = document.createElement('div');
+    d.id = 'trailer-end';
+    const small = Math.min(window.innerWidth, window.innerHeight);
+    d.innerHTML = `<img src="/assets/icon.png" alt=""><b>Merge Beasts</b><span>Battle mode is here!</span>`;
+    d.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:' + Math.round(small * 0.03) + 'px;background:radial-gradient(circle at 50% 45%, rgba(40,30,90,0.82), rgba(8,6,24,0.94));animation:trEnd 0.5s ease-out both;';
+    const st = document.createElement('style');
+    st.textContent = `@keyframes trEnd { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+      #trailer-end img { width: ${Math.round(small * 0.38)}px; height: ${Math.round(small * 0.38)}px; border-radius: 22%; box-shadow: 0 ${Math.round(small * 0.02)}px ${Math.round(small * 0.08)}px rgba(0,0,0,0.6); }
+      #trailer-end b { font-family: var(--font-game); font-size: ${Math.round(small * 0.12)}px; color: #fff; -webkit-text-stroke: ${Math.round(small * 0.012)}px #1a1440; paint-order: stroke fill; }
+      #trailer-end span { font-family: var(--font-game); font-size: ${Math.round(small * 0.075)}px; color: #ffd43b; -webkit-text-stroke: ${Math.round(small * 0.009)}px #3a2000; paint-order: stroke fill; }`;
+    document.head.appendChild(st);
+    document.body.appendChild(d);
+    await wait(300);
+    act = () => {};
   };
 
   async function run(name) {

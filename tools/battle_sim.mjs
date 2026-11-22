@@ -154,7 +154,7 @@ if (isMain && calibrate) {
       points[lv.id] = +p.toFixed(2);
       // Stars are hard to earn (Sam, 18 Nov: the times were too long): under the bot's fastest win,
       // never more than two and a half minutes.
-      stars[lv.id] = Math.min(150, Math.max(25, Math.ceil(((times[0] || 120) * 0.9) / 5) * 5));
+      stars[lv.id] = Math.min(150, Math.max(40, Math.ceil(((times[0] || 120) * 0.9) / 5) * 5));
       console.log(`${lv.id.padEnd(5)} ${lv.pattern.padEnd(9)}${(lv.rule ? lv.rule.kind : '').padEnd(7)} most ${most[i].toFixed(1).padStart(6)} smooth ${med[i].toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
     }
   }

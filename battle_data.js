@@ -813,12 +813,12 @@ const BATTLE_DATA = (() => {
     } else if (pattern === 'champion') {
       // One huge, strong enemy (two side by side from level 15), and nothing else for a long while:
       // a champion has three times the stats, stands a size and a half up and hits two at once.
-      const plain = pool.filter((e) => e.role !== 'swarm');
+      const plain = pool.filter((e) => e.role !== 'swarm' && !['burrow', 'cloak'].includes(traitOf(e.id)));
       const big = theme && plain.some(themed) ? plain.filter(themed) : plain;
       const one = () => (big.length ? big[Math.floor(r() * big.length)] : pick());
       const two = n >= 15;
       // The same one or two kinds all level, and they are its only defenders too.
-      const a = fresh && fresh.role !== 'swarm' ? fresh : one();
+      const a = fresh && fresh.role !== 'swarm' && !['burrow', 'cloak'].includes(traitOf(fresh.id)) ? fresh : one();
       let b = one();
       for (let i = 0; i < 4 && b === a && big.length > 1; i++) b = one();
       const champs = (t, text) => {

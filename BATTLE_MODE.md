@@ -355,7 +355,7 @@ manaFilled).
 
 Sam (19 Nov): the game froze for a while opening a level, swapping a beast, mid battle, on Next
 level and leaving battle mode. Profiled in Edge at 375 by 812 with the full Prime collection
-(scratchpad perf/probe.mjs, a CPU profile and long tasks per step):
+(a throwaway CDP script: a CPU profile and long tasks per step):
 
 - Every beast picture is an SVG drawn onto a canvas with a blurred glow and encoded as a PNG, on
   the main thread. A level screen asked for all of them at once (72 Prime beasts: 0.6 s of
@@ -523,28 +523,29 @@ three tiers weaker wins 16 of 40 (21 before mana, 33 before the fourth round). S
 
 After the seventh round (dearer mana, straight-line Speed and Range, enemy abilities and role
 floors, the opening group, side entries and portals, room to attack, the Best six reference),
-six ways of playing (scratchpad strategies.mjs: spam everything, cheapest first, save mana for a
+six ways of playing (tools/strategies.mjs: spam everything, cheapest first, save mana for a
 wave, defend then push, spam with specials used on crowds, sneak down the emptier lane), wins of
 40 with the expected six and with one three tiers weaker:
 
 | World | spam | cheap | save | defend | evolved | lane | three tiers weaker (best way) |
 |---|---|---|---|---|---|---|---|
-| 1 | 35 | 33 | 40 | 37 | 37 | 15 | 32 |
-| 2 | 34 | 37 | 39 | 40 | 38 | 9 | 39 |
-| 3 | 33 | 32 | 39 | 38 | 39 | 11 | 39 |
-| 4 | 36 | 34 | 39 | 38 | 36 | 11 | 32 |
-| 5 | 29 | 34 | 38 | 36 | 37 | 15 | 36 |
-| 6 | 36 | 32 | 38 | 37 | 38 | 9 | 38 |
+| 1 | 35 | 32 | 40 | 37 | 37 | 14 | 32 |
+| 2 | 35 | 38 | 39 | 40 | 37 | 9 | 39 |
+| 3 | 34 | 32 | 39 | 38 | 39 | 11 | 39 |
+| 4 | 35 | 33 | 39 | 38 | 37 | 12 | 32 |
+| 5 | 34 | 34 | 37 | 36 | 35 | 15 | 36 |
+| 6 | 34 | 35 | 37 | 37 | 37 | 10 | 38 |
 
 (After reviewer 4's fixes: hurried enemies never champions, every other one from a side; home
 guard; specials kept when nothing is in reach; more World 1 abilities. Before them the same
-sweep had eased nine levels; this time one, 4-31.)
+sweep had eased nine levels; this time one, 4-31. After reviewer 5's fixes, 4-21, 5-33 and 6-17 were
+eased, and the Quick cards levels from World 2 on as described there.)
 
 Saving mana for a wave and defending then pushing win the most; spamming does well but not
 best; slipping down an empty lane mostly fails. In Worlds 2, 3, 5 and 6 a six three tiers weaker
 does about as well, as the expected six there is already Tier 20 and prestige counts for more.
 Levels fewer than two ways won (1-6, 1-35, 4-30, 5-33), or only in over two and a half minutes
-(1-2, 1-22, 2-36, 4-14, 5-9), were eased 8% at a time (scratchpad ease2.mjs, ease3.mjs) and their
+(1-2, 1-22, 2-36, 4-14, 5-9), were eased 8% at a time (tools/ease.mjs) and their
 stars set at nine tenths of the fastest win. The fastest wins average 58 to 69 seconds a world.
 
 Stalemates: a deck that is too weak often neither wins nor loses (the bot holds its half and never
@@ -702,6 +703,38 @@ one crate. All five perks were won on purpose and announced. Fixed from it:
 Not changed: stars stay tight (missed by 1 to 9 s; Sam wants them hard); spamming still wins
 some levels, as it does for the bots; cheap Tier 1 to 4 cards still fill the field in early
 levels, where the enemies are weak.
+
+## Reviewer playtest 5 (19 to 22 Nov, Worlds 2 to 6, 375 by 812)
+
+Three players: Prime at prestige 2 through late World 2 and World 3, Low Gravity up to Tier 15
+through late World 4 and World 5, and every Low Gravity beast at prestige 2 through the end of
+World 6; 55 battles, no page errors, nothing over 0.3 s even at four times CPU slowdown. Champions
+never came as a stream; specials with nothing in reach stayed ready; Sync down, drag to swap and
+home guard worked; all nine enemy abilities were seen and read clearly; Low Gravity's green stars
+and music were right; eight levels were lost one way and won another. Fixed from it:
+
+- **Quick cards levels were walls for players behind on prestige** (3-34 lost three ways at
+  prestige 2, between levels they won): with tiers capped, prestige is all a six has. Every Quick
+  cards level from World 2 on is now eased until a six at half the expected prestige wins two
+  ways (PMUL=0.5 in tools/strategies.mjs and tools/ease.mjs).
+- **6-35 was a spike** (points 11.2 against 9.4 around it): brought to its neighbours and checked
+  the same way.
+- **Best six chose glass cannons late on**, and three near-identical jellyfish in Low Gravity. It
+  now picks a balanced six: the two toughest of the strongest fourteen (Health × √Attack) to hold
+  the front, two shooters (Range 3 or more) behind, then the strongest, with no more than two of
+  one body. (Calibration still uses the plain strongest six, so levels are if anything a little
+  easier with the button.)
+- **Champions are never burrowers or cloakers** (the field looked empty after "Two champions!").
+- **Stars are at least 40 seconds** (0:30 and 0:35 targets, when emptying a pile alone takes 15).
+- The special's mark on a slot sits bottom right, clear of the prestige badge; the coin piles'
+  seconds are drawn over the hearts; the enemy list on a level is one line that scrolls sideways
+  (late levels listed 26 and pushed the six below the button); warnings in battle show just
+  above the cards, by your pile; Dash checks its reach; beating 3-40 or 6-40 the first time says
+  you have beaten every world of that solar system.
+
+Not changed: Folded Legends can join after a defeat (their challenges count kills, which a lost
+battle still makes); portals come more often once a long battle's schedule repeats; frame rate
+dips to about 48 fps at four times slowdown in the busiest World 6 battles.
 
 ## Bugs found
 
