@@ -41,10 +41,12 @@ window.TRAILER = (() => {
     BATTLE.run.paused = false;
     BATTLE.run.retreated = true;
     BATTLE.run.battle.finish('lost');
-    for (let i = 0; i < 40 && !document.querySelector('.bt-modal [data-a=map]'); i++) await wait(100);
+    // The result screen comes on the game's clock: move it on ourselves rather than wait for it.
+    for (let i = 0; i < 80 && !document.querySelector('.bt-modal [data-a=map]'); i++) { W().step(100); await wait(20); }
     const b = document.querySelector('.bt-modal [data-a=map]');
     if (b) b.click();
-    await wait(400);
+    W().step(100);
+    await wait(200);
     document.querySelectorAll('.bt-modal').forEach((m) => m.remove());
   }
   if (window.BATTLE && BATTLE.checkMergeAch) BATTLE.checkMergeAch = () => {};
@@ -93,7 +95,7 @@ window.TRAILER = (() => {
       drag(f);
       if (f === 40) caption('');
       // The discovery card for a moment, then the new beast on the field.
-      if (f === 88) document.querySelectorAll('#discovery-modal.active').forEach((m) => m.classList.remove('active'));
+      if (f === 74) document.querySelectorAll('#discovery-modal.active').forEach((m) => m.classList.remove('active'));
     };
   };
 
@@ -112,15 +114,22 @@ window.TRAILER = (() => {
     discoveries(false);
     clean();
     await SCENES.base({ level: 3, essence: 6.4e12, all: true });
+    // Every beast of both solar systems, the Relics and the Folded Legends.
+    for (const id of Object.keys(BEAST_TEMPLATES)) if (!/shadow_fiend|void_parasite/.test(id) && !state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id);
+    for (const l of BATTLE_DATA.LEGEND_LIST) BATTLE.B().legends[l.id] = true;
     document.getElementById('menu-toggle-btn').click();
     await wait(300);
     document.getElementById('tab-beastopedia').click();
     await wait(300);
     renderBeastopedia();
-    await wait(800);
-    const box = document.getElementById('content-beastopedia');
-    const scroller = [box, ...box.querySelectorAll('*')].find((e) => e.scrollHeight > e.clientHeight + 40 && getComputedStyle(e).overflowY !== 'visible') || box.closest('.sidebar-content') || document.scrollingElement;
-    act = (f) => { if (f === 0) caption('Discover them all', 79); scroller.scrollTop = f * 9; };
+    await wait(1200);
+    // The element that scrolls: up from a beast's card until one does.
+    let scroller = document.querySelector('.beastopedia-card');
+    while (scroller && !(scroller.scrollHeight > scroller.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(scroller).overflowY))) scroller = scroller.parentElement;
+    scroller = scroller || document.scrollingElement;
+    const span = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    // Down through every section, gently at the start and the end.
+    act = (f) => { if (f === 0) caption('Discover them all', 79); const k = Math.min(1, f / 92); scroller.scrollTop = span * (k * k * (3 - 2 * k)); };
   };
 
   // 5. The Battle tab: its painted worlds.
@@ -173,6 +182,14 @@ window.TRAILER = (() => {
   function follow(zoom = 1.1) {
     const run = BATTLE.run;
     if (!run) return;
+    if (zoom === 'fit' || zoom < 0.7) {
+      // Out wide: the whole field (or most of it), centred a little towards the fight.
+      const z = zoom === 'fit' ? run.fit : zoom;
+      run.cam.zoom += (z - run.cam.zoom) * 0.08;
+      run.cam.x += (500 - run.cam.x) * 0.08;
+      run.cam.y += ((zoom === 'fit' ? 1000 : 1150) - run.cam.y) * 0.08;
+      return;
+    }
     const live = run.battle.units.filter((u) => u.state !== 'dying' && !u.burrowed && Number.isFinite(u.x) && Number.isFinite(u.y));
     if (!live.length) return;
     const hot = live.filter((u) => u.state === 'fight' || u.state === 'capture' || u.boss);
@@ -233,17 +250,17 @@ window.TRAILER = (() => {
   // 6. World 1: the first clash.
   S.battle = async () => {
     await battle(1, 8, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi']);
-    fight('', 1.0, 1, 7);
+    fight('', 'fit', 0, 5);
   };
-  // 7. World 2, the Iron Kingdom: foes that leap, charge, heal and knock back.
+  // 7. World 2, the Iron Kingdom: its boss, the Minotaur Lord, who charges.
   S.kingdom = async () => {
-    await battle(2, 26, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 4);
-    fight('Tricky foes', 1.1, 1);
+    await battle(2, 20, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 3);
+    fight('Fight bosses', 1.1, 1);
   };
   // 8. World 4, the Moon Hollows (the Low Gravity system): cloakers, burrowers, chargers.
   S.moon = async () => {
     await battle(4, 28, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 0);
-    fight('Two solar systems', 1.1, 1);
+    fight('Two solar systems', 0.55, 1);
   };
   // 9. World 6, the Eclipse Court: summoners and healers, and the specials.
   S.eclipse = async () => {
@@ -253,7 +270,7 @@ window.TRAILER = (() => {
   // 10. World 3's boss, the Hive Empress.
   S.hive = async () => {
     await battle(3, 30, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 11);
-    fight('Beat the bosses', 1.15, 2, 5);
+    fight('', 1.15, 2, 5);
   };
   // 11. The last boss of all, the Eclipse Emperor.
   S.emperor = async () => {

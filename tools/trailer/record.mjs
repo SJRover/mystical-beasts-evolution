@@ -13,12 +13,12 @@ const FPS = 30;
 // 47.04 s where the full band comes in), so each cut lands on a downbeat.
 export const PLAN = [
   { name: 'meadow', frames: 65 },
-  { name: 'merge', frames: 131 },
-  { name: 'crate', frames: 65 },
-  { name: 'collection', frames: 66 },
+  { name: 'merge', frames: 98 },
+  { name: 'crate', frames: 66 },
+  { name: 'collection', frames: 98 },
   { name: 'worlds', frames: 66 },
   { name: 'battle', frames: 65, pre: 300 },
-  { name: 'kingdom', frames: 66, pre: 330 },
+  { name: 'kingdom', frames: 66, pre: 0, until: 'boss', after: 90 },
   { name: 'moon', frames: 65, pre: 330 },
   { name: 'eclipse', frames: 66, pre: 360 },
   { name: 'hive', frames: 65, pre: 0, until: 'boss', after: 100 },
@@ -48,7 +48,7 @@ for (const shot of PLAN) {
   const dir = path.join(here, 'frames', shot.name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
-  console.log(shot.name, await ev(`__TW.autoRun(); return await TRAILER.run('${shot.name}');`));
+  console.log(shot.name, await ev(`__TW.autoRun(); return await TRAILER.run('${shot.name}');`), await ev(`return JSON.stringify({ battle: BATTLE.run ? BATTLE.run.level.id + (BATTLE.run.battle.result ? ' ' + BATTLE.run.battle.result : '') : null, modal: !!document.querySelector('.bt-modal'), sheets: document.querySelectorAll('.bt-sheet').length });`));
   await ev(`__TW.manual(); return 1;`);
   // Unseen frames first (the countdown, the wait for a crowd), stepping the clock and the shot.
   let f0 = -(shot.pre || 0);
