@@ -1,5 +1,9 @@
 # Merge Beasts 1.4: Battle mode
 
+**Released:** merged into main for the 1.4 build on 22 Nov 2026, after reviewer playtests 4 and 5, the
+release checks (tools/native_check.mjs, tools/upgrade14_check.mjs on a clean profile) and the App Store
+trailer and screenshots ("App Store 1.4/").
+
 Sam's brief (17 Nov 2026), so the beasts you merge are not only a collection: a battle mode in
 the spirit of Battle Cats for the pace, the strategy and the variety of enemies, laid out like
 Clash Royale (your coin pile at the bottom, theirs at the top). Every enemy, world and picture
