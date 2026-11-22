@@ -2,24 +2,28 @@
 // `node record.mjs [shot ...]`. Each shot's frames go to frames/<shot>/0000.jpg ...; build.py
 // puts them together with the music. The page runs on tw.js's clock, so every frame is exact.
 import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const here = path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/, '$1');
+const here = path.dirname(fileURLToPath(import.meta.url));
 const { openTab } = await import(pathToFileURL('C:/Users/Samjo/OneDrive/Desktop/MineToAustralia/scripts/trailer/cdp.mjs').href);
 const FPS = 30;
 // The shots in order, with how many frames each is filmed for and how many it runs unseen first.
-// Cuts sit on the bars of the music (110 bpm, a bar 2.183 s; see build.py).
+// Cuts sit on the bars of the music (110 bpm, a bar 65.45 frames; build.py starts it on the bar at
+// 47.04 s where the full band comes in), so each cut lands on a downbeat.
 export const PLAN = [
-  { name: 'meadow', frames: 112 },
+  { name: 'meadow', frames: 65 },
   { name: 'merge', frames: 131 },
-  { name: 'crate', frames: 66 },
-  { name: 'collection', frames: 65 },
+  { name: 'crate', frames: 65 },
+  { name: 'collection', frames: 66 },
   { name: 'worlds', frames: 66 },
-  { name: 'battle', frames: 131, pre: 60 },
-  { name: 'horde', frames: 131, pre: 75 },
-  { name: 'boss', frames: 131, pre: 0, until: 'boss' },
-  { name: 'end', frames: 67 },
+  { name: 'battle', frames: 65, pre: 300 },
+  { name: 'kingdom', frames: 66, pre: 330 },
+  { name: 'moon', frames: 65, pre: 330 },
+  { name: 'eclipse', frames: 66, pre: 360 },
+  { name: 'hive', frames: 65, pre: 0, until: 'boss', after: 100 },
+  { name: 'emperor', frames: 98, pre: 0, until: 'boss', after: 100 },
+  { name: 'end', frames: 65 },
 ];
 const pick = process.argv.slice(2);
 const tw = readFileSync(path.join(here, 'tw.js'), 'utf8');
@@ -50,12 +54,17 @@ for (const shot of PLAN) {
   let f0 = -(shot.pre || 0);
   if (shot.until === 'boss') {
     // Run on until the boss is out, then film.
+    // The shot's own frames count from when filming starts (its caption shows then), so the
+    // waiting frames are numbered far below zero.
+    let w = -100000;
     for (let i = 0; i < 1500; i++) {
-      const out = await ev(`TRAILER.act(${f0}); __TW.step(1000 / ${FPS}); return !!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss)) ;`);
-      f0++;
+      const out = await ev(`TRAILER.act(${w}); __TW.step(1000 / ${FPS}); return !!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss)) ;`);
+      w++;
       if (out === true) break;
     }
-    f0 = Math.max(f0, 0);
+    // A moment more, so the boss is in the fight when filming starts.
+    for (let i = 0; i < (shot.after || 0); i++) { await ev(`TRAILER.act(${w}); __TW.step(1000 / ${FPS}); return 1;`); w++; }
+    f0 = 0;
   } else {
     for (; f0 < 0; f0++) await ev(`TRAILER.act(${f0}); __TW.step(1000 / ${FPS}); return 1;`);
   }

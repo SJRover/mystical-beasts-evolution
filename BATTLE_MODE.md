@@ -860,8 +860,20 @@ dips to about 48 fps at four times slowdown in the busiest World 6 battles.
 - [x] Merge achievements with Relics, auto-evolved or two-part.
 - [x] Upgrade taps, 100 incubations to evolve, sound after locking the phone, beasts under the
   bars, the Beastopedia's sway, one-finger panning.
-- [ ] The 30-second App Store trailer and new iPhone and iPad screenshots of battle mode (after
-  this round is played and tested, as Sam asked).
+- [x] The 30-second App Store trailer and new iPhone and iPad screenshots of battle mode (22 Nov,
+  after reviewers 4 and 5). In "App Store 1.4/" (not in git): `App Preview iPhone 886x1920.mp4`
+  (29.4 s, H.264 High@4.0, 30 fps, about 10.4 Mbps, AAC 256k stereo 48 kHz) and five screenshots
+  each for iPhone 1206x2622 and iPad 2064x2752 (battle, specials, the Eclipse Emperor, six
+  worlds, Folded Legends), captions in a band above the game so they cover nothing.
+  - Trailer: collect, merge, a premium crate, the Beastopedia, the six worlds ("Battle mode is
+    here!"), then World 1, the Iron Kingdom (foes that charge and heal), the Moon Hollows (Low
+    Gravity), the Eclipse Court with specials, the Hive Empress and the Eclipse Emperor, and an
+    end card. Music: Sam's PrimeSolarSystemCasualBattleMusicVariant3 from 47.04 s, the bar where
+    the full band comes in (it started at 35.1 s, which Sam found awkward); every cut on a bar.
+    The camera follows the thickest knot of fighting units (it had sat on a stray beast).
+  - Rebuild: `node tools/trailer/record.mjs [shot ...]` (frame-exact on tw.js's clock), then
+    `py tools/trailer/build.py`; screenshots `node tools/store_shots.mjs --battle`, then
+    `py tools/flatten.py "App Store 1.4"`.
 
 ### Sam's notes of 19 Nov (seventh round)
 

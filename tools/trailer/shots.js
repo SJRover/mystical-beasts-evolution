@@ -32,9 +32,35 @@ window.TRAILER = (() => {
 
   const S = {};
   let act = () => {};
+  window.checkMergeAchievements = () => {};
+  const realDiscovery = window.triggerDiscoveryModal;
+  const discoveries = (on) => { window.triggerDiscoveryModal = on ? realDiscovery : () => {}; };
+  if (typeof MERGE_ACH !== 'undefined' && window.BATTLE) { const B = BATTLE.B(); B.mach = B.mach || {}; for (const a of MERGE_ACH) B.mach[a.id] = B.mach[a.id] || 1; }
+  async function endBattle() {
+    if (!BATTLE.run) return;
+    BATTLE.run.paused = false;
+    BATTLE.run.retreated = true;
+    BATTLE.run.battle.finish('lost');
+    for (let i = 0; i < 40 && !document.querySelector('.bt-modal [data-a=map]'); i++) await wait(100);
+    const b = document.querySelector('.bt-modal [data-a=map]');
+    if (b) b.click();
+    await wait(400);
+    document.querySelectorAll('.bt-modal').forEach((m) => m.remove());
+  }
+  if (window.BATTLE && BATTLE.checkMergeAch) BATTLE.checkMergeAch = () => {};
+  const quiet = document.createElement('style');
+  quiet.textContent = '#toast-container, .toast-alert { display: none !important; }';
+  document.head.appendChild(quiet);
+  /** Nothing left over from the shot before: cards, crate scenes, toasts. */
+  function clean() {
+    document.querySelectorAll('.modal-overlay.active').forEach((m) => m.classList.remove('active'));
+    document.querySelectorAll('.fx-overlay, .toast-alert').forEach((e) => e.remove());
+  }
 
   // 1. A full meadow: beasts wandering, essence dropping, a crate landing.
   S.meadow = async () => {
+    discoveries(false);
+    clean();
     await SCENES.base({ level: 3, essence: 6.4e12, all: true });
     SCENES.scatter([['phoenix'], ['leviathan'], ['eclipse', 1], ['siren'], ['astral'], ['aeris'], ['chronos'], ['blazehorn'], ['aqualion'], ['nebulon'], ['aven'], ['glaciator']], { top: 26, bottom: 58 });
     SCENES.coins(5);
@@ -47,6 +73,11 @@ window.TRAILER = (() => {
 
   // 2. Two merges: a pair dragged together, the flash, the new beast and its discovery card.
   S.merge = async () => {
+    discoveries(true);
+    const realCrate = window.spawnCrateOnField;
+    window.spawnCrateOnField = () => {};
+    setTimeout(() => { window.spawnCrateOnField = realCrate; }, 20000);
+    clean();
     await SCENES.base({ level: 2, essence: 3.8e10 });
     const others = [['geon', 12, 33], ['gargoyle', 86, 31], ['frostbite', 87, 58], ['hydradon', 40, 28], ['aqualion', 14, 60]].map(([id, x, y]) => PT.spawnInView(id, false, false, x, y));
     const a = PT.spawnInView('chronos', false, false, 24, 47);
@@ -61,11 +92,14 @@ window.TRAILER = (() => {
       if (f === 2) caption('Merge them');
       drag(f);
       if (f === 40) caption('');
+      // The discovery card for a moment, then the new beast on the field.
+      if (f === 88) document.querySelectorAll('#discovery-modal.active').forEach((m) => m.classList.remove('active'));
     };
   };
 
   // 3. A premium crate opening on a Legendary.
   S.crate = async () => {
+    discoveries(false);
     document.querySelectorAll('#discovery-modal.active').forEach((m) => m.classList.remove('active'));
     await SCENES.base({ level: 1, essence: 2.1e9 });
     SCENES.scatter([['ignis'], ['torrent'], ['magmadon'], ['aven'], ['blazehorn'], ['aqualion']], { top: 30, bottom: 57 });
@@ -75,6 +109,8 @@ window.TRAILER = (() => {
 
   // 4. The Beastopedia, scrolling.
   S.collection = async () => {
+    discoveries(false);
+    clean();
     await SCENES.base({ level: 3, essence: 6.4e12, all: true });
     document.getElementById('menu-toggle-btn').click();
     await wait(300);
@@ -89,20 +125,30 @@ window.TRAILER = (() => {
 
   // 5. The Battle tab: its painted worlds.
   S.worlds = async () => {
-    for (let k = 1; k <= 40; k++) BATTLE.B().best['1-' + k] = 60;
-    for (let k = 1; k <= 26; k++) BATTLE.B().best['2-' + k] = 60;
-    for (let k = 1; k <= 30; k++) if (k % 3) BATTLE.B().stars['1-' + k] = true;
+    discoveries(false);
+    clean();
+    // Every world open, as a player far along sees it.
+    state.prestigeLevel = Math.max(state.prestigeLevel, 9);
+    for (const [w, won, stars] of [[1, 40, 31], [2, 40, 24], [3, 40, 17], [4, 40, 22], [5, 40, 9], [6, 18, 3]]) {
+      for (let k = 1; k <= won; k++) BATTLE.B().best[`${w}-${k}`] = 60;
+      for (let k = 1; k <= stars; k++) BATTLE.B().stars[`${w}-${Math.min(won, k * Math.max(1, Math.floor(won / stars)))}`] = true;
+    }
+    document.getElementById('sidebar-panel').classList.add('active');
     document.getElementById('tab-sanctuary').click();
     await wait(300);
     BATTLE.renderTab();
     await wait(800);
     const box = document.getElementById('content-sanctuary');
     const scroller = [box, ...box.querySelectorAll('*')].find((e) => e.scrollHeight > e.clientHeight + 40 && getComputedStyle(e).overflowY !== 'visible') || box.closest('.sidebar-content') || document.scrollingElement;
-    act = (f) => { if (f === 0) caption('Battle mode\nis here!', 79); scroller.scrollTop = f * 4; };
+    act = (f) => { if (f === 0) caption('Battle mode\nis here!', 9); scroller.scrollTop = f * 4; };
   };
 
   /** Start a battle on a level with a deck, everything on the field already won. */
-  async function battle(world, n, deck) {
+  async function battle(world, n, deck, prestige = 0) {
+    await endBattle();
+    for (const id of deck) if (!BATTLE_DATA.LEGENDS[id]) BATTLE.B().bestPrestige[id] = prestige;
+    window.triggerDiscoveryModal = () => {};
+    clean();
     document.getElementById('sidebar-panel').classList.remove('active');
     caption('');
     for (let k = 1; k < n; k++) BATTLE.B().best[`${world}-${k}`] = 60;
@@ -123,6 +169,38 @@ window.TRAILER = (() => {
     [...document.querySelectorAll('.bt-sheet')].pop().querySelector('.bt-go').click();
     await wait(400);
   }
+  /** Follow the fight: the thickest knot of units fighting (a boss counts four), smoothly. */
+  function follow(zoom = 1.1) {
+    const run = BATTLE.run;
+    if (!run) return;
+    const live = run.battle.units.filter((u) => u.state !== 'dying' && !u.burrowed && Number.isFinite(u.x) && Number.isFinite(u.y));
+    if (!live.length) return;
+    const hot = live.filter((u) => u.state === 'fight' || u.state === 'capture' || u.boss);
+    const pool = hot.length >= 2 ? hot : live;
+    let tx = 0, ty = 0, tw = 0;
+    for (const u of pool) {
+      let n = 0;
+      for (const o of pool) if (Math.hypot(o.x - u.x, o.y - u.y) < 280) n++;
+      const w = n * n * (u.boss ? 4 : 1);
+      tx += u.x * w; ty += u.y * w; tw += w;
+    }
+    tx = Math.max(320, Math.min(680, tx / tw));
+    ty = Math.max(450, Math.min(1650, ty / tw));
+    run.cam.zoom += (zoom - run.cam.zoom) * 0.05;
+    run.cam.x += (tx - run.cam.x) * 0.05;
+    run.cam.y += (ty - run.cam.y) * 0.05;
+  }
+  /** A special from a special-slot beast with an enemy close to it (none wasted on nothing). */
+  let specialsLeft = 0;
+  function specialNear(R = 180) {
+    const b = BATTLE.run && BATTLE.run.battle;
+    if (!b || specialsLeft <= 0) return;
+    for (let i = 0; i < 3; i++) {
+      if (!b.canSpecial(i)) continue;
+      const u = b.onField(i).find((m) => b.units.some((o) => o.side === 'foe' && o.state !== 'dying' && !o.burrowed && Math.hypot(o.x - m.x, o.y - m.y) < R));
+      if (u && b.special(i, u)) { specialsLeft--; return; }
+    }
+  }
   /** One of the special slots' beasts on the field does its special. */
   function special() {
     const b = BATTLE.run && BATTLE.run.battle;
@@ -136,31 +214,58 @@ window.TRAILER = (() => {
     if (!run || run.battle.result) return;
     const cards = [...document.querySelectorAll('.bt-cardbtn.ready')];
     if (!cards.length) return;
-    run.marker = [0.3, 0.7, 0.5, 0.2, 0.8][Math.floor(f / every) % 5];
+    run.marker = [0.3, 0.7, 0.5, 0.2, 0.8][((Math.floor(f / every) % 5) + 5) % 5];
     tap(cards[0]);
   }
 
-  // 6. A battle: the countdown ends, beasts pour out and meet the enemy.
+  /** A battle shot: play cards, follow the fight, specials when enemies are close, a caption a moment. */
+  function fight(text, zoom, specials, every = 6) {
+    specialsLeft = specials;
+    act = (f) => {
+      playCards(f, every);
+      follow(zoom);
+      if (f >= 6 && f % 3 === 0) specialNear(200);
+      if (f === 0) caption(text || '', 15);
+      if (f === 45) caption('');
+    };
+  }
+
+  // 6. World 1: the first clash.
   S.battle = async () => {
     await battle(1, 8, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi']);
-    act = (f) => { if (f > 12) playCards(f, 7); };
+    fight('', 1.0, 1, 7);
   };
-
-  // 7. A horde.
-  S.horde = async () => {
-    await battle(1, 13, ['leviathan', 'eclipse', 'aqualion', 'siren', 'fold_phoenix', 'origami_dragon']);
-    act = (f) => { playCards(f, 6); if (f === 0) caption('Use specials', 17); if (f === 30 || f === 75) special(); if (f === 60) caption(''); };
+  // 7. World 2, the Iron Kingdom: foes that leap, charge, heal and knock back.
+  S.kingdom = async () => {
+    await battle(2, 26, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 4);
+    fight('Tricky foes', 1.1, 1);
   };
-
-  // 8. A boss: it arrives, then the win.
-  S.boss = async () => {
-    await battle(1, 10, ['ragnarok', 'aurelion', 'voidwalker', 'infinity', 'paper_kirin', 'thousand_cranes']);
-    act = (f) => { playCards(f, 6); if (f === 0) caption('Beat the bosses', 17); if (f === 50) caption(''); if (f === 70) special(); };
+  // 8. World 4, the Moon Hollows (the Low Gravity system): cloakers, burrowers, chargers.
+  S.moon = async () => {
+    await battle(4, 28, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 0);
+    fight('Two solar systems', 1.1, 1);
+  };
+  // 9. World 6, the Eclipse Court: summoners and healers, and the specials.
+  S.eclipse = async () => {
+    await battle(6, 25, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 10);
+    fight('Use specials', 1.15, 3, 5);
+  };
+  // 10. World 3's boss, the Hive Empress.
+  S.hive = async () => {
+    await battle(3, 30, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 11);
+    fight('Beat the bosses', 1.15, 2, 5);
+  };
+  // 11. The last boss of all, the Eclipse Emperor.
+  S.emperor = async () => {
+    await battle(6, 40, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 13);
+    fight('', 1.1, 3, 5);
   };
 
   // 9. The end card over the battle: the icon, the name, and the news.
   S.end = async () => {
     caption('');
+    clean();
+    document.querySelectorAll('.bt-modal').forEach((m) => m.remove());
     const d = document.createElement('div');
     d.id = 'trailer-end';
     const small = Math.min(window.innerWidth, window.innerHeight);

@@ -18,6 +18,34 @@ window.SCENES = (() => {
     document.body.appendChild(d);
   }
 
+  /** The caption in a band over a slightly smaller game, so it covers nothing. */
+  function band(text) {
+    unband();
+    const W = window.innerWidth, H = window.innerHeight, k = W > 600 ? 0.84 : 0.8;
+    const b = document.body.style;
+    b.transformOrigin = '50% 100%'; b.transform = `scale(${k})`; b.height = '100vh'; b.overflow = 'hidden';
+    b.borderRadius = `${Math.round(W * 0.05)}px ${Math.round(W * 0.05)}px 0 0`; b.boxShadow = '0 0 40px rgba(0,0,0,0.6)';
+    const bg = document.createElement('style');
+    bg.className = 'store-band';
+    bg.textContent = 'html { background: radial-gradient(circle at 50% 0%, #4a2a9a, #1a1040 70%) !important; min-height: 100vh; }';
+    document.head.appendChild(bg);
+    document.querySelectorAll('#toast-container > *, .toast-notification, .toast-alert').forEach((e) => e.remove());
+    const d = document.createElement('div');
+    d.className = 'store-band';
+    d.textContent = text;
+    const small = Math.min(W, H);
+    d.style.cssText = `position:fixed;left:4%;right:4%;top:0;height:${Math.round(H * (1 - k))}px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-line;z-index:2147483647;pointer-events:none;` +
+      `font-family:'Fredoka',sans-serif;font-weight:800;font-size:${Math.round(small * (W > 600 ? 0.07 : 0.085))}px;line-height:1.05;color:#fff;` +
+      `-webkit-text-stroke:${Math.max(3, Math.round(small * 0.011))}px #1a1440;paint-order:stroke fill;text-shadow:0 ${Math.round(small * 0.01)}px 0 rgba(10,8,30,0.85);`;
+    document.documentElement.appendChild(d);
+  }
+  function unband() {
+    document.querySelectorAll('.store-band').forEach((e) => e.remove());
+    const b = document.body.style;
+    b.transform = ''; b.transformOrigin = ''; b.height = ''; b.overflow = ''; b.borderRadius = ''; b.boxShadow = '';
+    document.documentElement.style.background = '';
+  }
+
   /** A clean, settled game: past the tutorial and pop-ups, nothing on the field. */
   async function base({ level = 0, essence = 1.2e6, all = false } = {}) {
     PT.dismiss();
@@ -40,6 +68,8 @@ window.SCENES = (() => {
       applyBiomeBg(level);
     }
     state.essence = essence;
+    // No merge achievement pops up over a shot (raising the prestige here would earn some).
+    if (typeof MERGE_ACH !== 'undefined' && window.BATTLE) { const Bt = BATTLE.B(); Bt.mach = Bt.mach || {}; for (const a of MERGE_ACH) Bt.mach[a.id] = true; }
     PT.clear();
     WORLD.centre();
     const w = window.innerWidth;
@@ -75,8 +105,24 @@ window.SCENES = (() => {
   const S = {};
 
   const tap = (el) => { const r = el.getBoundingClientRect(); const o = { bubbles: true, pointerId: 7, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, isPrimary: true }; el.dispatchEvent(new PointerEvent('pointerdown', o)); el.dispatchEvent(new PointerEvent('pointerup', o)); };
+  /** End a battle left running by the scene before (a new one will not start while it runs). */
+  async function endBattle() {
+    if (BATTLE.run) {
+      BATTLE.run.paused = false;
+      BATTLE.run.retreated = true;
+      BATTLE.run.battle.finish('lost');
+      for (let i = 0; i < 40 && !document.querySelector('.bt-modal [data-a=map]'); i++) await sleep(100);
+      const b = document.querySelector('.bt-modal [data-a=map]');
+      if (b) b.click();
+      await sleep(400);
+    }
+    document.querySelectorAll('.bt-modal').forEach((m) => m.remove());
+    BATTLE.closeSheets();
+    await sleep(250);
+  }
   /** A battle on a level (no rule), its earlier levels won, with a six whose first three are evolved. */
   async function battle(world, n, deck, evolved = 3) {
+    await endBattle();
     await base({ level: 3, essence: 6.4e12, all: true });
     const B = BATTLE.B();
     for (let k = 1; k < n; k++) B.best[`${world}-${k}`] = 60;
@@ -103,42 +149,83 @@ window.SCENES = (() => {
       await sleep(every);
     }
   }
-  const leave = () => { if (BATTLE.run) { BATTLE.run.battle.result = 'lost'; } document.querySelectorAll('#battle-screen, .bt-modal').forEach((e) => e.remove()); document.body.classList.remove('bt-in-battle'); };
 
+  /** The camera on the thickest part of the fight (a boss counts four). */
+  function frameFight(zoom = 1.1) {
+    const run = BATTLE.run;
+    if (!run) return;
+    const live = run.battle.units.filter((u) => u.state !== 'dying' && !u.burrowed);
+    const hot = live.filter((u) => u.state === 'fight' || u.state === 'capture' || u.boss);
+    const pool = hot.length >= 2 ? hot : live;
+    if (!pool.length) return;
+    let tx = 0, ty = 0, tw = 0;
+    for (const u of pool) { let n = 0; for (const o of pool) if (Math.hypot(o.x - u.x, o.y - u.y) < 280) n++; const w = n * n * (u.boss ? 4 : 1); tx += u.x * w; ty += u.y * w; tw += w; }
+    run.cam.zoom = zoom;
+    run.cam.x = Math.max(320, Math.min(680, tx / tw));
+    run.cam.y = Math.max(450, Math.min(1650, ty / tw));
+  }
+  function specialNear() {
+    const b = BATTLE.run.battle;
+    for (let i = 0; i < 3; i++) {
+      if (!b.canSpecial(i)) continue;
+      const u = b.onField(i).find((m) => b.units.some((o) => o.side === 'foe' && o.state !== 'dying' && !o.burrowed && Math.hypot(o.x - m.x, o.y - m.y) < 200));
+      if (u && b.special(i, u)) return u;
+    }
+    return null;
+  }
   S.battle = async () => {
-    await battle(1, 8, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi']);
-    await playFor(9000);
-    caption('Battle mode\nis here!', 17);
-    S._release = leave;
+    for (const id of ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan']) BATTLE.B().bestPrestige[id] = 4;
+    await battle(2, 26, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan']);
+    await playFor(11000, 300);
+    frameFight(1.0);
+    await sleep(300);
+    band('Battle mode\nis here!');
   };
   S.specials = async () => {
-    await battle(1, 13, ['leviathan', 'eclipse', 'aqualion', 'siren', 'fold_phoenix', 'origami_dragon']);
+    for (const id of ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing']) BATTLE.B().bestPrestige[id] = 10;
+    await battle(6, 25, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing']);
     await playFor(9000, 300);
-    const b = BATTLE.run.battle;
-    for (let i = 0; i < 3; i++) if (b.canSpecial(i)) { b.special(i); break; }
-    await sleep(350);
-    caption('Evolved beasts\nhave specials', 17);
-    S._release = leave;
+    let hero = null;
+    for (let k = 0; k < 40 && !(hero = specialNear()); k++) await playFor(300, 300);
+    frameFight(1.15);
+    // Centred on the beast doing its special, so its call-out shows whole.
+    if (hero) { BATTLE.run.cam.x = Math.max(320, Math.min(680, hero.x)); BATTLE.run.cam.y = Math.max(450, Math.min(1650, hero.y - 60)); }
+    await sleep(300);
+    band('Evolved beasts\nhave specials');
   };
   S.boss = async () => {
-    await battle(1, 10, ['ragnarok', 'aurelion', 'voidwalker', 'infinity', 'paper_kirin', 'thousand_cranes']);
-    await playFor(60000, 450, (b) => b.units.some((u) => u.boss && u.y > 520));
-    await playFor(2500, 450);
-    caption('Beat the bosses', 17);
-    S._release = leave;
+    for (const id of ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing']) BATTLE.B().bestPrestige[id] = 13;
+    await battle(6, 40, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing']);
+    await playFor(60000, 400, (b) => b.units.some((u) => u.boss && u.y > 420));
+    await playFor(5500, 400);
+    frameFight(1.1);
+    await sleep(300);
+    band('Beat the bosses');
   };
   S.worlds = async () => {
+    await endBattle();
     await base({ level: 3, essence: 6.4e12, all: true });
-    for (let k = 1; k <= 40; k++) BATTLE.B().best['1-' + k] = 60;
-    for (let k = 1; k <= 26; k++) BATTLE.B().best['2-' + k] = 60;
-    for (let k = 1; k <= 30; k++) if (k % 3) BATTLE.B().stars['1-' + k] = true;
+    // Far enough along for the Low Gravity worlds, with the usual meadow behind.
+    state.prestigeLevel = 9;
+    const B = BATTLE.B();
+    for (const [w, won, stars] of [[1, 40, 31], [2, 40, 24], [3, 40, 17], [4, 40, 22], [5, 40, 9], [6, 18, 3]]) {
+      for (let k = 1; k <= won; k++) B.best[`${w}-${k}`] = 60;
+      for (let k = 1; k <= stars; k++) B.stars[`${w}-${Math.min(won, k * Math.max(1, Math.floor(won / stars)))}`] = true;
+    }
     document.getElementById('sidebar-panel').classList.add('active');
     switchTab('sanctuary');
     BATTLE.renderTab();
     await sleep(900);
-    caption('Six worlds\nto conquer', 79);
+    // Scrolled so the six worlds are all in view, from the first heading down.
+    const head = [...document.querySelectorAll('#content-sanctuary *')].find((e) => /prime solar system/i.test(e.textContent) && e.children.length === 0);
+    let el = head;
+    while (el && !(el.scrollHeight > el.clientHeight + 20 && getComputedStyle(el).overflowY !== 'visible')) el = el.parentElement;
+    const scroller = el || document.scrollingElement;
+    if (head) scroller.scrollTop += head.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 6;
+    band('Six worlds to conquer');
   };
   S.legends = async () => {
+    await endBattle();
     await base({ level: 3, essence: 6.4e12, all: true });
     for (const l of BATTLE_DATA.LEGEND_LIST.slice(0, 11)) BATTLE.B().legends[l.id] = true;
     document.getElementById('sidebar-panel').classList.add('active');
@@ -146,7 +233,9 @@ window.SCENES = (() => {
     BATTLE.renderTab();
     BATTLE.openLegends();
     await sleep(1200);
-    caption('Win Folded\nLegends', 79);
+    // On a tablet the sheet's cards are small: larger, to fill the screen.
+    if (window.innerWidth > 600) { const body = [...document.querySelectorAll('.bt-sheet')].pop().querySelector('.bt-sheet-body'); if (body) body.style.zoom = '1.75'; await sleep(300); }
+    band('Win Folded Legends');
     S._release = () => BATTLE.closeSheets();
   };
 

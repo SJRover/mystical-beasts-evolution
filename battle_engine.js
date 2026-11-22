@@ -170,6 +170,8 @@ const BattleEngine = (() => {
      */
     deploy(i, xFrac, yAt) {
       if (!this.canDeploy(i)) return null;
+      if (!Number.isFinite(xFrac)) xFrac = 0.5;
+      if (yAt != null && !Number.isFinite(yAt)) yAt = null;
       const c = this.cards[i];
       const r = BATTLE_DATA.beastRadius(c.id);
       const u = unitFrom('you', c.id, c.stats, r, { area: c.area });
