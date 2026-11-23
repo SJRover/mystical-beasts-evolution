@@ -15,7 +15,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ctx = vm.createContext({ console, Math });
 ctx.window = ctx;
 const calibrate = process.argv.includes('--calibrate');
-for (const f of ['beasts.js', 'battle_data.js', 'battle_engine.js', ...(calibrate || !fs.existsSync(path.join(root, 'battle_levels.js')) ? [] : ['battle_levels.js'])]) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
+for (const f of ['beasts.js', 'battle_data.js', 'mutants.js', 'battle_engine.js', ...(calibrate || !fs.existsSync(path.join(root, 'battle_levels.js')) ? [] : ['battle_levels.js'])]) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 const { BATTLE_DATA: D, BattleEngine: BE, BEAST_TEMPLATES: T } = vm.runInContext('({ BATTLE_DATA, BattleEngine, BEAST_TEMPLATES })', ctx);
 
 const args = process.argv.slice(2);
@@ -35,7 +35,8 @@ export function refDeck(world, n, tierShift = 0) {
   const top = Math.max(1, Math.round(pr.tier) + tierShift);
   const maxRank = RANK.indexOf(pr.rarity);
   // Only what the level's rule allows (quick cards, long reach, swift, plain stock, three only).
-  const all = Object.keys(T).filter((id) => D.canBattle(id) && D.systemOf(id) === sys && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
+  // (World 7: beasts of every system.)
+  const all = Object.keys(T).filter((id) => D.canBattle(id) && (sys === 'any' || D.systemOf(id) === sys) && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
   const power = (id) => { const s = D.beastStats(id, pr.prestige); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
   const deck = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a) || T[b].tier - T[a].tier);
   return deck.slice(0, rule && rule.kind === 'three' ? 3 : 6).map((id) => ({ id, prestige: pr.prestige }));
@@ -119,6 +120,30 @@ if (isMain && calibrate) {
   const only = Number(process.argv[process.argv.indexOf('--calibrate') + 1]) || 0;
   for (const w of D.WORLDS) {
     if (only && w.id !== only) continue;
+    if (w.id === 7) {
+      // World 7 (1.5): twenty boss fights, each made by hand, so no smoothing along the world. Each
+      // is set at or beyond the most the reference six (the best of both systems at prestige 15)
+      // beats: the bot never uses a special or plays to a boss's weakness, so a player who does has
+      // an edge, and needs it.
+      for (let n = 1; n <= w.levels; n++) {
+        const lv = D.level(7, n), deck = refDeck(7, n);
+        // The most it beats three games in five (in small steps: boss fights vary a lot).
+        const wins = (p) => [0, 1, 2, 3, 4].filter((variant) => { const r = play({ ...lv, points: p }, deck, { variant }); return r.result === 'won' && r.pileLeft >= 1; }).length;
+        // Up in big steps until it fails twice running, then in small steps from the last win.
+        let most = 3, q = 3, misses = 0;
+        while (q < 200 && misses < 2) { q *= 1.2; if (wins(q) >= 3) { most = q; misses = 0; } else misses++; }
+        for (let f = most * 1.05, top = most * 1.44; f < top; f *= 1.05) { if (wins(f) >= 3) most = f; else break; }
+        // (Sam, 23 Nov: really hard. From 95% of the most the bot beats to 110% by the last level;
+        // the bot must still win one game in five.)
+        let p = most * (0.95 + (0.15 * (n - 1)) / (w.levels - 1)), eased = 0;
+        while (!beats(lv, deck, p, 1, 5) && p > 2) { p *= 0.95; eased++; }
+        const times = [0, 1, 2, 3, 4].map((variant) => play({ ...lv, points: p }, deck, { variant })).filter((r) => r.result === 'won').map((r) => r.time).sort((x, y) => x - y);
+        points[lv.id] = +p.toFixed(2);
+        stars[lv.id] = Math.min(240, Math.max(60, Math.ceil(((times[0] || 180) * 0.95) / 5) * 5));
+        console.log(`${lv.id.padEnd(5)} ${lv.name.padEnd(34)} most ${most.toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
+      }
+      continue;
+    }
     // The most each level's reference deck beats, then smoothed along the world (a median of five,
     // then never falling more than a little), so the climb is steady.
     const lvls = [], most = [];

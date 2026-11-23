@@ -245,7 +245,8 @@ const BATTLE_DATA = (() => {
     if (id in traitCache) return traitCache[id];
     const e = ENEMIES[id];
     let t = null;
-    if (e && e.role !== 'boss') {
+    if (e && e.look && 'trait' in e.look) t = e.look.trait;
+    else if (e && e.role !== 'boss' && e.role !== 'mutant') {
       for (const [k, re] of TRAIT_WORDS) if (re.test(id)) { t = k; break; }
       if (!t && enemyAttackKind(id) === 'area') t = 'knock';
     }
@@ -318,6 +319,8 @@ const BATTLE_DATA = (() => {
     brute: { order: ['atk', 'hp', 'spd', 'rng'], split: [0.52, 0.33, 0.1, 0.05], points: 1.1, floor: { atk: 3 } },
     swarm: { order: ['spd', 'atk', 'hp', 'rng'], split: [0.4, 0.3, 0.2, 0.1], points: 0.5, floor: { spd: 2 } },
     boss: { order: ['hp', 'atk', 'rng', 'spd'], split: [0.42, 0.36, 0.14, 0.08], points: 1.7, hp: 4, multi: 3 },
+    // 1.5: World 7's giants (mutants.js sets their speed and reach; these are their health and blows).
+    mutant: { order: ['hp', 'atk', 'rng', 'spd'], split: [0.55, 0.37, 0.05, 0.03], points: 1.5, hp: 7.5, multi: 2 },
   };
 
   // Looks: plan (body plan), size, colours, head, hat, weapon and extras: enemies.js draws them.
@@ -558,7 +561,8 @@ const BATTLE_DATA = (() => {
     return s;
   }
   /** How big an enemy stands (radius, arena units). */
-  const enemyRadius = (id) => Math.min(84, 24 * Math.max(0.85, ((ENEMIES[id] || {}).look || { size: 1 }).size));
+  // (World 7's giants stand as wide as they are drawn: 28 a size, up to 135.)
+  const enemyRadius = (id) => { const l = (ENEMIES[id] || {}).look || { size: 1 }; return l.plan === 'mutant' && l.boss ? Math.min(135, 28 * l.size) : Math.min(84, 24 * Math.max(0.85, l.size)); };
   /** An enemy's size as drawn: never under 0.85, so swarms are big enough to see. */
   const enemySize = (id) => Math.max(0.85, ((ENEMIES[id] || {}).look || { size: 1 }).size);
 
@@ -570,6 +574,8 @@ const BATTLE_DATA = (() => {
     { id: 4, system: 'low_gravity', name: 'Moon Hollows', theme: 'moon', levels: 40, base: 3.2, gain: 0.62, chest: { rarity: 'LEGENDARY', tier: 10 } },
     { id: 5, system: 'low_gravity', name: 'Ring Pirates', theme: 'rings', levels: 40, base: 25, gain: 0.7, chest: { rarity: 'GODLY', tier: 12 } },
     { id: 6, system: 'low_gravity', name: 'Eclipse Court', theme: 'eclipse', levels: 40, base: 48, gain: 0.75, chest: { rarity: 'GODLY', tier: 15 } },
+    // 1.5: World 7, the Universal Mutants (mutants.js): beasts of every system, twenty boss fights.
+    { id: 7, system: 'any', name: 'Universal Mutants', theme: 'mutants', levels: 20, base: 70, gain: 1.3, chest: { rarity: 'DARK_MATTER', tier: 20 } },
   ];
   const BOSS_EVERY = 10;
 
@@ -582,6 +588,8 @@ const BATTLE_DATA = (() => {
    * beasts.
    */
   function expect(world, n) {
+    // World 7 is for the end of the game: the best of both systems at prestige 15.
+    if (world === 7) return { tier: 20, rarity: 'DARK_MATTER', prestige: 15 };
     const i = (stage(world) - 1) * 40 + n;
     const rarity = i < 8 ? 'RARE' : i < 20 ? 'SUPER_RARE' : i < 35 ? 'ULTRA_RARE' : i < 55 ? 'LEGENDARY' : i < 90 ? 'GODLY' : 'DARK_MATTER';
     return { tier: Math.min(20, i <= 10 ? i : 10 + (i - 10) * 0.2), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
@@ -677,6 +685,7 @@ const BATTLE_DATA = (() => {
    * randomness, so a level is always the same.
    */
   function level(world, n) {
+    if (world === 7 && typeof MUTANTS !== 'undefined') return MUTANTS.level(n);
     const w = WORLDS[world - 1];
     const r = seeded(hash(`level|${world}|${n}`));
     const boss = n % BOSS_EVERY === 0;
@@ -969,10 +978,12 @@ const BATTLE_DATA = (() => {
     { id: 'perk_fortify', name: 'Iron Vault', desc: 'Beat a boss with your coin pile full.', test: (b) => !!b.perkWon.fortify, reward: { perk: 'fortify' } },
     { id: 'perk_wellspring', name: 'Never Idle', desc: 'Win a level from level 10 on without your mana ever filling up.', test: (b) => !!b.perkWon.wellspring, reward: { perk: 'wellspring' } },
     { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing twelve beasts or fewer.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
+    { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { premium: 15 } },
+    { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { premium: 10 } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */
-  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20 };
+  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20, 7: 20 };
 
   /** Perks: one before a battle. */
   const PERKS = [

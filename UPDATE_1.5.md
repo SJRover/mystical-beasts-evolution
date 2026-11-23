@@ -22,6 +22,17 @@ To build:
 Decided (Sam, 23 Nov): 15 ascents, so 16 biomes in each system (prestige 0 to 15): four new
 biomes each.
 
+Built (23 Nov, branch update-1.5):
+- PRESTIGE_MAX 15 (game.js). The last three costs carry on the climb: 500Oc, 25No, 1Dc (5e29,
+  2.5e31, 1e33); numbers now have names to 1e45 (No, Dc, UDc, DDc, TDc). At 15 the bar reads
+  "Final Biome / Prestige 15" and the button "Prestige 15, the highest", disabled.
+- Four new biomes in each system, painted like the others (biomes.js), with new skylines
+  (clockwork, aurora, islands, genesis, pulsar, rings, quasar), two new props (hourglass, floating
+  rock) and a new edge (crystal tree). Prime: Chrono Rift, Astral Throne, Shattered Heavens, Edge of
+  Creation. Low Gravity: Pulsar Fields, Magnetar Storm, Wormhole Reef, Event Horizon.
+- A save past 15 loads at 15, with a one-time note. Battle points from prestige stop at 15.
+- A merge achievement, Pinnacle (reach prestige 15): 8 premium crates up to Tier 20.
+
 ## 2. World 7, Universal Mutants (battle mode)
 
 Sam's brief:
@@ -68,6 +79,53 @@ Proposals of mine for World 7 (say which to keep):
 Decided (Sam, 23 Nov): twenty levels for now; he likes the proposals above (telegraphs, phases,
 weak points and armour, damage types, enrage) and the extra bosses below, and leaves the details
 to me.
+
+Built (23 Nov, branch update-1.5): mutants.js (numbers, moves, levels), mutants_art.js (drawing),
+battle.js (screens), battle_engine.js (hooks), battle_audio.js (sounds), tools/battle_sim.mjs.
+- Opens when Worlds 1, 2, 4 and 5 are won in full; beasts of every system battle there. A level is
+  won by beating its bosses (their camp has no coin pile) and lost if they take yours. Beasts go
+  for the nearest enemy wherever it is (nothing waits for them at the top).
+- Ten bosses, each with its own moves, phases at two thirds and one third, rage at three minutes
+  (the Chimera at two and a half): Gorrak the Hulk Goblin (throws his goblin riders over your line,
+  leaps, slams), the Walking Hive (swarms, poison stings; fire makes it burn and let out fewer),
+  Rime the Frost Giant (frost lanes that freeze and leave ice, ice boulders), Trisskar the
+  Three-Headed Serpent (three heads with their own targets and damage types, tail lash,
+  hatchlings down the flanks, a lunge), Vitriel the Mirror Witch (copies your last special,
+  glass doubles, blinks away), the Twin Titans Sol and Luna (mend each other close together, and
+  one fallen rises again unless both fall within six seconds), the Rot Behemoth (lingering poison
+  clouds, plague rats, bursting blisters), the Colossus (footsteps knock back, core beam at your
+  shooters, only shots hurt its core), Pyraxis the Dragon (fire breath sweeping 45 degrees either
+  side of your pile, armour in front, tail for flankers, wing gust, dive), the Omega Chimera
+  (lion, then goat and frost, then wings and fire).
+- Every big attack is telegraphed on the ground true to where it hits; a stun in a wind-up
+  interrupts it. Damage types: fire burns, frost slows and freezes, poison lingers, crushing
+  knocks back, shock stuns; beasts' elements resist some. Each boss is weak to an element and
+  resists another (shown on the level and in the Foe Wiki).
+- Sam (23 Nov): they hit your coin pile directly. An attack whose area covers the pile takes
+  seconds off it (a slam 3, a leap 4, a frost lane 2.5, a beam 3, breath 0.35 a tick), a giant
+  within reach of the pile strikes it every swing whoever is fighting it, and giants shoulder on
+  towards the pile while they fight.
+- Peons: goblin runts (the riders he throws, drawn exactly as on his shoulders), brutes and
+  shamans (who mend him), hive drones, frost sprites, hatchlings, glass doubles, plague rats,
+  mutant medics (mend bosses, a quarter as much on a giant), stone sentries, wyrmlings.
+- Twenty hand-made levels (below), calibrated by the bot with the best six of both systems at
+  prestige 15, from 95% of the most it beats at level 1 to 110% at level 20 (the bot never uses a
+  special or plays to a weakness, so the last ones need both).
+- Blue stars; the Foe Wiki rates World 7 in one to five bleeding, dripping red stars against
+  World 7 only; a cover painting with Pyraxis, Gorrak and Trisskar; Sam's three World 7 tracks
+  (BattleWorld7Music, 2 and 3), one a level in turn (build.js files names with "world7" as
+  mutants). Achievements: Mutation Ended (clear it), Monster Hunter (beat all ten bosses).
+- Art (Sam, 23 Nov: more detail, legs above all; nothing should look unjoined): every limb, neck
+  and tail is one shape (all outlines drawn first, then the fills), roots tucked behind bodies or
+  under shoulders; feet with toes, paws with claws, scales, stitches, runes.
+
+Levels: 1 Gorrak; 2 the Walking Hive; 3 Rime; 4 Trisskar; 5 Vitriel; 6 the Twin Titans; 7 the Rot
+Behemoth (medics); 8 the Colossus; 9 Pyraxis; 10 Gorrak's War Band (brutes, shamans); 11 Frost on
+the Hive (two bosses); 12 the Serpent's Nest (medics, hatchlings); 13 Glass and Stone (Colossus and
+Witch); 14 Dragonfire (wyrmlings); 15 the Plague Twins (rats, a medic); 16 the Long Winter (Colossus
+and Rime); 17 Fire and Fang (Trisskar and Pyraxis); 18 the Swarm Queen's Mirror (Hive and Witch);
+19 the Gauntlet (Gorrak, then the Twins, then Pyraxis, each after the last falls); 20 the Omega
+Chimera.
 
 More boss ideas of mine, in the same spirit: a hive that walks (its back opens and lets out
 swarms; burn the hive to stop them); a frost giant who freezes the ground in lanes; a mirror witch

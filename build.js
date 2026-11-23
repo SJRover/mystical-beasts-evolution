@@ -11,12 +11,14 @@ if (!fs.existsSync(destDir)) {
 // name), listed for battle_audio.js by solar system and kind: Low Gravity if the name says so, a
 // boss track if it says boss, victory and defeat music for the end of a battle; everything else
 // is a Prime battle track.
-const music = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, victory: [], defeat: [] };
+// 1.5: World 7's own tracks (Sam: "BattleWorld7Music..."), by "world7" or "mutant" in the name.
+const music = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, mutants: [], victory: [], defeat: [] };
 for (const f of fs.readdirSync(__dirname).sort()) {
   const n = f.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (!f.toLowerCase().endsWith('.mp3') || !(n.includes('battle') || n.includes('victory') || n.includes('defeat'))) continue;
   if (n.includes('victory') || n.includes('win')) { music.victory.push(f); continue; }
   if (n.includes('defeat') || n.includes('lose')) { music.defeat.push(f); continue; }
+  if (n.includes('world7') || n.includes('mutant')) { music.mutants.push(f); continue; }
   const sys = n.includes('lowgravity') ? 'low_gravity' : 'prime';
   music[sys][n.includes('boss') ? 'boss' : 'casual'].push(f);
 }

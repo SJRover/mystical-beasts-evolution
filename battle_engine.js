@@ -90,6 +90,11 @@ const BattleEngine = (() => {
       this.result = null;
       this.endAt = null;
       this.seen = new Set();
+      // 1.5, World 7: the bosses' telegraphed moves (mutants.js), their areas on the ground, and a
+      // level won by beating its bosses (no coin pile at their end).
+      this.zones = [];
+      this.mut = typeof MUTANTS !== 'undefined' && level.world === 7;
+      this.bossFight = level.win === 'bosses';
       this.deployed = 0;
       this.hurry = 0;
       this.maxTierUsed = 0;
@@ -125,12 +130,14 @@ const BattleEngine = (() => {
       if (!this.canSpecial(i)) return false;
       const c = this.cards[i];
       const u = who && who.card === i && this.onField(i).includes(who) ? who : this.onField(i).slice(-1)[0];
-      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed && !(o.cloakUntil > this.time));
+      const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed && !o.airborne && !(o.cloakUntil > this.time));
       const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
       const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
       const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480, dash: 520 }[c.ability];
       if (reach && !near(foes, reach).length) { this.events.push({ type: 'special-miss', unit: u }); return false; }
       c.abilityUsed = true;
+      // The Mirror Witch copies the last special used (mutants.js).
+      this.lastSpecial = { ability: c.ability, t: this.time };
       const nearest = (list, R, k) => near(list, R).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y)).slice(0, k);
       const L = u.light, now = this.time, dir = u.side === 'you' ? -1 : 1;
       const hit = [];
@@ -138,10 +145,10 @@ const BattleEngine = (() => {
       switch (c.ability) {
         case 'blast': for (const o of near(foes, 190)) { this.hurt(o, L * 4, u, true); hit.push(o); } break;
         case 'freeze': for (const o of nearest(foes, 200, 5)) { o.stunUntil = Math.max(o.stunUntil, now + 2.5); o.frozen = true; hit.push(o); } break;
-        case 'gust': for (const o of near(foes, 230)) { o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y - dir * 170)); o.stunUntil = Math.max(o.stunUntil, now + 0.6); o.frozen = false; hit.push(o); } break;
+        case 'gust': for (const o of near(foes, 230)) { if (!o.mutant) o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y - dir * 170)); o.stunUntil = Math.max(o.stunUntil, now + 0.6); o.frozen = false; hit.push(o); } break;
         case 'quake': for (const o of near(foes, 210)) { this.hurt(o, L * 2, u, true); o.stunUntil = Math.max(o.stunUntil, now + 1.6); o.frozen = false; hit.push(o); } break;
         case 'heal': for (const o of near(friends, 240)) { o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.4); hit.push(o); } break;
-        case 'gravity': for (const o of nearest(foes, 220, 5)) { o.x += (u.x - o.x) * 0.6; o.y += (u.y - o.y) * 0.6; this.hurt(o, L * 1.2, u, false); o.stunUntil = Math.max(o.stunUntil, now + 1); o.frozen = false; hit.push(o); } break;
+        case 'gravity': for (const o of nearest(foes, 220, 5)) { if (!o.mutant) { o.x += (u.x - o.x) * 0.6; o.y += (u.y - o.y) * 0.6; } this.hurt(o, L * 1.2, u, false); o.stunUntil = Math.max(o.stunUntil, now + 1); o.frozen = false; hit.push(o); } break;
         case 'starfall': for (const o of nearest(foes, 450, 4)) { this.hurt(o, L * 3, u, true); hit.push(o); } break;
         case 'rally': for (const o of near(friends, 280)) { o.buffUntil = now + 5; o.buff = 1.5; hit.push(o); } break;
         case 'dash': u.dashUntil = now + 1.8; u.forceHeavy = true; break;
@@ -213,6 +220,7 @@ const BattleEngine = (() => {
       if (u.trait === 'cloak') u.cloakAt = this.time + 2 + s.x * 3;
       if (u.trait === 'heal') u.healAt = this.time + 3;
       if (u.trait === 'summon') u.summonAt = this.time + 6;
+      if (this.mut && e.look && e.look.plan === 'mutant') MUTANTS.setup(this, u);
       if (s.announce) this.events.push({ type: 'wave', text: s.announce, champ });
       // Out of their camp around the pile (the middle half of the width), so it is defended; a
       // horde or a garrison across the whole width, in rows.
@@ -253,7 +261,8 @@ const BattleEngine = (() => {
       // its boss) for as long as the battle goes on.
       const foeCount = this.foes.length;
       let room = this.level.maxEnemies - foeCount;
-      while (this.queue.length && this.queue[0].t + this.loop <= this.time && room > 0) {
+      // (A boss that comes in turn waits for the one before it to fall: World 7's Gauntlet.)
+      while (this.queue.length && this.queue[0].t + this.loop <= this.time && room > 0 && !(this.queue[0].afterBoss && this.units.some((x) => x.boss && x.side === 'foe' && x.state !== 'dying'))) {
         this.spawnFoe(this.queue.shift());
         room--;
       }
@@ -268,7 +277,7 @@ const BattleEngine = (() => {
           this.hurry = this.time + 2.5;
         }
       }
-      if (!this.queue.length) {
+      if (!this.queue.length && this.level.loop !== false) {
         this.loop = this.time;
         this.queue = this.level.spawns.filter((s) => !s.boss && s.t > 4).map((s) => ({ ...s, t: s.t - 4 }));
       }
@@ -278,6 +287,9 @@ const BattleEngine = (() => {
         this.think(u, dt);
       }
       this.units = this.units.filter((u) => u.state !== 'dying' || u.dyingT < DYING);
+      if (this.mut) MUTANTS.step(this, dt);
+      if (this.result) return;
+      if (this.bossFight && this.mut && MUTANTS.won(this)) { this.finish('won'); return; }
       this.spread(dt);
       // Coin piles.
       for (const side of ['you', 'foe']) {
@@ -299,7 +311,7 @@ const BattleEngine = (() => {
      * ground and the other is moved. Two passes a step.
      */
     spread(dt) {
-      const live = this.units.filter((u) => u.state !== 'dying' && !u.burrowed);
+      const live = this.units.filter((u) => u.state !== 'dying' && !u.burrowed && !u.airborne);
       const planted = (u) => u.state === 'fight' || u.state === 'capture';
       for (let pass = 0; pass < 2; pass++) {
         for (let i = 0; i < live.length; i++) {
@@ -316,6 +328,9 @@ const BattleEngine = (() => {
             let wa = 0.5;
             if (planted(a) && !planted(b)) wa = 0.12;
             else if (planted(b) && !planted(a)) wa = 0.88;
+            // A giant is not shoved about by beasts.
+            if (a.mutant && !b.mutant) wa = 0.03;
+            else if (b.mutant && !a.mutant) wa = 0.97;
             a.x -= nx * push * wa; a.y -= ny * push * wa;
             b.x += nx * push * (1 - wa); b.y += ny * push * (1 - wa);
             for (const u of [a, b]) {
@@ -328,7 +343,7 @@ const BattleEngine = (() => {
     }
 
     /** Whether a unit can be seen and hit: not underground, not invisible. */
-    visible(o) { return !o.burrowed && !(o.cloakUntil > this.time); }
+    visible(o) { return !o.burrowed && !o.airborne && !(o.cloakUntil > this.time); }
 
     /** An enemy's ability on its clock: cloaking, healing, summoning. */
     traitTick(u) {
@@ -337,7 +352,8 @@ const BattleEngine = (() => {
       if (u.trait === 'heal' && now >= u.healAt) {
         u.healAt = now + 4;
         const mended = this.units.filter((o) => o.side === u.side && o.state !== 'dying' && o.hp < o.maxHp && Math.hypot(o.x - u.x, o.y - u.y) < 220);
-        for (const o of mended) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.12);
+        // (A World 7 giant takes a quarter as much: a medic must not out-mend a whole army.)
+        for (const o of mended) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * (o.mutant ? 0.03 : 0.12));
         if (mended.length) this.events.push({ type: 'trait', kind: 'heal', unit: u, targets: mended });
       }
       if (u.trait === 'summon' && now >= u.summonAt) {
@@ -357,6 +373,8 @@ const BattleEngine = (() => {
     }
 
     think(u, dt) {
+      // A World 7 boss: its moves first (mutants.js); while one is under way it does nothing else.
+      if (u.mutant && MUTANTS.think(this, u, dt)) return;
       // Stunned or frozen: nothing until it wears off (the blow it was winding up waits too).
       if (u.stunUntil > this.time) return;
       u.frozen = false;
@@ -393,7 +411,7 @@ const BattleEngine = (() => {
         u.swing -= dt * (u.slowUntil > this.time ? 0.6 : 1);
         if (u.swing <= 0) {
           u.swing += 1;
-          this.attack(u, foes);
+          if (!u.noBasic) this.attack(u, foes);
         }
         return;
       }
@@ -402,6 +420,8 @@ const BattleEngine = (() => {
       const pile = u.side === 'you' ? PILES.foe : PILES.you;
       const toPile = Math.hypot(pile.x - u.x, pile.y - u.y);
       if (toPile <= PILE_R + u.r + 8) {
+        // World 7: no coin pile at their end; your beasts wait there for what comes.
+        if (u.side === 'you' && this.bossFight) { u.state = 'walk'; u.capturing = false; return; }
         if (u.state !== 'capture') this.events.push({ type: 'capture', unit: u });
         u.state = 'capture';
         u.capturing = true;
@@ -473,6 +493,15 @@ const BattleEngine = (() => {
         u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
         return;
       }
+      // World 7: nothing to walk to at their end, so a beast goes for the nearest enemy wherever it
+      // is (beasts passing beside a giant walked on to the empty top and waited there).
+      if (this.bossFight && u.side === 'you' && foes.length) {
+        let tg = null, td = Infinity;
+        for (const o of foes) { const d = Math.hypot(o.x - u.x, o.y - u.y); if (d < td) { td = d; tg = o; } }
+        this.approach(u, tg, dt, foes);
+        u.y = Math.max(PILES.foe.y - 60, Math.min(PILES.you.y + 60, u.y));
+        return;
+      }
       const home = u.side === 'you' ? pile.y + HOME : pile.y - HOME;
       const inHome = u.side === 'you' ? u.y <= home : u.y >= home;
       let vx = 0, vy = dir;
@@ -536,8 +565,8 @@ const BattleEngine = (() => {
       if (u.area) splash = foes.filter((o) => !hit.includes(o) && this.visible(o) && Math.hypot(o.x - u.target.x, o.y - u.target.y) - o.r <= 70);
       this.events.push({ type: 'swing', unit: u, heavy, targets: hit, ranged: u.reach >= SHOT_REACH || u.shooter, splash });
       if (u.cloakUntil > this.time) u.cloakUntil = this.time;
-      for (const o of hit) this.hurt(o, dmg, u, heavy);
-      for (const o of splash) this.hurt(o, dmg * u.area, u, false);
+      for (const o of hit) this.hurt(o, dmg, u, heavy, u.dmgType);
+      for (const o of splash) this.hurt(o, dmg * u.area, u, false, u.dmgType);
       if (u.trait === 'slow') for (const o of hit) o.slowUntil = this.time + 2;
       if (u.trait === 'knock' && heavy) for (const o of [...hit, ...splash]) {
         if (o.state === 'dying' || o.boss) continue;
@@ -546,20 +575,24 @@ const BattleEngine = (() => {
       }
     }
 
-    hurt(o, dmg, by, heavy) {
+    /** `type`: World 7's damage types (fire, frost, poison, crush, shock), or 'dot' for a burn's tick. */
+    hurt(o, dmg, by, heavy, type = null) {
       if (o.state === 'dying') return;
       if (o.shieldUntil > this.time) dmg *= 0.2;
       if (o.side === 'foe' && this.units.some((a) => a.trait === 'aura' && a !== o && a.state !== 'dying' && a.side === 'foe' && Math.hypot(a.x - o.x, a.y - o.y) < 180)) dmg *= 0.75;
+      let tag = null;
+      if (this.mut) { const m = MUTANTS.modify(this, o, dmg, by, heavy, type); dmg = m.dmg; tag = m.tag; }
       o.hp -= dmg;
       o.lastHurt = this.time;
-      this.events.push({ type: 'hit', unit: o, by, dmg, heavy });
+      this.events.push({ type: 'hit', unit: o, by, dmg, heavy, tag, dot: type === 'dot' });
       if (o.hp <= 0) {
         o.hp = 0;
         o.state = 'dying';
         o.dyingT = 0;
         o.target = null;
+        if (this.mut) MUTANTS.onDeath(this, o);
         this.events.push({ type: 'death', unit: o, by });
-      }
+      } else if (o.mutant) MUTANTS.onHurt(this, o);
     }
 
     finish(result) {

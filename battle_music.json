@@ -16,6 +16,11 @@
    "LowGravityBattleBossLevelMusic.mp3"
   ]
  },
+ "mutants": [
+  "BattleWorld7Music.mp3",
+  "BattleWorld7Music2.mp3",
+  "BattleWorld7Music3.mp3"
+ ],
  "victory": [
   "PrimeSolarSystemVictoryMusic.mp3"
  ],

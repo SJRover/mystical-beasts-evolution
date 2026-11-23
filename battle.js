@@ -39,7 +39,8 @@ const BATTLE = (() => {
   /** Folded Legends you have won: they battle in every world, Prime and Low Gravity. */
   const legendsOwned = () => D.LEGEND_LIST.map((l) => l.id).filter((id) => B().legends[id]);
   // Beasts of the world's system, the Relics (merge rewards, every world) and the Folded Legends.
-  const owned = (sys) => [...state.unlockedBeasts.filter((id) => D.canBattle(id) && (D.systemOf(id) === sys || D.systemOf(id) === 'any') && !D.LEGENDS[id]), ...legendsOwned()];
+  // (World 7: every system's beasts.)
+  const owned = (sys) => [...state.unlockedBeasts.filter((id) => D.canBattle(id) && (sys === 'any' || D.systemOf(id) === sys || D.systemOf(id) === 'any') && !D.LEGENDS[id]), ...legendsOwned()];
   const cleared = (id) => !!B().best[id];
   /** Whether you have reached the Low Gravity solar system (its warp portal opens at Prime prestige 9). */
   const reachedLowGravity = () => state.currentSolarSystem === 'low_gravity' || ((state.primeSystem && state.primeSystem.prestigeLevel) || 0) >= 9 || (state.currentSolarSystem === 'prime' && state.prestigeLevel >= 9);
@@ -50,16 +51,18 @@ const BATTLE = (() => {
    */
   const worldOpen = (w) => {
     if (w.id === 1) return true;
+    // 1.5: World 7 opens once Worlds 1, 2, 4 and 5 are won in full (Sam, 23 Nov).
+    if (w.id === 7) return [1, 2, 4, 5].every((k) => cleared(`${k}-40`));
     if (w.id === 4) return reachedLowGravity() && cleared(`1-${D.WORLDS[0].levels}`);
     return cleared(`${w.id - 1}-${D.WORLDS[w.id - 2].levels}`);
   };
-  const lockText = (w) => (w.id === 4 ? 'Reach the Low Gravity system and win World 1 to open' : `Clear World ${w.id - 1} to open`);
+  const lockText = (w) => (w.id === 7 ? 'Win Worlds 1, 2, 4 and 5 to open' : w.id === 4 ? 'Reach the Low Gravity system and win World 1 to open' : `Clear World ${w.id - 1} to open`);
   /** Any level you have won stays open to play again; the next one opens when you win the one before. */
   const levelOpen = (w, n) => worldOpen(w) && (n === 1 || cleared(`${w.id}-${n}`) || cleared(`${w.id}-${n - 1}`));
   function totals() {
     const b = B();
     let worlds = 0, lgWorlds = 0;
-    for (const w of D.WORLDS) if (cleared(`${w.id}-${w.levels}`)) { if (w.system === 'prime') worlds++; else lgWorlds++; }
+    for (const w of D.WORLDS) if (cleared(`${w.id}-${w.levels}`)) { if (w.system === 'prime') worlds++; else if (w.system === 'low_gravity') lgWorlds++; }
     // Kills, by kind of enemy, by world and by the enemy itself (for the legends' challenges).
     const killsByRole = {}, killsByWorld = {};
     let kills = 0;
@@ -76,6 +79,9 @@ const BATTLE = (() => {
       clears: Object.keys(b.best).length, stars: Object.keys(b.stars).length, bosses: Object.keys(b.bosses).length,
       worlds, lgWorlds, seen: Object.keys(b.seen).length, flawless: b.flawless || 0, fastest: b.fastest || 0, underdog: !!b.underdog,
       kills, killsOf: b.kills, killsByRole, killsByWorld, lowTierWin: !!b.lowTierWin, achDone, achTotal, blitz: !!b.blitz, perkWon: b.perkWon || {},
+      // 1.5: World 7 won, and how many of its ten bosses beaten (the twins count as one).
+      w7: cleared('7-20') ? 1 : 0,
+      mutantBosses: new Set(Object.keys(b.kills).filter((id) => D.ENEMIES[id] && D.ENEMIES[id].role === 'mutant').map((id) => (id === 'twin_luna' ? 'twin_sol' : id))).size,
     };
   }
 
@@ -176,12 +182,13 @@ const BATTLE = (() => {
       moon: { sky: ['#03040a', '#1c2038'], ground: ['#a4a8b8', '#5a5e70'] },
       rings: { sky: ['#06071a', '#2e2458'], ground: ['#6a5644', '#2a2018'] },
       eclipse: { sky: ['#040208', '#30143e'], ground: ['#3c2654', '#160c24'] },
+      mutants: { sky: ['#07020f', '#3a1450'], ground: ['#3a2a3a', '#120a14'] },
     }[w.theme];
     const sky = g.createLinearGradient(0, 0, 0, 120);
     sky.addColorStop(0, LOOK.sky[0]); sky.addColorStop(1, LOOK.sky[1]);
     g.fillStyle = sky; g.fillRect(0, 0, 240, 180);
     // Stars over the dark worlds.
-    if (['shadow', 'moon', 'rings', 'eclipse', 'invasion'].includes(w.theme)) for (let i = 0; i < 40; i++) { g.globalAlpha = 0.3 + r() * 0.6; g.fillStyle = '#fff'; g.fillRect(r() * 240, r() * 100, 1.5, 1.5); }
+    if (['shadow', 'moon', 'rings', 'eclipse', 'invasion', 'mutants'].includes(w.theme)) for (let i = 0; i < 40; i++) { g.globalAlpha = 0.3 + r() * 0.6; g.fillStyle = '#fff'; g.fillRect(r() * 240, r() * 100, 1.5, 1.5); }
     g.globalAlpha = 1;
     const disc = (x, y, rad, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); };
     const glowAt = (x, y, rad, col) => { const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); };
@@ -212,6 +219,11 @@ const BATTLE = (() => {
       g.strokeStyle = 'rgba(240,220,180,0.8)'; g.lineWidth = 4; g.beginPath(); g.ellipse(170, 52, 56, 13, -0.3, 0, Math.PI * 2); g.stroke();
       g.fillStyle = '#3a2a1a'; g.fillRect(28, 68, 6, 52); g.fillStyle = '#e8e0d0'; g.beginPath(); g.moveTo(34, 70); g.lineTo(70, 84); g.lineTo(34, 100); g.fill();
       g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc(46, 84, 5, 0, Math.PI * 2); g.fill();
+    } else if (w.theme === 'mutants') {
+      // A sick green glow, a cracked moon.
+      glowAt(120, 50, 120, 'rgba(160,255,90,0.3)');
+      disc(196, 30, 18, '#c8ff9a'); glowAt(196, 30, 30, 'rgba(200,255,150,0.4)');
+      g.strokeStyle = '#4a7a2a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(186, 22); g.lineTo(196, 31); g.lineTo(190, 42); g.moveTo(196, 31); g.lineTo(209, 33); g.stroke();
     } else {
       glowAt(120, 46, 70, 'rgba(255,200,90,0.65)'); disc(120, 46, 26, '#05030a');
       g.strokeStyle = '#ffd27a'; g.lineWidth = 2; g.beginPath(); g.arc(120, 46, 27, 0, Math.PI * 2); g.stroke();
@@ -228,9 +240,18 @@ const BATTLE = (() => {
     const front = list.filter((e) => e.role !== 'boss').slice(0, 6);
     const pose = { t: 0.3, walk: 0.15, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 1 };
     const put = (id, x, y, px) => { g.save(); g.translate(x, y); ENEMY_ART.draw(g, id, pose, px); g.restore(); };
-    if (boss) put(boss.id, 124, 150, 78 / Math.max(1, boss.look.size || 1) * 1.15);
-    if (front[1]) put(front[3] ? front[3].id : front[1].id, 62, 170, 62);
-    if (front[0]) put(front[0].id, 186, 172, 62);
+    if (w.theme === 'mutants') {
+      // Pools of glowing slime, then three of its giants: Pyraxis behind, Gorrak and Trisskar in front.
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(140,255,90,0.35)'; g.beginPath(); g.ellipse(26 + i * 62, 150 + (i % 2) * 14, 18, 5, 0, 0, Math.PI * 2); g.fill(); }
+      const giant = (id, x, y, h, mut) => { const e = D.ENEMIES[id]; g.save(); g.translate(x, y); ENEMY_ART.draw(g, id, { ...pose, mut: mut || {} }, ((h / 80) * 60) / e.look.size); g.restore(); };
+      giant('dragon', 120, 128, 96, { phase: 1 });
+      giant('hulk_goblin', 54, 178, 86, { riders: 3 });
+      giant('three_headed_serpent', 190, 178, 84, {});
+    } else {
+      if (boss) put(boss.id, 124, 150, 78 / Math.max(1, boss.look.size || 1) * 1.15);
+      if (front[1]) put(front[3] ? front[3].id : front[1].id, 62, 170, 62);
+      if (front[0]) put(front[0].id, 186, 172, 62);
+    }
     // A soft dark edge.
     const vg = g.createRadialGradient(120, 90, 60, 120, 90, 150);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
@@ -259,7 +280,7 @@ const BATTLE = (() => {
         <div class="bt-world-art" style="background-image:url(${worldArt(w)})"></div>
         <div class="bt-world-body">
           <div class="bt-world-name">World ${w.id}: ${w.name}</div>
-          <div class="bt-world-meta">${open ? `${done >= w.levels ? 'All won' : `Level ${Math.min(w.levels, done + 1)} of ${w.levels}`} · <span class="${w.system === 'low_gravity' ? 'bt-lgstar' : 'bt-gold'}">★ ${stars}/${w.levels}</span>` : lockText(w)}</div>
+          <div class="bt-world-meta">${open ? `${done >= w.levels ? 'All won' : `Level ${Math.min(w.levels, done + 1)} of ${w.levels}`} · <span class="${w.system === 'low_gravity' ? 'bt-lgstar' : w.system === 'any' ? 'bt-bluestar' : 'bt-gold'}">★ ${stars}/${w.levels}</span>` : lockText(w)}</div>
           <div class="bt-bar"><i style="width:${(done / w.levels) * 100}%"></i></div>
         </div>
         <div class="bt-world-go">${open ? '▶' : '🔒'}</div>
@@ -267,6 +288,7 @@ const BATTLE = (() => {
     };
     const primeWorlds = D.WORLDS.filter((w) => w.system === 'prime').map(worldCard).join('');
     const lgWorlds = D.WORLDS.filter((w) => w.system === 'low_gravity').map(worldCard).join('');
+    const mutantWorlds = D.WORLDS.filter((w) => w.system === 'any').map(worldCard).join('');
     const spins = b.freeSpins || 0;
     sec.innerHTML = `
       <div class="shop-section-title">Battle</div>
@@ -280,6 +302,7 @@ const BATTLE = (() => {
       ${primeWorlds}
       <div class="bt-system">Low Gravity Solar System</div>
       ${lgWorlds}
+      ${mutantWorlds ? `<div class="bt-system mutants">Universal Mutants</div>${mutantWorlds}` : ''}
       <div class="bt-row">
         <button class="bt-btn" id="bt-open-legends">Folded Legends <small>${legendsOwned().length}/${D.LEGEND_LIST.length}</small></button>
         <button class="bt-btn" id="bt-open-ach">Achievements <small>${Object.keys(b.ach).length + Object.keys(b.mach || {}).length}/${D.ACHIEVEMENTS.length + MERGE_ACH.length}</small></button>
@@ -290,7 +313,7 @@ const BATTLE = (() => {
       </div>`;
     sec.querySelectorAll('.bt-world[data-world]').forEach((btn) => btn.addEventListener('click', () => {
       const w = D.WORLDS[Number(btn.dataset.world) - 1];
-      if (!worldOpen(w)) { showWarning('World locked', w.id === 4 ? 'Win World 1 and reach the Low Gravity system first.' : `Win World ${w.id - 1} first.`); return; }
+      if (!worldOpen(w)) { showWarning('World locked', w.id === 7 ? 'Win Worlds 1, 2, 4 and 5 in full first. World 7 is the end of the game: bring your strongest beasts from both solar systems.' : w.id === 4 ? 'Win World 1 and reach the Low Gravity system first.' : `Win World ${w.id - 1} first.`); return; }
       click();
       openWorld(w);
     }));
@@ -325,6 +348,7 @@ const BATTLE = (() => {
   function openWorld(w) {
     const sh = sheet(`World ${w.id}: ${w.name}`);
     if (w.system === 'low_gravity') sh.el.classList.add('lg');
+    if (w.id === 7) sh.el.classList.add('mutants');
     const draw = () => {
       const b = B();
       let stars = 0;
@@ -436,6 +460,7 @@ const BATTLE = (() => {
     const known = !!b.played[level.id] || cleared(level.id);
     const sh = sheet(level.boss ? `${n}. ${known ? level.name : 'Boss level'}` : `${w.name} ${n}`, level.boss ? (known ? 'Boss level' : 'Who is it? Play to find out') : D.PATTERNS[level.pattern].name);
     if (sys === 'low_gravity') sh.el.classList.add('lg');
+    if (w.id === 7) sh.el.classList.add('mutants');
     let io = null;
     const draw = () => {
       const played = !!b.played[level.id] || cleared(level.id);
@@ -443,7 +468,7 @@ const BATTLE = (() => {
         const known = played && !!b.seen[id];
         const e = D.ENEMIES[id];
         const tr = known && D.traitOf(id) ? D.TRAITS[D.traitOf(id)] : null;
-        return `<div class="bt-foe ${known ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${id}">${stillImg(id, 112, !known)}${tr ? `<i class="bt-foe-trait" title="${tr.name}">${tr.icon}</i>` : ''}<span>${known ? e.name : '???'}</span></div>`;
+        return `<div class="bt-foe ${known ? '' : 'unseen'} ${e.role === 'boss' || e.role === 'mutant' ? 'boss' : ''}" data-id="${id}">${stillImg(id, 112, !known)}${tr ? `<i class="bt-foe-trait" title="${tr.name}">${tr.icon}</i>` : ''}<span>${known ? e.name : '???'}</span></div>`;
       }).join('');
       const slots = [0, 1, 2, 3, 4, 5].map((i) => {
         if (i >= max) return '<div class="bt-slot barred"><span>✕</span></div>';
@@ -482,6 +507,7 @@ const BATTLE = (() => {
         <div class="bt-card">
           <div class="bt-card-row"><div><b>Enemies</b></div><div class="bt-goal"><span class="bt-gold">★</span> win in under ${fmt(level.starTime)}${best ? `<br><span class="bt-dim">best ${fmt(best)}${b.stars[level.id] ? ' ★' : ''}</span>` : ''}</div></div>
           <div class="bt-foes">${foes}</div>
+          ${w.id === 7 ? mutantCard(level, played) : ''}
           <div class="bt-tags"><span class="bt-tag" data-tip="${pat.tip}">${pat.name} ⓘ</span>${theme ? `<span class="bt-tag" data-tip="${theme.tip}">${theme.name} ⓘ</span>` : ''}</div>
           ${cleared(level.id) ? '' : `<div class="bt-dim bt-reward">First win: essence${level.boss ? ' and a premium crate' : ''}</div>`}
         </div>
@@ -602,7 +628,7 @@ const BATTLE = (() => {
     // Played once (won, lost or left), a level shows who is in it.
     B().played[level.id] = true;
     const rule = level.rule ? ` · ${D.RULES[level.rule.kind].name}` : '';
-    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : ''}">
+    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : level.world === 7 ? 'mutants' : ''}">
       <canvas id="bt-canvas"></canvas>
       <div class="bt-hud">
         <button class="bt-hud-btn" id="bt-pause" aria-label="Pause">❚❚</button>
@@ -610,6 +636,7 @@ const BATTLE = (() => {
         <button class="bt-hud-btn" id="bt-view" aria-label="Zoom">⤢</button>
         <button class="bt-hud-btn" id="bt-speed">1×</button>
       </div>
+      <div class="bt-bossbars" id="bt-bossbars"></div>
       <div class="bt-tip" id="bt-tip">Tap your blue zone, then a card.</div>
       <div class="bt-deck">
         <div class="bt-deck-info"><span id="bt-count">0/10 on the field</span><span id="bt-star"></span></div>
@@ -987,8 +1014,208 @@ const BATTLE = (() => {
     if (u.buffUntil > now) { ctx.globalAlpha = 0.35; ctx.drawImage(ENEMY_ART.glowSprite('#ff6a5a'), x - R * 1.5, y - R * 2.6, R * 3, R * 3); ctx.globalAlpha = 1; }
     if (u.slowUntil > now) { ctx.globalAlpha = 0.6; ctx.drawImage(ENEMY_ART.glowSprite('#7ab8ff'), x - R * 1.3, y - R * 2.4, R * 2.6, R * 2.6); ctx.globalAlpha = 0.95; ctx.fillStyle = '#bfe8ff'; ctx.font = `800 ${Math.max(10, 15 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('❄', x - R * 0.9, y - R * 2.3); ctx.globalAlpha = 1; }
     if (u.trait === 'aura') { ctx.globalAlpha = 0.22 + 0.08 * Math.sin(t * 3); ctx.strokeStyle = '#8ad8ff'; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.ellipse(x, y, 180 * z, 180 * z * 0.35, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+    // World 7: burning (flames licking up) and poisoned (green bubbles).
+    if (u.burnUntil > now) { for (let i = 0; i < 3; i++) { const fx = x + (i - 1) * R * 0.5, k = (t * 3 + i * 0.37) % 1; ctx.globalAlpha = 0.85 * (1 - k); ctx.fillStyle = i % 2 ? '#ffb43a' : '#ff6a1a'; ctx.beginPath(); ctx.ellipse(fx, y - R * (0.6 + k * 1.4), R * 0.16 * (1 - k * 0.5), R * 0.3 * (1 - k * 0.4), 0, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; }
+    if (u.poisonUntil > now) { for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; ctx.globalAlpha = 0.8 * (1 - k); ctx.strokeStyle = '#9dff4a'; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.arc(x + Math.sin(t * 3 + i * 2) * R * 0.6, y - R * (1 + k * 1.6), Math.max(2, R * 0.12), 0, Math.PI * 2); ctx.stroke(); } ctx.globalAlpha = 1; }
     if (u.dashUntil > now || u.charging) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1.5, 3 * z); for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * R * 0.5, y + R * 0.4); ctx.lineTo(x + i * R * 0.5, y + R * 2.4); ctx.stroke(); } }
   }
+
+  // ------------------------------------------------------------------ World 7 (1.5): the giants on screen
+  const MOVE_WORD = { throw: 'Goblin throw', leap: 'Leap', slam: 'Slam', swarm: 'Swarm', sting: 'Stings', lane: 'Frost lane', boulder: 'Ice boulder', tail: 'Tail swipe', brood: 'Hatchlings', charge: 'Lunge', mirror: 'Mirror', clones: 'Glass doubles', beam: 'Beam', gas: 'Poison clouds', breath: 'Fire breath', gust: 'Wing gust', roar: 'Roar', steps: 'Footsteps', blink: 'Blink' };
+  const MOVE_SFX = { throw: 'm_throw', leap: 'm_roar', slam: 'm_warn', breath: 'm_inhale', tail: 'm_hiss', swarm: 'm_buzz', sting: 'm_buzz', lane: 'm_freeze', boulder: 'm_warn', brood: 'm_hiss', charge: 'm_roar', mirror: 'm_mirror', clones: 'm_mirror', blink: 'm_blink', beam: 'm_charge', gas: 'm_gas', gust: 'm_warn', roar: 'm_roar' };
+  const TYPE_RGB = { fire: '255,122,42', frost: '154,232,255', poison: '157,255,74', crush: '255,176,90', shock: '255,242,122' };
+  /** A boss's move as it starts and lands, its phases, rage, a stun that stops it. */
+  function mutantFx(ev) {
+    const u = ev.unit;
+    const TY = typeof MUTANTS !== 'undefined' ? MUTANTS.TYPES : {};
+    switch (ev.kind) {
+      case 'cast':
+        if (ev.move !== 'steps' && ev.move !== 'blink') bigText(u.x, u.y - u.r * 3.1, `${ev.name || MOVE_WORD[ev.move] || ''}!`, '#ffb8a8', 1.2);
+        if (MOVE_SFX[ev.move]) sfx(MOVE_SFX[ev.move]);
+        break;
+      case 'land': {
+        const col = (TY[ev.mtype] || {}).col || '#e0b070';
+        if (ev.move === 'slam' || ev.move === 'leap' || ev.move === 'steps') {
+          const big = ev.move !== 'steps';
+          ring(ev.x, ev.y, ev.r || 150, col); if (big) ring(ev.x, ev.y, (ev.r || 150) * 0.6, col);
+          burst(ev.x, ev.y, '#a89880', big ? 24 : 6, big ? 300 : 140, 'smoke');
+          run.shake = Math.max(run.shake, big ? 16 : 3); sfx(big ? 'm_slam' : 'm_step');
+        } else if (ev.move === 'roar') { ring(u.x, u.y, 250, '#ffe8a0'); ring(u.x, u.y, 160, '#ffe8a0'); run.shake = Math.max(run.shake, 8); }
+        else if (ev.move === 'tail') { ring(u.x, u.y - u.r * 0.3, 240, '#ffd08a'); run.shake = Math.max(run.shake, 8); sfx('m_whip'); }
+        else if (ev.move === 'gust') { burst(u.x, u.y + u.r, '#eaffff', 26, 380, 'smoke'); sfx('sp_gust'); }
+        else if (ev.move === 'breath') sfx('m_breath');
+        else if (ev.move === 'mirror') { ring(u.x, u.y, 220, '#e0d0ff'); burst(u.x, u.y - u.r, '#ffffff', 20, 260, 'star'); }
+        else if (ev.move === 'swarm' || ev.move === 'clones' || ev.move === 'brood') burst(u.x, u.y - u.r * 1.2, ev.move === 'clones' ? '#e8f0ff' : ev.move === 'brood' ? '#c8ff8a' : '#ffe27a', 18, 220, 'spark');
+        else if (ev.move === 'charge') run.shake = Math.max(run.shake, 10);
+        break;
+      }
+      case 'zone-land': {
+        const z = ev.zone, col = (TY[z.type] || {}).col || '#ffffff';
+        if (z.shape === 'lane') { for (let y = z.y; y < BE.ARENA.h; y += 150) burst(z.x, y, '#e8fbff', 5, 160, 'star'); run.shake = Math.max(run.shake, 8); sfx('sp_freeze'); }
+        else { ring(z.x, z.y, z.r, col); burst(z.x, z.y, col, z.small ? 10 : 16, 220, z.type === 'poison' ? 'wisp' : 'smoke'); sfx(z.small ? 'm_splat' : z.type === 'poison' ? 'm_gas' : 'm_slam'); if (!z.small) run.shake = Math.max(run.shake, 6); }
+        break;
+      }
+      case 'throw': (run.throws = run.throws || []).push({ from: ev.from, to: ev.to, start: run.battle.time, dur: ev.dur, peon: ev.peon, spin: Math.random() * 6 }); break;
+      case 'beam': (run.beams = run.beams || []).push({ x: u.x, y: u.y - u.r * 1.4, a: ev.a, len: ev.len, w: ev.w, until: run.battle.time + 0.45, col: (TY[ev.mtype] || {}).col || '#fff27a' }); sfx('m_beam'); run.shake = Math.max(run.shake, 8); break;
+      case 'phase':
+        run.banner = { text: ev.text, t: 2.4, max: 2.4, champ: true }; sfx('m_phase'); run.shake = Math.max(run.shake, 12); ring(u.x, u.y, u.r * 3, '#ff6a3c');
+        if (ev.burst) { ring(u.x, u.y, ev.burst.r, '#9dff4a'); burst(u.x, u.y - u.r, '#9dff4a', 30, 300, 'wisp'); }
+        break;
+      case 'enrage': run.banner = { text: ev.text, t: 2.4, max: 2.4, champ: true }; sfx('m_enrage'); break;
+      case 'interrupt': bigText(u.x, u.y - u.r * 3.1, '💫 Interrupted!', '#9ae6ff', 1.6); sfx('m_clang'); ring(u.x, u.y, u.r * 2, '#9ae6ff'); break;
+      case 'blink': burst(ev.from.x, ev.from.y - 60, '#e8e0ff', 16, 200, 'star'); burst(u.x, u.y - 60, '#e8e0ff', 16, 200, 'star'); sfx('m_blink'); break;
+      case 'revive': run.banner = { text: ev.text, t: 2.2, max: 2.2, champ: true }; ring(u.x, u.y, u.r * 3, '#ffe066'); burst(u.x, u.y - u.r, '#ffe066', 30, 260, 'star'); sfx('m_revive'); break;
+      case 'text': bigText(u.x, u.y - u.r * 3.1, ev.text, ev.col || '#ffd0a0', 1.5); break;
+      case 'pile': {
+        // A giant's blow lands on your coins.
+        const p = BE.PILES.you;
+        burst(p.x + (Math.random() - 0.5) * 60, p.y - 20, '#ffd84a', Math.min(30, 6 + ev.sec * 6), 260, 'coin');
+        text(p.x + 100, p.y - 130, `-${ev.sec.toFixed(1)}s`, '#ff6a6a');
+        run.shake = Math.max(run.shake, 3 + ev.sec * 2);
+        if (ev.sec >= 1) sfx('alarm');
+        if (!(run.pileToastAt > performance.now())) { run.pileToastAt = performance.now() + 6000; toast('A giant is smashing your coins!'); }
+        break;
+      }
+      case 'shards': for (const o of ev.targets) run.shots.push({ x: u.x, y: u.y - u.r * 1.4, tx: o.x, ty: o.y - o.r * 0.7, t: 0, dur: 0.28, arc: 40, wobble: 0, style: 'star', col: '#e8e0ff', heavy: true, side: 'foe', seed: Math.random() * 6 }); break;
+      default: break;
+    }
+  }
+  /** What a blow on a boss did (weak spot, resisted, armour, flanked, core), now and then. */
+  const TAG = { weak: ['Weak spot!', '#8aff8a'], resist: ['Resisted', '#c8c8d8'], armour: ['Armour', '#c8c8d8'], flank: ['Flanked!', '#ffe066'], core: ['Core hit!', '#ffd86a'] };
+  function tagFx(u, tag) {
+    if (!TAG[tag] || (u._tagAt || 0) > run.battle.time) return;
+    u._tagAt = run.battle.time + 1.4;
+    run.fx.push({ kind: 'text', x: u.x + (Math.random() - 0.5) * u.r, y: u.y - u.r * 2.2, s: TAG[tag][0], col: TAG[tag][1], life: 1, max: 1, vy: -60 });
+  }
+  /**
+   * The ground where a big attack will land, drawn true to where it hits (no squashing): faint at
+   * first, filling towards its edge as the moment comes, its rim blinking faster; frost left on a
+   * lane, clouds of poison.
+   */
+  function drawZones(ctx, t, z) {
+    const now = run.battle.time;
+    for (const q of run.battle.zones) {
+      const rgb = TYPE_RGB[q.type] || '255,90,90';
+      const k = q.linger ? 1 : Math.max(0, Math.min(1, (now - q.start) / Math.max(0.05, q.at - q.start)));
+      const blink = 0.5 + 0.5 * Math.sin(t * (10 + k * 14));
+      const path = (s = 1) => {
+        ctx.beginPath();
+        if (q.shape === 'ring') ctx.arc(sx(q.x), sy(q.y), Math.max(1, q.r * z * s), 0, Math.PI * 2);
+        else if (q.shape === 'cone') { const cx = sx(q.x), cy = sy(q.y); ctx.moveTo(cx, cy); ctx.arc(cx, cy, Math.max(1, q.r * z * s), q.a - q.spread, q.a + q.spread); ctx.closePath(); }
+        else if (q.shape === 'line') { const L = q.len * s, hw = q.w / 2, ca = Math.cos(q.a), sa = Math.sin(q.a); [[q.x - sa * hw, q.y + ca * hw], [q.x + ca * L - sa * hw, q.y + sa * L + ca * hw], [q.x + ca * L + sa * hw, q.y + sa * L - ca * hw], [q.x + sa * hw, q.y - ca * hw]].forEach(([x, y], i) => (i ? ctx.lineTo(sx(x), sy(y)) : ctx.moveTo(sx(x), sy(y)))); ctx.closePath(); }
+        else if (q.shape === 'lane') ctx.rect(sx(q.x - q.w / 2), sy(q.y), q.w * z, (q.y2 - q.y) * z * s);
+      };
+      ctx.save();
+      if (q.linger) {
+        if (q.kind === 'ice') {
+          path(); ctx.fillStyle = `rgba(200,240,255,${0.22 + 0.05 * Math.sin(t * 3)})`; ctx.fill(); ctx.strokeStyle = 'rgba(230,250,255,0.6)'; ctx.lineWidth = Math.max(1, 2 * z); ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          for (let i = 0; i < 8; i++) { const yy = q.y + ((i * 211 + t * 30) % Math.max(1, q.y2 - q.y)); ctx.beginPath(); ctx.arc(sx(q.x + Math.sin(i * 7) * q.w * 0.35), sy(yy), Math.max(1.2, 3 * z), 0, Math.PI * 2); ctx.fill(); }
+        } else if (q.kind === 'gas') {
+          const left = Math.max(0, Math.min(1, (q.until - now) / 1.5));
+          for (let i = 0; i < 5; i++) { const a = i * 1.26 + t * 0.4, cx = sx(q.x + Math.cos(a) * q.r * 0.45), cy = sy(q.y + Math.sin(a) * q.r * 0.35), R = q.r * z * 0.7; const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, R); gr.addColorStop(0, `rgba(157,255,74,${0.34 * left})`); gr.addColorStop(1, 'rgba(157,255,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill(); }
+        }
+        ctx.restore();
+        continue;
+      }
+      path(); ctx.fillStyle = `rgba(${rgb},${0.1 + 0.1 * k})`; ctx.fill();
+      ctx.strokeStyle = `rgba(${rgb},${0.5 + 0.45 * blink})`; ctx.lineWidth = Math.max(1.5, 4 * z);
+      if (!q.small) ctx.setLineDash([Math.max(4, 14 * z), Math.max(3, 8 * z)]);
+      ctx.stroke(); ctx.setLineDash([]);
+      path(k); ctx.fillStyle = `rgba(${rgb},${0.18 + 0.22 * k})`; ctx.fill();
+      if (q.small) { const cx = sx(q.x), cy = sy(q.y), R = q.r * z; ctx.strokeStyle = `rgba(${rgb},0.9)`; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.moveTo(cx - R * 0.5, cy); ctx.lineTo(cx + R * 0.5, cy); ctx.moveTo(cx, cy - R * 0.5); ctx.lineTo(cx, cy + R * 0.5); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+  const lerpN = (a, b2, k) => a + (b2 - a) * k;
+  /** Fire from a dragon's jaws, goblins in the air, beams, and the twins' tether. */
+  function drawMutantFx(ctx, t, z) {
+    const b = run.battle, now = b.time;
+    for (const u of b.units) {
+      const c = u.cast;
+      if (!c || c.move.kind !== 'breath' || c.stage !== 'act' || u.state === 'dying') continue;
+      // From the jaws (high on the body) down onto the ground it burns: the cone from its feet.
+      const a = c.angle != null ? c.angle : c.a0, R = c.move.range;
+      const mx = u.x + Math.cos(a) * u.r * 0.3, my = u.y - u.r * 2.7;
+      const x0 = sx(mx), y0 = sy(my), fx = sx(u.x + Math.cos(a) * R), fy = sy(u.y + Math.sin(a) * R);
+      const gr = ctx.createLinearGradient(x0, y0, fx, fy);
+      gr.addColorStop(0, 'rgba(255,250,200,0.95)'); gr.addColorStop(0.25, 'rgba(255,190,60,0.85)'); gr.addColorStop(0.7, 'rgba(255,90,20,0.55)'); gr.addColorStop(1, 'rgba(200,30,0,0)');
+      const sp = 0.2 + 0.03 * Math.sin(t * 30);
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x0, y0);
+      for (let k = 0; k <= 8; k++) { const aa = a - sp + (2 * sp * k) / 8; ctx.lineTo(sx(u.x + Math.cos(aa) * R), sy(u.y + Math.sin(aa) * R)); }
+      ctx.closePath(); ctx.fill();
+      if (Math.random() < 0.7) { const d = 0.2 + Math.random() * 0.8; burst(lerpN(mx, u.x + Math.cos(a) * R, d), lerpN(my, u.y + Math.sin(a) * R, d), Math.random() < 0.5 ? '#ffb43a' : '#ff6a1a', 2, 120, 'spark'); }
+    }
+    if (run.throws) {
+      run.throws = run.throws.filter((th) => now - th.start < th.dur);
+      for (const th of run.throws) {
+        const k = (now - th.start) / th.dur;
+        const gx = th.from.x + (th.to.x - th.from.x) * k, gy = th.from.y + (th.to.y - th.from.y) * k;
+        const lift = Math.sin(k * Math.PI) * 520;
+        ctx.globalAlpha = 0.35; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(sx(th.to.x + (gx - th.to.x) * 0.3), sy(th.to.y + (gy - th.to.y) * 0.3), 22 * z * (0.4 + k * 0.6), 7 * z * (0.4 + k * 0.6), 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+        const e = D.ENEMIES[th.peon];
+        ctx.save(); ctx.translate(sx(gx), sy(gy - lift) + 20 * z); ctx.rotate(th.spin + k * 9); ctx.translate(0, -20 * z);
+        ENEMY_ART.draw(ctx, th.peon, { t: now * 3, walk: 0, walkRaw: now * 4, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 7, mut: {} }, (90 * z * D.enemySize(th.peon)) / (e.look.size || 1));
+        ctx.restore();
+      }
+    }
+    if (run.beams) {
+      run.beams = run.beams.filter((bm) => bm.until > now);
+      for (const bm of run.beams) {
+        const k = (bm.until - now) / 0.45;
+        const x0 = sx(bm.x), y0 = sy(bm.y), x1 = sx(bm.x + Math.cos(bm.a) * bm.len), y1 = sy(bm.y + Math.sin(bm.a) * bm.len);
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.5 * k; ctx.strokeStyle = bm.col; ctx.lineWidth = bm.w * z; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.globalAlpha = 0.95 * k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = bm.w * z * 0.3; ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    const sol = b.units.find((u) => u.kind === 'twin_sol' && u.state !== 'dying'), luna = b.units.find((u) => u.kind === 'twin_luna' && u.state !== 'dying');
+    if (sol && luna && sol.linked) {
+      const x0 = sx(sol.x), y0 = sy(sol.y - sol.r * 1.6), x1 = sx(luna.x), y1 = sy(luna.y - luna.r * 1.6);
+      const gr = ctx.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(255,207,58,0.7)'); gr.addColorStop(1, 'rgba(154,216,255,0.7)');
+      ctx.strokeStyle = gr; ctx.lineWidth = Math.max(2, 6 * z); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x0, y0);
+      for (let i = 1; i <= 12; i++) { const k = i / 12; ctx.lineTo(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k + Math.sin(k * Math.PI * 4 + t * 8) * 8 * z * Math.sin(k * Math.PI)); }
+      ctx.stroke();
+    }
+  }
+  /** Each boss's health along the top: its name, phase marks, rage coming. */
+  function bossBars(b) {
+    const host = run.screen.querySelector('#bt-bossbars');
+    if (!host) return;
+    const bosses = b.units.filter((u) => u.mutant && u.side === 'foe');
+    const key = bosses.map((u) => u.uid).join(',');
+    if (host.dataset.key !== key) {
+      host.dataset.key = key;
+      host.innerHTML = bosses.map((u) => `<div class="bt-bossbar" data-uid="${u.uid}"><span class="bt-bb-name">${D.ENEMIES[u.kind].name}</span><span class="bt-bb-tag"></span><div class="bt-bb-track"><div class="bt-bb-fill"></div>${(u.mutant.phases || []).map((p) => `<i style="left:${p.at * 100}%"></i>`).join('')}</div></div>`).join('');
+    }
+    for (const u of bosses) {
+      const row = host.querySelector(`[data-uid="${u.uid}"]`);
+      if (!row) continue;
+      row.querySelector('.bt-bb-fill').style.width = `${Math.max(0, (u.hp / u.maxHp) * 100).toFixed(1)}%`;
+      row.classList.toggle('dead', u.state === 'dying');
+      row.classList.toggle('enraged', !!u.enraged);
+      const left = (u.mutant.enrage || 180) - (b.time - u.spawnT);
+      const tag = u.enraged ? 'Enraged!' : left < 45 ? `Rage in ${Math.ceil(left)}s` : u.phase ? `Phase ${u.phase + 1}` : '';
+      const tg = row.querySelector('.bt-bb-tag');
+      if (tg.textContent !== tag) tg.textContent = tag;
+    }
+  }
+  /** A World 7 level's card: how it is won, the hint, and each boss's weaknesses once met. */
+  function mutantCard(level, played) {
+    const b = B();
+    const rows = (level.bossIds || []).map((id) => {
+      const e = D.ENEMIES[id], n = MUTANTS.bossNotes(id);
+      if (!(played && b.seen[id])) return '<div class="bt-mut-row"><b>???</b><span class="bt-dim">Play the level to learn about this boss.</span></div>';
+      return `<div class="bt-mut-row"><b>${e.name}</b><div class="bt-mut-chips">${n.weak ? `<span class="bt-mchip weak">Weak to ${n.weak}</span>` : ''}${n.resist ? `<span class="bt-mchip resist">Resists ${n.resist}</span>` : ''}${n.type ? `<span class="bt-mchip">${n.type.icon} ${n.type.name}: ${n.type.text}</span>` : ''}</div>${n.armour ? `<span class="bt-dim">${n.armour}</span>` : ''}${n.twin ? `<span class="bt-dim">${n.twin}</span>` : ''}</div>`;
+    }).join('');
+    return `<div class="bt-mutcard"><div class="bt-mut-rule">Beat the boss to win. Their camp has no coin pile, so guard yours.</div>${level.tip ? `<div class="bt-mut-tip">💡 ${level.tip}</div>` : ''}${rows}</div>`;
+  }
+  /** One to five bleeding, dripping red stars: how dangerous a World 7 foe is, against World 7 only (Sam, 23 Nov). */
+  const BLOOD_STAR = '<svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5 1.4-7.1-5.3-5 7.2-.9z" fill="#c8102e" stroke="#4a0008" stroke-width="1.4" stroke-linejoin="round"/><path d="M7.6 18.4c-.2 2.4.4 4 .9 5.6.5-1.4.9-2.8.9-4.6zM15.4 18.8c.1 2.2.6 3.4 1.1 4.6.4-1.2.6-2.3.4-3.7z" fill="#c8102e" stroke="#4a0008" stroke-width=".9"/><circle class="drip" cx="8.5" cy="26" r="1.4" fill="#c8102e"/><circle class="drip d2" cx="16.5" cy="25" r="1.2" fill="#c8102e"/><path d="M8.6 7.4l2.2-1" stroke="#ff8a9a" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  const bloodHtml = (d) => { let s = ''; for (let i = 1; i <= 5; i++) s += `<span class="bt-blood ${d >= i ? 'full' : d >= i - 0.5 ? 'half' : ''}">${BLOOD_STAR}</span>`; return s; };
+  const dangerHtml = (id) => (D.ENEMIES[id].world === 7 && typeof MUTANTS !== 'undefined' ? `<span class="bt-bloods">${bloodHtml(MUTANTS.bloodStars(id))}</span>` : heartsHtml(D.difficulty(id)));
 
   function events(list) {
     for (const ev of list) {
@@ -1007,6 +1234,7 @@ const BATTLE = (() => {
         case 'special-miss': bigText(u.x, u.y - u.r * 2.4, 'Nothing in reach', '#c8d0e8', 1.1); sfx('nope'); break;
         case 'portal': for (const [rr, life] of [[2.8, 1.3], [2, 1.1], [1.3, 0.9]]) run.fx.push({ kind: 'ring', x: u.x, y: u.y, r: u.r * rr, life, max: life, col: '#b080ff' }); burst(u.x, u.y - u.r, '#b080ff', 22, 170, 'wisp'); bigText(u.x, u.y - u.r * 2.6, '🌀 Portal!', '#d8b0ff', 1.1); break;
         case 'trait': traitFx(ev); break;
+        case 'mutant': mutantFx(ev); break;
         case 'swing':
           if (ev.ranged) {
             const style = shotStyle(u);
@@ -1032,10 +1260,13 @@ const BATTLE = (() => {
           if (ev.heavy && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(u, true);
           break;
         case 'hit':
-          if (!ev.heavy && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(ev.by, false);
+          // A burn's or poison's tick: a small number now and then, no blow.
+          if (ev.dot) { if (Math.random() < 0.3) text(u.x + u.r * 0.8, u.y - u.r * 1.4, `${Math.round(ev.dmg)}`, u.burnUntil > run.battle.time ? '#ffb43a' : '#b8ff6a'); break; }
+          if (!ev.heavy && ev.by && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(ev.by, false);
           hitFx(u, ev.by, ev.heavy);
           if (ev.heavy) text(u.x + u.r * 1.1, u.y - u.r * 1.6, `${Math.round(ev.dmg)}`, '#ffe066');
           u._hurt = 1;
+          if (ev.tag && u.mutant) tagFx(u, ev.tag);
           break;
         case 'death':
           if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.death(u);
@@ -1154,6 +1385,7 @@ const BATTLE = (() => {
       invasion: { top: '#4a2a22', mid: '#7a4a2e', low: '#8a6a3a', path: 'rgba(40,30,30,0.35)', blob: ['#8a5634', '#6a3a26', '#9a6a3c', '#5a3424'], edge: '#2a1810' },
       moon: { top: '#3a3e52', mid: '#6a6e82', low: '#8a8e9e', path: 'rgba(220,225,240,0.22)', blob: ['#7a7e90', '#5a5e70', '#9a9eae', '#6a6e80'], edge: '#1a1c28' },
       rings: { top: '#141830', mid: '#2a2a48', low: '#3a3a5a', path: 'rgba(240,210,160,0.2)', blob: ['#4a4060', '#3a3050', '#5a5070', '#2a2a44'], edge: '#0a0a18' },
+      mutants: { top: '#1a0e22', mid: '#2a2236', low: '#34304a', path: 'rgba(160,255,90,0.14)', blob: ['#3a2a4a', '#2a3a2a', '#4a3a5a', '#2a4a34'], edge: '#0a0610' },
       eclipse: { top: '#0e0818', mid: '#1e1230', low: '#2e1c44', path: 'rgba(255,200,100,0.14)', blob: ['#2a1a40', '#3a2050', '#1a1030', '#4a2a5a'], edge: '#05030a' },
     }[theme];
     const grd = g.createLinearGradient(0, 0, 0, H);
@@ -1517,7 +1749,9 @@ const BATTLE = (() => {
     ctx.drawImage(run.bg, sx(0), sy(0), W * z, H * z);
     // Your zone lights up for a moment when you tap it.
     if (run.markPulse > 0 || run.drag) { ctx.fillStyle = `rgba(120,210,255,${0.14 * Math.max(run.markPulse, run.drag ? 1 : 0)})`; ctx.fillRect(sx(0), sy(SAFE_Y), W * z, (H - SAFE_Y) * z); }
-    pile(ctx, 'foe', battle.piles.foe, battle.pileMax.foe, t);
+    // (World 7: no coin pile at their end; the giants' attacks show on the ground first.)
+    if (!battle.bossFight) pile(ctx, 'foe', battle.piles.foe, battle.pileMax.foe, t);
+    if (battle.zones && battle.zones.length) drawZones(ctx, t, z);
     pile(ctx, 'you', battle.piles.you, battle.pileMax.you, t);
     run.pileLabels = [];
     // The marker: where the next beast comes out.
@@ -1533,9 +1767,10 @@ const BATTLE = (() => {
     const units = [...battle.units].sort((a, c) => a.y - c.y);
     for (const u of units) { (u.side === 'you' ? drawBeast : drawFoe)(ctx, u, t); if (u.state !== 'dying' && !u.burrowed) statusFx(ctx, u, t, z); }
     for (const s of run.shots) if (s.t >= 0) drawShot(ctx, s, z, t);
+    if (battle.mut) drawMutantFx(ctx, t, z);
     // Hearts over everyone still standing, over the top of each one's head.
     for (const u of units) {
-      if (u.state === 'dying' || u.burrowed || u.cloakUntil > battle.time) continue;
+      if (u.state === 'dying' || u.burrowed || u.cloakUntil > battle.time || u.mutant) continue;
       const hgt = u.side === 'you' ? u.r * 2.85 : u.r * (D.ENEMIES[u.kind].look.plan === 'float' ? 3.0 : 3.5);
       const size = Math.max(15, Math.min(u.boss ? 42 : 30, u.r * z * (u.boss ? 0.9 : 0.85)));
       const size2 = u.champ ? Math.min(40, size * 1.25) : size;
@@ -1913,6 +2148,7 @@ const BATTLE = (() => {
       t: t + u.uid * 0.37, walk: (run.walk.get(u.uid) || 0) % 1, walkRaw: run.walk.get(u.uid) || 0, atk: ph, heavy: heavyNow,
       hurt: u._hurt || 0, dying: u.state === 'dying' ? Math.min(1, u.dyingT / BE.DYING) : 0,
       capture: u.state === 'capture', seed: u.uid, ranged: shoots(u),
+      mut: u.mutant ? MUTANTS.pose(run.battle, u) : null,
     };
     ctx.save();
     ctx.translate(sx(u.x), sy(u.y));
@@ -1926,7 +2162,7 @@ const BATTLE = (() => {
       ctx.beginPath(); ctx.ellipse(0, 0, u.r * z * (0.9 + k * 0.7), u.r * z * (0.3 + k * 0.22), 0, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    if (u.boss) { ctx.globalAlpha = 0.25; ctx.drawImage(ENEMY_ART.glowSprite('#ff3c3c'), -u.r * z * 2.2, -u.r * z * 3.4, u.r * z * 4.4, u.r * z * 4.4); ctx.globalAlpha = 1; }
+    if (u.boss && !u.mutant) { ctx.globalAlpha = 0.25; ctx.drawImage(ENEMY_ART.glowSprite('#ff3c3c'), -u.r * z * 2.2, -u.r * z * 3.4, u.r * z * 4.4, u.r * z * 4.4); ctx.globalAlpha = 1; }
     if (u.elite && u.state !== 'dying') {
       ctx.globalAlpha = 0.32 + 0.1 * Math.sin(t * 5 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ffd43b'), -u.r * z * 1.9, -u.r * z * 3.3, u.r * z * 3.8, u.r * z * 3.8); ctx.globalAlpha = 1;
     }
@@ -2006,6 +2242,7 @@ const BATTLE = (() => {
       // An evolved card whose beast is out with its special unused: the card names the special.
       btn.classList.toggle('special', b.canSpecial(i) && run.countdown <= 0);
     });
+    if (b.mut) bossBars(b);
   }
 
   // ------------------------------------------------------------------ pause, finish, results
@@ -2088,7 +2325,7 @@ const BATTLE = (() => {
     const next = level.n < w.levels ? level.n + 1 : null;
     const m = el(`<div class="bt-modal"><div class="bt-panel ${won ? 'won' : 'lost'}">
       <h2>${won ? 'Victory!' : r.retreated ? 'Retreated' : 'Defeat'}</h2>
-      ${first && level.n === w.levels && (level.world === 3 || level.world === 6) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : 'You have beaten every world of the Low Gravity solar system!'}</div>` : ''}
+      ${first && level.n === w.levels && (level.world === 3 || level.world === 6 || level.world === 7) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : level.world === 6 ? 'You have beaten every world of the Low Gravity solar system!' : 'You have beaten the Universal Mutants, the hardest battles in either universe!'}</div>` : ''}
       <div class="bt-result-star ${starNow ? 'on' : ''}">★</div>
       <div class="bt-dim">${won ? `Won in ${fmt(time)}` : battle.piles.you <= 0 ? 'They took your coin pile.' : 'You retreated.'} · star under ${fmt(level.starTime)}${starNow ? (newStar ? ': earned!' : '') : ''}</div>
       ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}, ${D.LEGENDS[id].title}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}</span></div></div>`).join('')}
@@ -2316,7 +2553,7 @@ const BATTLE = (() => {
       html += `<div class="bt-system">World ${w.id}: ${w.name} <small>${list.filter((e) => b.seen[e.id]).length}/${list.length}</small></div><div class="bt-wiki">`;
       for (const e of list) {
         const seen = !!b.seen[e.id];
-        html += `<button class="bt-wiki-cell ${seen ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${e.id}">${stillImg(e.id, 160, !seen)}<span>${seen ? e.name : '???'}</span></button>`;
+        html += `<button class="bt-wiki-cell ${seen ? '' : 'unseen'} ${e.role === 'boss' || e.role === 'mutant' ? 'boss' : ''}" data-id="${e.id}">${stillImg(e.id, 160, !seen)}<span>${seen ? e.name : '???'}</span></button>`;
       }
       html += '</div>';
     }
@@ -2331,15 +2568,16 @@ const BATTLE = (() => {
   function openFoe(id) {
     const e = D.ENEMIES[id];
     const s = D.enemyStats(id, D.levelPoints(e.world, e.debut));
-    const roles = { grunt: 'Foot soldier', tank: 'Tough', runner: 'Fast', ranged: 'Shoots from afar', caster: 'Magic from afar', brute: 'Hits hard', swarm: 'Comes in crowds', boss: 'Boss: hits three at once' };
+    const roles = { grunt: 'Foot soldier', tank: 'Tough', runner: 'Fast', ranged: 'Shoots from afar', caster: 'Magic from afar', brute: 'Hits hard', swarm: 'Comes in crowds', boss: 'Boss: hits three at once', mutant: 'Giant: many attacks of its own' };
     const kills = B().kills[id] || 0;
     const m = el(`<div class="bt-modal"><div class="bt-panel bt-foe-card">
       <img src="${ENEMY_ART.still(id, 240)}" alt="">
       <h2>${e.name}</h2>
-      <div class="bt-diff">${heartsHtml(D.difficulty(id))}</div>
+      <div class="bt-diff">${dangerHtml(id)}</div>
       <div class="bt-dim">World ${e.world}: ${D.WORLDS[e.world - 1].name} · first seen at level ${e.debut} · ${roles[e.role]}</div>
       <div>${kindChip(D.enemyAttackKind(id))}${D.traitOf(id) ? ` <span class="bt-kindchip trait">${D.TRAITS[D.traitOf(id)].icon} ${D.TRAITS[D.traitOf(id)].name}</span>` : ''}</div>
       ${D.traitOf(id) ? `<div class="bt-dim">${D.TRAITS[D.traitOf(id)].text}</div>` : ''}
+      ${e.role === 'mutant' ? (() => { const n = MUTANTS.bossNotes(id), mv = [...new Set(MUTANTS.BOSSES[id].moves.map((x) => x.name || MOVE_WORD[x.kind]).filter(Boolean))]; return `<div class="bt-mut-chips">${n.weak ? `<span class="bt-mchip weak">Weak to ${n.weak}</span>` : ''}${n.resist ? `<span class="bt-mchip resist">Resists ${n.resist}</span>` : ''}${n.type ? `<span class="bt-mchip">${n.type.icon} ${n.type.name}</span>` : ''}</div><div class="bt-dim">Its attacks: ${mv.join(', ')}.</div>${n.armour ? `<div class="bt-dim">${n.armour}</div>` : ''}${n.twin ? `<div class="bt-dim">${n.twin}</div>` : ''}`; })() : ''}
       <p>${e.note}</p>
       <div class="bt-stats">${statChips(s)}</div>
       <div class="bt-dim">Defeated: ${kills}</div>

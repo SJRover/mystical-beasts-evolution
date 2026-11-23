@@ -1208,7 +1208,9 @@ const ENEMY_ART = (() => {
     }
   }
 
-  const PLANS = { biped, float: floater, quad, centaur, crawler, serpent, blob, tripod, ram };
+  // 1.5: World 7's giants are drawn by mutants_art.js (loaded after this file).
+  const mutant = (ctx, P, look, pose) => { if (typeof MUTANT_ART !== 'undefined') MUTANT_ART.draw(ctx, P, look, pose); };
+  const PLANS = { biped, float: floater, quad, centaur, crawler, serpent, blob, tripod, ram, mutant };
 
   /**
    * Draw enemy `id` with its feet at (0, 0). `px` is how many pixels a size-1 enemy stands; the
@@ -1229,7 +1231,7 @@ const ENEMY_ART = (() => {
       if (P.shadow) ctx.scale(1 + d * 0.4, 1 - d * 0.7);
       else { ctx.rotate(d * 1.2 * (pose.seed % 2 ? 1 : -1)); ctx.translate(0, d * 6); }
     }
-    if (pose.hurt > 0) {
+    if (pose.hurt > 0 && look.plan !== 'mutant') {
       // A white flash over the enemy alone: drawn on a canvas of its own first, then whitened
       // where it is (on the battle canvas that would whiten the ground behind it too).
       const w = Math.ceil(150 * s), h = Math.ceil(160 * s);
@@ -1258,6 +1260,8 @@ const ENEMY_ART = (() => {
 
   /** The ground shadow, then the enemy (bobbing as it takes coins). */
   function body(ctx, P, look, pose) {
+    // A World 7 giant draws its own shadow and moves (mutants_art.js).
+    if (look.plan === 'mutant') { PLANS.mutant(ctx, P, look, pose); return; }
     ellipse(ctx, 0, 0, 16, 4.5, 'rgba(0,0,0,0.28)', null);
     if (pose.capture) ctx.translate(0, Math.abs(Math.sin(pose.t * 9)) * -3);
     const plan = look.plan || 'biped';
@@ -1304,7 +1308,8 @@ const ENEMY_ART = (() => {
     const e = BATTLE_DATA.ENEMIES[id];
     const big = (e && e.look.size) || 1;
     ctx.translate(size / 2, size * 0.86);
-    draw(ctx, id, { t: 0.4, walk: 0.1, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 1 }, (size * 0.62) / Math.max(1, big));
+    // (A World 7 giant spreads wider, wings and all: drawn a little smaller to fit.)
+    draw(ctx, id, { t: 0.4, walk: 0.1, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 1 }, ((size * 0.62) / Math.max(1, big)) * (e && e.look.plan === 'mutant' && e.look.boss ? 0.72 : 1));
     if (silhouette) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'source-in';
