@@ -10,18 +10,22 @@ import os, re, shutil, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 FPS = 30
-MUSIC = os.path.join(ROOT, 'PrimeSolarSystemCasualBattleMusicVariant3.mp3')
-START = 47.04
+SHOW = '--showcase' in sys.argv
+# The battle showcase (Sam, 23 Nov): its own shots and Sam's Variant 2 from its drop at 103.59 s.
+MUSIC = os.path.join(ROOT, 'PrimeSolarSystemCasualBattleMusicVariant2.mp3' if SHOW else 'PrimeSolarSystemCasualBattleMusicVariant3.mp3')
+START = 103.59 if SHOW else 47.04
 OUT_DIR = os.path.join(ROOT, 'App Store 1.4')
 
-# The shot order from record.mjs's PLAN.
-plan = re.findall(r"\{ name: '(\w+)', frames: (\d+)", open(os.path.join(HERE, 'record.mjs'), encoding='utf-8').read())
+# The shot order from record.mjs's PLAN (or SHOWCASE).
+src = open(os.path.join(HERE, 'record.mjs'), encoding='utf-8').read()
+part = src[src.index('export const SHOWCASE'):] if SHOW else src[src.index('export const PLAN'):src.index('export const SHOWCASE')]
+plan = re.findall(r"\{ name: '(\w+)', frames: (\d+)", part[: part.index('];')])
 seq = os.path.join(HERE, 'frames', '_all')
 shutil.rmtree(seq, ignore_errors=True)
 os.makedirs(seq)
 n = 0
 for name, count in plan:
-    d = os.path.join(HERE, 'frames', name)
+    d = os.path.join(HERE, 'frames', f'showcase-{name}' if SHOW else name)
     files = sorted(f for f in os.listdir(d) if f.endswith('.jpg')) if os.path.isdir(d) else []
     if len(files) < int(count):
         sys.exit(f'{name}: {len(files)} frames, want {count}')
@@ -30,10 +34,10 @@ for name, count in plan:
         n += 1
 dur = n / FPS
 print('frames', n, 'seconds', round(dur, 2))
-if dur > 30:
+if dur > 30 and not SHOW:
     sys.exit('over 30 seconds')
 os.makedirs(OUT_DIR, exist_ok=True)
-out = os.path.join(OUT_DIR, 'App Preview iPhone 886x1920.mp4')
+out = os.path.join(OUT_DIR, 'Battle Showcase 886x1920.mp4' if SHOW else 'App Preview iPhone 886x1920.mp4')
 fade_out = 1.4
 cmd = [
     'ffmpeg', '-y', '-nostdin', '-v', 'error',

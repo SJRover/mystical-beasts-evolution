@@ -927,7 +927,7 @@ const BATTLE = (() => {
   function specialFx(ev) {
     const u = ev.unit, a = ev.ability, A = D.ABILITIES[a];
     bigText(u.x, u.y - u.r * 2.4, `${A.icon} ${A.name}!`, '#ffe066', 1.6);
-    sfx('special');
+    sfx('sp_' + a);
     const R = { blast: 190, freeze: 210, gust: 230, quake: 210, heal: 240, gravity: 280, rally: 280 }[a];
     const col = { blast: '#ff7a2a', freeze: '#9ae8ff', gust: '#eaffff', quake: '#c8a070', heal: '#7af0a0', gravity: '#b080ff', rally: '#ff6a5a', starfall: '#ffe066', dash: '#ffffff', shield: '#9ad8ff', volley: '#ffe8a0', leap: '#d8c8a8' }[a];
     if (R) { ring(u.x, u.y, R, col); ring(u.x, u.y, R * 0.6, col); burst(u.x, u.y - u.r * 0.5, col, 26, 260, a === 'gravity' ? 'wisp' : a === 'gust' || a === 'quake' ? 'smoke' : 'spark'); }

@@ -680,7 +680,7 @@ const BATTLE_DATA = (() => {
     const w = WORLDS[world - 1];
     const r = seeded(hash(`level|${world}|${n}`));
     const boss = n % BOSS_EVERY === 0;
-    const pool = E.filter((e) => e.world === world && e.role !== 'boss' && e.debut <= n);
+    let pool = E.filter((e) => e.world === world && e.role !== 'boss' && e.debut <= n);
     const fresh = E.find((e) => e.world === world && e.debut === n && e.role !== 'boss');
     const bossFoe = boss ? E.find((e) => e.world === world && e.role === 'boss' && e.debut === n) : null;
     const points = levelPoints(world, n);
@@ -719,6 +719,18 @@ const BATTLE_DATA = (() => {
     if (n >= 9 && k10 === 9) rule = { kind: 'spring', value: 0 };
     if (n >= 5 && k10 === 5) theme = ['snipers', 'swarm', 'runners', 'tanks'][(round + world) % 4];
     const themed = (e) => theme && THEMES[theme].roles.includes(e.role);
+    // 1.4.1, a level's own roster (Sam, 23 Nov: every level showed every enemy met so far): its
+    // newest, a few recent ones and one or two older ones, four kinds early in a world and seven by
+    // its end, and on a themed level at least two of the theme.
+    {
+      const size = Math.min(pool.length, 4 + Math.round((3 * (n - 1)) / Math.max(1, w.levels - 1)));
+      const roster = fresh ? [fresh] : [];
+      for (const e of [...pool].sort((a, c) => c.debut - a.debut).slice(0, 6)) if (roster.length < Math.ceil(size * 0.6) && !roster.includes(e) && r() < 0.75) roster.push(e);
+      const rest = pool.filter((e) => !roster.includes(e));
+      while (roster.length < size && rest.length) roster.push(rest.splice(Math.floor(r() * rest.length), 1)[0]);
+      if (theme) for (const e of pool.filter((x) => themed(x) && !roster.includes(x))) if (roster.filter(themed).length < 2) roster.push(e);
+      if (roster.length) pool = roster;
+    }
     const weights = pool.map((e) => (1 + Math.max(0, 6 - (n - e.debut)) * 0.5) * (themed(e) ? 7 : 1));
     const pick = () => {
       let x = r() * weights.reduce((a, b) => a + b, 0);

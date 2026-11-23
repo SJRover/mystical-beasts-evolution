@@ -215,7 +215,7 @@ window.TRAILER = (() => {
     for (let i = 0; i < 3; i++) {
       if (!b.canSpecial(i)) continue;
       const u = b.onField(i).find((m) => b.units.some((o) => o.side === 'foe' && o.state !== 'dying' && !o.burrowed && Math.hypot(o.x - m.x, o.y - m.y) < R));
-      if (u && b.special(i, u)) { specialsLeft--; return; }
+      if (u && b.special(i, u)) { specialsLeft--; return u; }
     }
   }
   /** One of the special slots' beasts on the field does its special. */
@@ -235,6 +235,24 @@ window.TRAILER = (() => {
     tap(cards[0]);
   }
 
+  /** A battle shot that closes in on the special when it happens (the showcase). */
+  function fightZoom(text, zoom, specials, every = 5) {
+    specialsLeft = specials;
+    let focus = null;
+    act = (f) => {
+      playCards(f, every);
+      const hero = f >= 4 && f % 2 === 0 ? specialNear(220) : null;
+      if (hero) focus = { u: hero, until: f + 50 };
+      const run = BATTLE.run;
+      if (focus && f < focus.until && run) {
+        run.cam.zoom += (1.7 - run.cam.zoom) * 0.18;
+        run.cam.x += (Math.max(320, Math.min(680, focus.u.x)) - run.cam.x) * 0.2;
+        run.cam.y += (Math.max(450, Math.min(1650, focus.u.y - 40)) - run.cam.y) * 0.2;
+      } else follow(zoom);
+      if (f === 0) caption(text || '', 15);
+      if (f === 45) caption('');
+    };
+  }
   /** A battle shot: play cards, follow the fight, specials when enemies are close, a caption a moment. */
   function fight(text, zoom, specials, every = 6) {
     specialsLeft = specials;
@@ -297,6 +315,58 @@ window.TRAILER = (() => {
     document.body.appendChild(d);
     await wait(300);
     act = () => {};
+  };
+
+  // ------------------------------------------------------------ the battle showcase (Sam, 23 Nov)
+  // Worlds, ways of playing, beasts, enemies and bosses: wide for the whole field, close for the
+  // specials, fast; then rare beasts being won.
+  S.sc_wide = async () => { await battle(1, 8, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi']); fight('Battle mode', 'fit', 0, 5); };
+  S.sc_minotaur = async () => { await battle(2, 20, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 3); fight('Fight bosses', 1.15, 1); };
+  S.sc_freeze = async () => { await battle(1, 13, ['leviathan', 'aqualion', 'eclipse', 'siren', 'fold_phoenix', 'origami_dragon']); fightZoom('Evolved specials', 1.0, 1); };
+  S.sc_horde = async () => { await battle(3, 25, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 9); fight('Plan your six', 0.5, 0, 5); };
+  S.sc_moon = async () => { await battle(4, 16, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 0); fight('', 1.15, 1); };
+  S.sc_gravity = async () => { await battle(6, 25, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 10); fightZoom('', 1.05, 2); };
+  S.sc_pirates = async () => { await battle(5, 13, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 4); fight('', 0.6, 1); };
+  S.sc_fortress = async () => { await battle(3, 28, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 10); fight('', 'fit', 0, 5); };
+  S.sc_gorgon = async () => { await battle(2, 30, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 5); fight('', 1.15, 1); };
+  S.sc_starfall = async () => { await battle(3, 33, ['dark_matter_leviathan', 'void_monarch', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 11); fightZoom('', 1.05, 1); };
+  S.sc_emperor = async () => {
+    await battle(6, 40, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 13);
+    fight('The last boss', 0.6, 2, 5);
+    const wide = act;
+    // Out wide for a bar, then in close.
+    act = (f) => { wide(f); if (f >= 70) follow(1.2); };
+  };
+  // A tenth star wins the Paper Crane: the results with "New Folded Legend".
+  S.sc_legend = async () => {
+    const B = BATTLE.B();
+    for (const l of BATTLE_DATA.LEGEND_LIST) delete B.legends[l.id];
+    B.stars = {};
+    for (let k = 21; k <= 29; k++) B.stars['1-' + k] = true;
+    await battle(1, 2, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 4);
+    fight('', 'fit', 0, 4);
+  };
+  // A Relic from a merge achievement, in its own card.
+  S.sc_relic = async () => {
+    await endBattle();
+    discoveries(true);
+    clean();
+    await SCENES.base({ level: 3, essence: 6.4e12, all: true });
+    SCENES.scatter([['phoenix'], ['leviathan'], ['eclipse', 1], ['siren'], ['astral'], ['aeris']], { top: 30, bottom: 58 });
+    await wait(600);
+    act = (f) => {
+      if (f === 0) caption('Earn rare Relics', 15);
+      if (f === 4) { if (!state.unlockedEvolved.includes('rose_window')) state.unlockedEvolved.push('rose_window'); triggerDiscoveryModal('rose_window'); }
+    };
+  };
+  // A Dark Matter beast out of a premium crate.
+  S.sc_crate = async () => {
+    discoveries(false);
+    clean();
+    await SCENES.base({ level: 5, essence: 2.1e15 });
+    SCENES.scatter([['ignis'], ['torrent'], ['magmadon'], ['aven'], ['blazehorn'], ['aqualion']], { top: 30, bottom: 57 });
+    await wait(600);
+    act = (f) => { if (f === 0) FX.premiumOpen(window.innerWidth / 2, window.innerHeight * 0.5, 'dark_matter_leviathan'); };
   };
 
   async function run(name) {

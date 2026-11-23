@@ -893,6 +893,30 @@ dips to about 48 fps at four times slowdown in the busiest World 6 battles.
 - [x] Drag to swap slots in the six.
 - [x] Sync down on rule levels that leave too few beasts.
 
+## 1.4.1 (Sam's notes of 23 Nov, branch update-1.4.1)
+
+- [x] Tier 15s that would not merge: two Legendary Tier 15s (Aurelion Prime with Voidwalker
+  Prime, the Omegas) took the Tier 14 Legendaries' road and came out as the same Tier 15, one
+  beast lost and never a Tier 16. They now take the Tier 15 road. That road is a gamble by design
+  (unchanged): until prestige 8 a Tier 15 pair has one chance in ten of a Godly beast and otherwise
+  loses one beast; from prestige 8 a failed roll still evolves to Tier 16; a Godly in the pair
+  always evolves. The failure message now says so.
+- [x] Each level its own enemies: it drew from every enemy met so far in its world (20 to 26 on the
+  level screen late on). Now its newest, a few recent ones and one or two older ones, four kinds
+  early in a world and seven by its end (a themed level at least two of its theme). All six
+  worlds recalibrated.
+- [x] The meadow's music after a battle: it only came back if it had been playing when the battle
+  began, and on iPhone the audio engine could be left paused. Now, a moment after leaving (unless
+  another battle has begun), the engine is woken and the meadow's track restarted if it is not
+  actually going (this also ends the blip of meadow music under Try again).
+- [x] A sound for each evolved special (leap, dash, shield, volley, blast, freeze, gust, quake,
+  heal, gravity well, starfall, war cry), battle_audio.js sp_*.
+- [x] Merge achievements' counts (merges, cures, mutations, evolutions) and each species' road to
+  its evolved form were never saved, so they were forgotten whenever the game closed. Saved now
+  (save keys mergeStats and evolveProgress); every discovered species shows its road from 0/100.
+- [x] The premium crate's beast flashed a square border: its image went on screen before it had
+  loaded. It now comes on once loaded, and its finished picture is made while the crate shakes.
+
 ## Ideas for later
 
 - Armoured enemies (half damage from light attacks) and fliers only Range 3 and up can hit.

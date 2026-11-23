@@ -100,6 +100,7 @@ const FX = (() => {
       const glow = el('div', 'fx-glow', stage);
       const rays = el('div', 'fx-rays', stage);
       const crate = el('div', 'fx-crate-shake', stage); crate.innerHTML = crateSvg();
+      try { ART.picture('beast', beastId, false, false, 360, true, true, true); } catch (e) { /* drawn later */ }
       requestAnimationFrame(() => o.classList.add('on'));
       // Move the scene to the middle of the screen while it shakes.
       stage.animate([{ left: `${x}px`, top: `${y}px` }, { left: `${innerWidth / 2}px`, top: `${innerHeight * 0.44}px` }], { duration: 450, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' });
@@ -115,8 +116,12 @@ const FX = (() => {
         const r = stage.getBoundingClientRect();
         burst(r.left, r.top, rarity, 1.6 + rank * 0.15);
         if (typeof audio !== 'undefined' && audio) { try { audio.playUnlock(['GODLY', 'DARK_MATTER'].includes(rarity) ? 'GODLY' : rarity); } catch (e) { /* no sound */ } }
-        const pic = el('img', 'fx-beast', stage); pic.src = beastPicture(beastId); pic.alt = '';
         const banner = el('div', 'fx-banner', stage);
+        const pic = el('img', 'fx-beast'); pic.alt = '';
+        const show = () => { if (!pic.parentNode && !done) stage.insertBefore(pic, banner); };
+        pic.onload = show; pic.onerror = show;
+        pic.src = beastPicture(beastId);
+        if (pic.complete && pic.naturalWidth) show();
         banner.innerHTML = `<div class="fx-rarity">${label(rarity)}!</div><div class="fx-name">${t ? t.name : ''}</div><div class="fx-tier">Tier ${t ? t.tier : ''}</div>`;
       }, 1100);
       let done = false;

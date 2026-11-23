@@ -372,6 +372,9 @@ function saveGame() {
     sanctuaryBeasts: state.sanctuaryBeasts,
     trophyCounts: state.trophyCounts,
     t20MergesCount: state.t20MergesCount || 0,
+    // 1.4.1: the merge achievements' counts and each species' road to its evolved form.
+    mergeStats: state.mergeStats || null,
+    evolveProgress: state.evolveProgress || {},
     lastTrashedBeast: state.lastTrashedBeast,
     lastSaved: state.lastSaved,
     primeSystem: state.primeSystem,
@@ -462,6 +465,8 @@ function loadGame() {
     state.sanctuaryBeasts = saveData.sanctuaryBeasts || [];
     state.trophyCounts = saveData.trophyCounts || { sparky: 1, floaty_ray: 1 };
     state.t20MergesCount = saveData.t20MergesCount || 0;
+    state.mergeStats = saveData.mergeStats || null;
+    state.evolveProgress = saveData.evolveProgress || {};
     state.lastTrashedBeast = saveData.lastTrashedBeast || null;
     state.lastSaved = saveData.lastSaved || Date.now();
     state.inBeastHub = saveData.inBeastHub || false;
@@ -597,6 +602,8 @@ function loadGame() {
       state.sanctuaryBeasts = [];
       state.trophyCounts = { sparky: 1, floaty_ray: 1 };
       state.t20MergesCount = 0;
+      state.mergeStats = null;
+      state.evolveProgress = {};
       state.premiumCratesCount = 0;
       state.doubleEssenceEndTime = 0;
       state.battle = null;
@@ -2428,7 +2435,7 @@ function executeMergeInner(beastA, beastB) {
     }
   }
 
-  const isBothLegendary = (originalTemplateA.rarity === 'LEGENDARY' && targetTemplate.rarity === 'LEGENDARY');
+  const isBothLegendary = (originalTemplateA.rarity === 'LEGENDARY' && targetTemplate.rarity === 'LEGENDARY' && originalTemplateA.tier < 15);
   const isBothT15 = (originalTemplateA.tier === 15 && targetTemplate.tier === 15);
   const isBothT19 = (originalTemplateA.tier === 19 && targetTemplate.tier === 19);
 
@@ -2555,7 +2562,7 @@ function executeMergeInner(beastA, beastB) {
       
       spawnToastNotification(
         '💥 MERGE FAILURE!',
-        `Tier 15 merge failed. One <b>Beast</b> was lost in the attempt.`,
+        `Tier 15 merges succeed one time in ten until prestige 8. This one failed, and one <b>Beast</b> was lost.`,
         getBeastSVG(beastA.type, beastA.evolved, beastA.infected)
       );
       if (audio) audio.playClick();
@@ -3457,7 +3464,6 @@ function evolveBadge(id) {
   if (isBossBeast(id) || isRelic(id)) return '';
   const n = (state.evolveProgress || {})[id] || 0;
   const got = (state.unlockedEvolved || []).includes(id);
-  if (!n && !got) return '';
   return `<div class="evolve-badge ${got ? 'got' : ''}"><i style="width:${(n / EVOLVE_NEEDED) * 100}%"></i><span>${got ? '✦ ' : ''}${n}/${EVOLVE_NEEDED}</span></div>`;
 }
 
@@ -5715,6 +5721,8 @@ function setupTutorialListeners() {
       state.sanctuaryBeasts = [];
       state.trophyCounts = { sparky: 1, floaty_ray: 1 };
       state.t20MergesCount = 0;
+      state.mergeStats = null;
+      state.evolveProgress = {};
       state.premiumCratesCount = 0;
       state.doubleEssenceEndTime = 0;
       state.battle = null;

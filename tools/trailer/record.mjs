@@ -25,7 +25,28 @@ export const PLAN = [
   { name: 'emperor', frames: 98, pre: 0, until: 'boss', after: 100 },
   { name: 'end', frames: 65 },
 ];
-const pick = process.argv.slice(2);
+// The battle showcase (Sam, 23 Nov): `node record.mjs --showcase [shot ...]`. Its music is
+// Sam's PrimeSolarSystemCasualBattleMusicVariant2 from the drop at 103.59 s (102 bpm, a bar is
+// 70.55 frames), so its cuts sit on bars too.
+export const SHOWCASE = [
+  { name: 'sc_wide', frames: 71, pre: 280 },
+  { name: 'sc_minotaur', frames: 70, pre: 0, until: 'boss', after: 90 },
+  { name: 'sc_freeze', frames: 71, pre: 250 },
+  { name: 'sc_horde', frames: 70, pre: 330 },
+  { name: 'sc_moon', frames: 71, pre: 330 },
+  { name: 'sc_gravity', frames: 70, pre: 330 },
+  { name: 'sc_pirates', frames: 71, pre: 330 },
+  { name: 'sc_fortress', frames: 70, pre: 420 },
+  { name: 'sc_gorgon', frames: 71, pre: 0, until: 'boss', after: 80 },
+  { name: 'sc_starfall', frames: 71, pre: 330 },
+  { name: 'sc_emperor', frames: 141, pre: 0, until: 'boss', after: 60 },
+  { name: 'sc_legend', frames: 70, pre: 0, until: 'result', after: 25 },
+  { name: 'sc_relic', frames: 71 },
+  { name: 'sc_crate', frames: 70 },
+  { name: 'end', frames: 141 },
+];
+const SHOW = process.argv.includes('--showcase');
+const pick = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const tw = readFileSync(path.join(here, 'tw.js'), 'utf8');
 const t = await openTab({ width: 443, height: 960, scale: 2, mobile: true, headless: true });
 await t.send('Page.addScriptToEvaluateOnNewDocument', { source: tw });
@@ -43,22 +64,23 @@ console.log(await ev(`
   if (window.audio) { audio.musicEnabled = false; audio.sfxEnabled = false; if (audio.stopMusic) audio.stopMusic(); }
   return 'ready';
 `));
-for (const shot of PLAN) {
+for (const shot of SHOW ? SHOWCASE : PLAN) {
   if (pick.length && !pick.includes(shot.name)) continue;
-  const dir = path.join(here, 'frames', shot.name);
+  const dir = path.join(here, 'frames', SHOW ? `showcase-${shot.name}` : shot.name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   console.log(shot.name, await ev(`__TW.autoRun(); return await TRAILER.run('${shot.name}');`), await ev(`return JSON.stringify({ battle: BATTLE.run ? BATTLE.run.level.id + (BATTLE.run.battle.result ? ' ' + BATTLE.run.battle.result : '') : null, modal: !!document.querySelector('.bt-modal'), sheets: document.querySelectorAll('.bt-sheet').length });`));
   await ev(`__TW.manual(); return 1;`);
   // Unseen frames first (the countdown, the wait for a crowd), stepping the clock and the shot.
   let f0 = -(shot.pre || 0);
-  if (shot.until === 'boss') {
+  if (shot.until) {
     // Run on until the boss is out, then film.
     // The shot's own frames count from when filming starts (its caption shows then), so the
     // waiting frames are numbered far below zero.
     let w = -100000;
     for (let i = 0; i < 1500; i++) {
-      const out = await ev(`TRAILER.act(${w}); __TW.step(1000 / ${FPS}); return !!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss)) ;`);
+      const cond = shot.until === 'result' ? `!!document.querySelector('.bt-modal [data-a=map]')` : `!!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss))`;
+      const out = await ev(`TRAILER.act(${w}); __TW.step(1000 / ${FPS}); return ${cond};`);
       w++;
       if (out === true) break;
     }

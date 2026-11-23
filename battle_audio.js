@@ -188,6 +188,19 @@ const BATTLE_SFX = (() => {
     nope(ctx, t) { tone(ctx, 'square', 220, 180, 0.12, 0.06, t); },
     // An evolved form's special: a rising shimmer and a strike.
     special(ctx, t) { [523, 784, 1047, 1568].forEach((f, i) => tone(ctx, 'triangle', f, f * 1.02, 0.2, 0.12, t + i * 0.05)); hiss(ctx, 400, 4000, 1.2, 0.35, 0.2, t + 0.15); tone(ctx, 'sine', 120, 40, 0.4, 0.4, t + 0.2); },
+    // Each special its own (1.4.1): a rising shimmer to start, then the special's sound.
+    sp_leap(ctx, t) { hiss(ctx, 500, 3000, 1.5, 0.28, 0.25, t); tone(ctx, 'square', 260, 620, 0.22, 0.08, t); tone(ctx, 'sine', 160, 38, 0.45, 0.55, t + 0.3); hiss(ctx, 900, 120, 0.8, 0.35, 0.3, t + 0.3, 'lowpass'); },
+    sp_dash(ctx, t) { hiss(ctx, 700, 5000, 2.5, 0.22, 0.3, t); tone(ctx, 'sawtooth', 220, 880, 0.18, 0.1, t); tone(ctx, 'sawtooth', 330, 1320, 0.18, 0.06, t + 0.04); },
+    sp_shield(ctx, t) { [659, 988, 1319].forEach((f, i) => tone(ctx, 'triangle', f, f, 0.9, 0.1, t + i * 0.06)); tone(ctx, 'sine', 196, 196, 0.9, 0.18, t); hiss(ctx, 3000, 6000, 4, 0.6, 0.06, t + 0.1); },
+    sp_volley(ctx, t) { for (let i = 0; i < 3; i++) { hiss(ctx, 2600, 500, 3, 0.12, 0.28, t + i * 0.09); tone(ctx, 'triangle', 880, 440, 0.1, 0.07, t + i * 0.09); } },
+    sp_blast(ctx, t) { tone(ctx, 'sine', 110, 28, 0.8, 0.7, t); hiss(ctx, 1800, 80, 0.7, 0.7, 0.5, t, 'lowpass'); tone(ctx, 'square', 70, 40, 0.25, 0.12, t); },
+    sp_freeze(ctx, t) { [2637, 2349, 1976, 1568, 1319].forEach((f, i) => tone(ctx, 'sine', f, f * 1.01, 0.35, 0.09, t + i * 0.045)); hiss(ctx, 6000, 9000, 6, 0.5, 0.08, t); tone(ctx, 'triangle', 330, 330, 0.6, 0.06, t + 0.1); },
+    sp_gust(ctx, t) { hiss(ctx, 250, 1400, 1.2, 0.5, 0.3, t); hiss(ctx, 1400, 300, 1.2, 0.5, 0.25, t + 0.4); },
+    sp_quake(ctx, t) { tone(ctx, 'sine', 55, 32, 1.1, 0.7, t); hiss(ctx, 400, 60, 0.6, 1.0, 0.45, t, 'lowpass'); tone(ctx, 'square', 48, 40, 0.5, 0.1, t + 0.15); },
+    sp_heal(ctx, t) { [523, 659, 784, 1047].forEach((f, i) => tone(ctx, 'sine', f, f, 0.45, 0.12, t + i * 0.08)); hiss(ctx, 4000, 8000, 5, 0.5, 0.05, t + 0.2); },
+    sp_gravity(ctx, t) { tone(ctx, 'sawtooth', 700, 55, 0.7, 0.14, t); tone(ctx, 'sine', 90, 45, 0.9, 0.45, t + 0.15); hiss(ctx, 2000, 120, 1.5, 0.7, 0.25, t, 'lowpass'); },
+    sp_starfall(ctx, t) { for (let i = 0; i < 5; i++) { const f = 1200 + i * 230; tone(ctx, 'triangle', f, f * 0.5, 0.25, 0.08, t + i * 0.07); tone(ctx, 'sine', 120, 40, 0.25, 0.25, t + 0.25 + i * 0.07); } },
+    sp_rally(ctx, t) { [[220, 0], [277, 0.12], [330, 0.24]].forEach(([f, d]) => { tone(ctx, 'sawtooth', f, f, 0.5, 0.09, t + d); tone(ctx, 'sawtooth', f * 1.5, f * 1.5, 0.5, 0.05, t + d); }); tone(ctx, 'sine', 110, 110, 0.7, 0.2, t); },
   };
   function play(kind, priority = true) {
     const ctx = ready();
@@ -230,7 +243,16 @@ const BATTLE_SFX = (() => {
   function stopMusic() {
     clearInterval(fadeT);
     if (track) { track.pause(); track = null; }
-    if (resumeSystem && typeof audio !== 'undefined' && audio) { resumeSystem = false; audio.startMusic(); }
+  }
+  const inBattle = () => document.body.classList.contains('bt-in-battle') || !!document.getElementById('battle-screen');
+  function resumeMeadow() {
+    resumeSystem = false;
+    setTimeout(() => {
+      if (typeof audio === 'undefined' || !audio || !audio.musicEnabled || inBattle()) return;
+      if (audio.ctx && audio.ctx.state !== 'running') audio.ctx.resume().catch(() => {});
+      const now = (window.state && state.currentSolarSystem === 'low_gravity') ? audio.lgActiveAudio : audio.primeActiveAudio;
+      if (!audio.musicPlaying || !now || now.paused) { audio.stopMusic(); audio.startMusic(); }
+    }, 600);
   }
   /**
    * The battle is over: its music fades out over a second and a half (Sam, 18 Nov: stopping dead
@@ -257,6 +279,7 @@ const BATTLE_SFX = (() => {
   function leave() {
     if (stingTrack) { stingTrack.pause(); stingTrack = null; }
     stopMusic();
+    resumeMeadow();
   }
 
   /**
