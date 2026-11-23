@@ -1075,5 +1075,7 @@ const MUTANT_ART = (() => {
     if (pose.hurt > 0) { const op = ctx.globalCompositeOperation; ctx.globalCompositeOperation = 'lighter'; glow(ctx, 0, (-40 - air * 55) * k * (small ? 0.45 : 1), 44 * k * (small ? 0.5 : 1), '#ffffff', 0.22 * Math.min(1, pose.hurt)); ctx.globalCompositeOperation = op; }
   }
 
-  return { draw, ARTS };
+  // The drawing tools, shared with comet_art.js (the comet's beasts are drawn the same way).
+  const H = { shape, ell, stroke, vgrad, rgrad, limb, chain, tube, glow, eye, foot, paw, leg, gait, blow, scales, stitches, bands, fist, steam, shade, rgba, lerp, ease, clamp, HI, LO, setLine: (w, line) => { LW = w; LINE = line; }, get LW() { return LW; } };
+  return { draw, ARTS, H };
 })();
