@@ -248,7 +248,21 @@ My plan for how the comet works (Sam left it to me):
   scholar with an alien familiar on her shoulder); Cosmic: the Singularity Dragon, the Ouroboros
   (a serpent eating its tail round a galaxy), the Architect (a being of light with three moons).
 
-### Limited-time beasts (after World 7 and the comet, Sam said; but see the timing note)
+### Built so far (23 Nov, late)
+- World 7: at each phase change a giant is hurled about 380 back up the field and staggered (its
+  wind-up stopped); recalibrated.
+- comet_art.js: all fifteen species drawn in four stages, each with a blow and a special pose, the
+  Cosmic three with the black-hole aura and circling stars (sheet: App Store 1.4/Comet beasts.jpg).
+  Waiting on Sam's look at the designs before the comet's systems are built.
+- New reward kinds (battle.js grant): `boost: { mult, minutes }` (an essence boost, stacks with the
+  bought x2, saved as rewardBoostUntil/rewardBoostMult, its own badge) and `income: minutes` (that
+  much of your current income at once). Pinnacle, Mutation Ended and Monster Hunter now pay these
+  instead of premium crates (Sam: premium crates mean nothing late on). Comet eggs join them once
+  the comet exists. Achievement progress is always counted from saved totals, so a changed
+  achievement picks up where a player already is.
+- Sam's answer on timing (23 Nov): the Snowman was only an idea; finish 1.5's ideas first.
+
+### Limited-time beasts (after World 7 and the comet, Sam said)
 - A shiny silver theme: the name with a metallic shine sweeping left to right, a reflective
   metallic glow round the beast.
 - Won by several hard challenges within a time window; once the window closes it can never be
