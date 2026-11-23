@@ -1508,6 +1508,17 @@ const BATTLE = (() => {
     if (theme === 'rings') { // the planet's rings sweeping across
       for (let i = 0; i < 5; i++) { g.strokeStyle = `rgba(${210 - i * 15},${180 - i * 10},${140 - i * 10},0.18)`; g.lineWidth = 40 + i * 12; g.beginPath(); g.ellipse(500, 1000, 1400 + i * 90, 360 + i * 30, -0.35, 0, Math.PI * 2); g.stroke(); }
     }
+    if (theme === 'mutants') { // World 7: no coin pile at their end, but the lair the giants come out of
+      const gl = g.createRadialGradient(500, 110, 20, 500, 110, 300); gl.addColorStop(0, 'rgba(150,255,90,0.5)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gl; g.beginPath(); g.arc(500, 110, 300, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#2a2230'; g.beginPath(); g.moveTo(250, 200); for (let i = 0; i <= 12; i++) { const a = Math.PI + (i / 12) * Math.PI; g.lineTo(500 + Math.cos(a) * 270 + (r() - 0.5) * 30, 200 + Math.sin(a) * 200 + (r() - 0.5) * 24); } g.lineTo(750, 200); g.closePath(); g.fill();
+      g.fillStyle = '#07040c'; g.beginPath(); g.moveTo(320, 205); for (let i = 0; i <= 10; i++) { const a = Math.PI + (i / 10) * Math.PI; g.lineTo(500 + Math.cos(a) * 180 + (r() - 0.5) * 20, 205 + Math.sin(a) * 140 + (r() - 0.5) * 16); } g.lineTo(680, 205); g.closePath(); g.fill();
+      const inner = g.createRadialGradient(500, 170, 10, 500, 170, 150); inner.addColorStop(0, 'rgba(160,255,90,0.35)'); inner.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = inner; g.beginPath(); g.arc(500, 170, 150, 0, Math.PI * 2); g.fill();
+      for (const [x, y] of [[452, 150], [476, 148], [532, 158], [556, 156]]) { g.fillStyle = '#ff4a3a'; g.beginPath(); g.ellipse(x, y, 5, 3, 0, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = '#efe6d2'; g.lineWidth = 6; g.lineCap = 'round';
+      for (let i = 0; i < 9; i++) { const x = 300 + r() * 400, y = 230 + r() * 70, a = r() * Math.PI; g.beginPath(); g.moveTo(x - Math.cos(a) * 18, y - Math.sin(a) * 8); g.lineTo(x + Math.cos(a) * 18, y + Math.sin(a) * 8); g.stroke(); }
+    }
     if (theme === 'eclipse') { // the eclipse itself above their pile
       const gl = g.createRadialGradient(500, 60, 60, 500, 60, 260); gl.addColorStop(0, 'rgba(255,200,90,0.55)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gl; g.beginPath(); g.arc(500, 60, 260, 0, Math.PI * 2); g.fill();
