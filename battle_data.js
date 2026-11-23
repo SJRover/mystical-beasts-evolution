@@ -149,7 +149,7 @@ const BATTLE_DATA = (() => {
       const pick = tied.length === STATS.length ? tied[Math.floor(seeded(hash(id + '|rarity'))() * tied.length)] : order(id).find((k) => tied.includes(k));
       s[pick] += bonus;
     }
-    for (let k = 1; k <= prestige; k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
+    for (let k = 1; k <= Math.min(prestige, 15); k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
     return s;
   }
 

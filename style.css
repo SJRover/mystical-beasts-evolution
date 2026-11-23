@@ -255,6 +255,11 @@ body {
 #meadow-bg.biome-11 .hill-layer-2 {
   background: linear-gradient(to top, #020005, #0a0014);
 }
+/* 1.5: prestige 12 to 15 (the painted biome covers these; they show for a moment as it loads). */
+#meadow-bg.biome-12 { background: linear-gradient(to bottom, #04121a 0%, #1e4650 60%, #122e36 100%); }
+#meadow-bg.biome-13 { background: linear-gradient(to bottom, #0a0620 0%, #3a2a6a 60%, #24184a 100%); }
+#meadow-bg.biome-14 { background: linear-gradient(to bottom, #1a0a2e 0%, #5a4a72 60%, #3a2e52 100%); }
+#meadow-bg.biome-15 { background: linear-gradient(to bottom, #1a1408 0%, #d8b860 60%, #a8862e 100%); }
 
 /* --- PREMIUM LABORATORY INCUBATORS --- */
 .incubator-pedestal-container {
@@ -2537,6 +2542,11 @@ input:checked + .slider:before {
   --space-arms: #e91e63;
   background: linear-gradient(to bottom, #110514 0%, #320d3a 60%, #110514 100%);
 }
+/* 1.5: prestige 12 to 15. */
+#meadow-bg.low-gravity.biome-12 { --space-glow: #e0f7ff; --space-core: #7cf7ff; --space-arms: #1e4aaa; background: linear-gradient(to bottom, #020814 0%, #16285a 60%, #020814 100%); }
+#meadow-bg.low-gravity.biome-13 { --space-glow: #f3e5ff; --space-core: #c86aff; --space-arms: #3ff6ff; background: linear-gradient(to bottom, #12001e 0%, #2e1450 60%, #12001e 100%); }
+#meadow-bg.low-gravity.biome-14 { --space-glow: #e0fff6; --space-core: #3ff6c6; --space-arms: #ff7ab6; background: linear-gradient(to bottom, #001418 0%, #0e4a4a 60%, #001418 100%); }
+#meadow-bg.low-gravity.biome-15 { --space-glow: #fff6d6; --space-core: #ffcf3d; --space-arms: #ff6a1a; background: linear-gradient(to bottom, #000000 0%, #2a1a0c 60%, #000000 100%); }
 
 /* --- SANCTUARY FILTER BAR & POPUP MODALS --- */
 .sanctuary-filter-bar {

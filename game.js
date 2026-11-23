@@ -66,8 +66,15 @@ const PRESTIGE_TARGETS = [
   125000000000000000000000, // lvl 8 -> 9 (125Sx)
   5000000000000000000000000, // lvl 9 -> 10 (5Sp)
   250000000000000000000000000, // lvl 10 -> 11 (250Sp)
-  10000000000000000000000000000 // lvl 11 -> 12 (10Oc)
+  10000000000000000000000000000, // lvl 11 -> 12 (10Oc)
+  // 1.5: the last three ascents, the same climb (x50, x50, x40).
+  5e29,                    // lvl 12 -> 13 (500Oc)
+  2.5e31,                  // lvl 13 -> 14 (25No)
+  1e33                     // lvl 14 -> 15 (1Dc)
 ];
+// 1.5: prestige 15 is the highest in each solar system (16 biomes, prestige 0 to 15).
+const PRESTIGE_MAX = 15;
+const atPrestigeMax = () => (state.prestigeLevel || 0) >= PRESTIGE_MAX;
 
 // Upgrade details
 const UPGRADE_CONFIGS = {
@@ -158,7 +165,12 @@ const BIOME_CONFIGS = [
   { name: 'Eldritch Spire', theme: 'biome-8' },
   { name: 'Singularity Void', theme: 'biome-9' },
   { name: 'Glittery Lava Plains', theme: 'biome-10' },
-  { name: 'Dark Matter Core', theme: 'biome-11' }
+  { name: 'Dark Matter Core', theme: 'biome-11' },
+  // 1.5: prestige 12 to 15.
+  { name: 'Chrono Rift', theme: 'biome-12' },
+  { name: 'Astral Throne', theme: 'biome-13' },
+  { name: 'Shattered Heavens', theme: 'biome-14' },
+  { name: 'Edge of Creation', theme: 'biome-15' }
 ];
 
 const LOW_GRAVITY_BIOME_CONFIGS = [
@@ -173,7 +185,12 @@ const LOW_GRAVITY_BIOME_CONFIGS = [
   { name: 'Antimatter Abyss', theme: 'biome-8' },
   { name: 'Gravitational Core', theme: 'biome-9' },
   { name: 'Hypernova Plain', theme: 'biome-10' },
-  { name: 'Quantum Singularity', theme: 'biome-11' }
+  { name: 'Quantum Singularity', theme: 'biome-11' },
+  // 1.5: prestige 12 to 15.
+  { name: 'Pulsar Fields', theme: 'biome-12' },
+  { name: 'Magnetar Storm', theme: 'biome-13' },
+  { name: 'Wormhole Reef', theme: 'biome-14' },
+  { name: 'Event Horizon', theme: 'biome-15' }
 ];
 
 function getActiveBiomes() {
@@ -317,6 +334,7 @@ function startStoreKitWhenReady() {
 
 // Get dynamic target
 function getPrestigeTarget() {
+  if (atPrestigeMax()) return Infinity;
   const idx = Math.min(state.prestigeLevel, PRESTIGE_TARGETS.length - 1);
   return PRESTIGE_TARGETS[idx];
 }
@@ -512,6 +530,14 @@ function loadGame() {
         ]
       };
     }
+
+    // 1.5: prestige stops at 15 in each solar system. A save past it comes down to 15 (nothing else
+    // is lost), and the player is told once.
+    let cappedPrestige = false;
+    for (const sys of [state.primeSystem, state.lowGravitySystem]) {
+      if (sys && (sys.prestigeLevel || 0) > PRESTIGE_MAX) { sys.prestigeLevel = PRESTIGE_MAX; cappedPrestige = true; }
+    }
+    if (cappedPrestige) setTimeout(() => showWarning('Prestige 15', 'Prestige now stops at 15 in each solar system, the sixteenth biome. Your prestige above 15 has come down to 15, and nothing else has changed.'), 2500);
 
     // Load active variables
     const activeSys = state.currentSolarSystem === 'prime' ? state.primeSystem : state.lowGravitySystem;
@@ -1968,10 +1994,20 @@ function updateHUD() {
   capDisplay.innerText = maxCap;
 
   const target = getPrestigeTarget();
-  const progressPercent = Math.min((state.essence / target) * 100, 100);
-  
+  const progressPercent = atPrestigeMax() ? 100 : Math.min((state.essence / target) * 100, 100);
+
   const pctEl = document.getElementById('prestige-progress-pct');
-  if (progressPercent >= 100) {
+  const maxed = atPrestigeMax();
+  const ascentLabel = document.querySelector('.prestige-progress-label span');
+  if (ascentLabel && ascentLabel.textContent !== (maxed ? 'Final Biome' : 'Next Biome Ascent')) ascentLabel.textContent = maxed ? 'Final Biome' : 'Next Biome Ascent';
+  const pBtn = document.getElementById('prestige-btn');
+  const pBtnText = maxed ? 'Prestige 15, the highest' : 'Ascend to Next Tier';
+  if (pBtn && pBtn.textContent.trim() !== pBtnText) pBtn.textContent = pBtnText;
+  if (maxed) {
+    pctEl.innerText = 'Prestige 15';
+    pctEl.classList.remove('ready-pulse');
+    pctEl.style.cursor = '';
+  } else if (progressPercent >= 100) {
     pctEl.innerText = 'Ready to Ascend!';
     pctEl.classList.add('ready-pulse');
     pctEl.style.cursor = 'pointer';
@@ -2070,7 +2106,8 @@ function updateCrateSpawnerDisplay() {
 // Format numbers
 function formatNumber(num) {
   if (num < 1000) return Math.floor(num).toString();
-  const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc'];
+  // 1.5: names up to 1e45 (prestige 15 costs 1Dc, 1e33).
+  const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'UDc', 'DDc', 'TDc'];
   const i = Math.floor(Math.log10(num) / 3);
   const formatted = (num / Math.pow(10, i * 3)).toFixed(2);
   return `${formatted}${suffixes[i] || ''}`;
@@ -4211,6 +4248,7 @@ function executePrestigeAscent() {
   // it was before, which came back on leaving the hub: the whole field went on into the next
   // prestige (Sam, 17 Nov).
   if (state.inBeastHub) toggleBeastHub(false);
+  if (atPrestigeMax()) return;
   const target = getPrestigeTarget();
   if (state.essence < target) return;
 

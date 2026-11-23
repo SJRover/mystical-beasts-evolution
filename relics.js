@@ -52,6 +52,7 @@ const MERGE_ACH = [
   { id: 'm_evolve_3', name: 'Living Proof', desc: 'Evolve 3 beasts.', count: (s) => [s.evolved, 3], reward: { relic: 'sunwindow_lion', evolved: true } },
   { id: 'm_prestige_3', name: 'Ascendant', desc: 'Reach prestige 3.', count: (s, x) => [x.prestige, 3], reward: { premium: 2, cap: 15 } },
   { id: 'm_prestige_9', name: 'Starfarer', desc: 'Reach prestige 9.', count: (s, x) => [x.prestige, 9], reward: { premium: 5, cap: 18 } },
+  { id: 'm_prestige_15', name: 'Pinnacle', desc: 'Reach prestige 15, the highest.', count: (s, x) => [x.prestige, 15], reward: { premium: 8, cap: 20 } },
 ];
 
 const RELIC_ART = (() => {

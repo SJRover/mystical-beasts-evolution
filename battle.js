@@ -31,11 +31,11 @@ const BATTLE = (() => {
   /** A beast has been on your field at this prestige: its battle version is at least that. */
   function noteOwned(id) {
     if (!id || state.inBeastHub || !D.canBattle(id) || D.LEGENDS[id]) return;
-    const p = sysPrestige(D.systemOf(id));
+    const p = Math.min(15, sysPrestige(D.systemOf(id)));
     const b = B();
     if ((b.bestPrestige[id] || 0) < p) b.bestPrestige[id] = p;
   }
-  const prestigeOf = (id) => B().bestPrestige[id] || 0;
+  const prestigeOf = (id) => Math.min(15, B().bestPrestige[id] || 0);
   /** Folded Legends you have won: they battle in every world, Prime and Low Gravity. */
   const legendsOwned = () => D.LEGEND_LIST.map((l) => l.id).filter((id) => B().legends[id]);
   // Beasts of the world's system, the Relics (merge rewards, every world) and the Folded Legends.
