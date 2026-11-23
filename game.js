@@ -384,6 +384,8 @@ function saveGame() {
     autoOpenCrates: state.autoOpenCrates,
     autoCrateDrops: state.autoCrateDrops,
     doubleEssenceEndTime: state.doubleEssenceEndTime,
+    rewardBoostUntil: state.rewardBoostUntil || 0,
+    rewardBoostMult: state.rewardBoostMult || 1.5,
     premiumCratesCount: state.premiumCratesCount,
     unlockedBeasts: state.unlockedBeasts,
     unlockedEvolved: state.unlockedEvolved || [],
@@ -477,6 +479,8 @@ function loadGame() {
     state.autoOpenCrates = typeof saveData.autoOpenCrates !== 'undefined' ? saveData.autoOpenCrates : true;
     state.autoCrateDrops = typeof saveData.autoCrateDrops !== 'undefined' ? saveData.autoCrateDrops : true;
     state.doubleEssenceEndTime = saveData.doubleEssenceEndTime || 0;
+    state.rewardBoostUntil = saveData.rewardBoostUntil || 0;
+    state.rewardBoostMult = saveData.rewardBoostMult || 1.5;
     state.premiumCratesCount = saveData.premiumCratesCount || 0;
     state.unlockedBeasts = saveData.unlockedBeasts || ['sparky', 'floaty_ray'];
     state.unlockedEvolved = saveData.unlockedEvolved || [];
@@ -1769,6 +1773,7 @@ function collectCrystal(crystalId) {
   if (isBoostActive()) {
     value *= 2;
   }
+  value *= rewardBoostMult();
   const pctX = parseFloat(crystal.getAttribute('data-pct-x'));
   const pctY = parseFloat(crystal.getAttribute('data-pct-y'));
 
@@ -1808,6 +1813,7 @@ function autoCollectCrystal(crystalId) {
   if (!crystal) return;
   let value = parseFloat(crystal.getAttribute('data-value'));
   if (isBoostActive()) value *= 2;
+  value *= rewardBoostMult();
   const abs = getAbsolutePosition(parseFloat(crystal.getAttribute('data-pct-x')), parseFloat(crystal.getAttribute('data-pct-y')));
   crystal.remove();
   const hudPos = document.querySelector('.essence-icon').getBoundingClientRect();
@@ -1891,6 +1897,7 @@ function tickGameSeconds() {
   if (isBoostActive() && !state.inBeastHub) {
     cps *= 2;
   }
+  cps *= rewardBoostMult();
   state.essence += cps;
 
   if (Math.floor(Date.now() / 1000) % 10 === 0) {
@@ -2044,7 +2051,13 @@ function updateHUD() {
         timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
       }
       
-      doubleEssenceEl.innerText = `x2 Active: ${timeStr}`;
+      doubleEssenceEl.innerText = `x${2 * rewardBoostMult()} Active: ${timeStr}`;
+      doubleEssenceEl.style.display = 'block';
+    } else if (rewardBoostMult() > 1) {
+      // An achievement's boost, with its own time left.
+      const s = Math.max(0, Math.floor((state.rewardBoostUntil - Date.now()) / 1000));
+      const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+      doubleEssenceEl.innerText = `x${rewardBoostMult()} Boost: ${hh ? `${hh}:${String(mm).padStart(2, '0')}` : mm}:${String(ss).padStart(2, '0')}`;
       doubleEssenceEl.style.display = 'block';
     } else {
       doubleEssenceEl.style.display = 'none';
@@ -4334,6 +4347,15 @@ function executePrestigeAscent() {
 function isBossBeast(type) {
   return ['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'].includes(type);
 }
+
+/**
+ * 1.5: an essence boost won from an achievement (x1.5 for a while; Sam, 23 Nov: rewards that matter
+ * late in the game). It stacks with the bought x2.
+ */
+function rewardBoostMult() {
+  return (state.rewardBoostUntil || 0) > Date.now() ? (state.rewardBoostMult || 1.5) : 1;
+}
+window.rewardBoostMult = rewardBoostMult;
 
 function isBoostActive() {
   return Date.now() < state.doubleEssenceEndTime;

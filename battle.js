@@ -2380,6 +2380,14 @@ const BATTLE = (() => {
   /** Pay out a reward and note it for the results. */
   function grant(rw, notes, why = '', level = null) {
     if (rw.essence) { state.essence += rw.essence; notes.push(`+${formatNumber(rw.essence)} essence`); }
+    // 1.5: hours of your income at once, and an essence boost for a while.
+    if (rw.income) { const cps = typeof calculateTotalCps === 'function' ? calculateTotalCps() : 0; const ess = Math.max(1e6, cps * 60 * rw.income); state.essence += ess; notes.push(`+${formatNumber(ess)} essence (${rw.income >= 60 ? `${rw.income / 60} hours` : `${rw.income} minutes`} of your income)`); }
+    if (rw.boost) {
+      const now = Date.now(), live = (state.rewardBoostUntil || 0) > now;
+      state.rewardBoostMult = Math.max(live ? state.rewardBoostMult || 1 : 1, rw.boost.mult);
+      state.rewardBoostUntil = Math.max(now, state.rewardBoostUntil || 0) + rw.boost.minutes * 60000;
+      notes.push(`Essence x${rw.boost.mult} for ${rw.boost.minutes >= 60 ? `${rw.boost.minutes / 60} hour${rw.boost.minutes > 60 ? 's' : ''}` : `${rw.boost.minutes} minutes`}`);
+    }
     if (rw.crates) {
       let dropped = 0, paid = 0;
       for (let i = 0; i < rw.crates; i++) { if (crateRoom()) { spawnCrateOnField(); dropped++; } else paid++; }
@@ -2631,6 +2639,8 @@ const BATTLE = (() => {
     if (rw.premium) out.push(`<span class="bt-rw premium"><i>🎁</i>${rw.premium}${rw.cap && rw.cap < 20 ? `<small>≤T${rw.cap}</small>` : ''}</span>`);
     if (rw.spins) out.push(`<span class="bt-rw"><i>🎡</i>${rw.spins}</span>`);
     if (rw.essence) out.push(`<span class="bt-rw"><i>✨</i>${formatNumber(rw.essence)}</span>`);
+    if (rw.income) out.push(`<span class="bt-rw"><i>✨</i>${rw.income >= 60 ? `${rw.income / 60}h` : `${rw.income}m`} income</span>`);
+    if (rw.boost) out.push(`<span class="bt-rw premium"><i>⚡</i>x${rw.boost.mult} ${rw.boost.minutes >= 60 ? `${rw.boost.minutes / 60}h` : `${rw.boost.minutes}m`}</span>`);
     if (rw.legend) out.push(`<span class="bt-rw legend"><img data-legend="${rw.legend}" alt="">${D.LEGENDS[rw.legend].name.replace(/^The /, '')}</span>`);
     if (rw.perk) out.push(`<span class="bt-rw perk">${perkIcon(rw.perk)}${D.PERKS.find((p) => p.id === rw.perk).name}</span>`);
     if (rw.relic) out.push(`<span class="bt-rw legend relic ${got ? '' : 'hidden'}"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(RELIC_ART.svg(rw.relic, { evolved: !!rw.evolved, noGround: true }))}" alt="">${BEAST_TEMPLATES[rw.relic].name.replace(/^The /, '')}${rw.evolved ? ' ✦' : ''}</span>`);

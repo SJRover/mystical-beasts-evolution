@@ -978,8 +978,9 @@ const BATTLE_DATA = (() => {
     { id: 'perk_fortify', name: 'Iron Vault', desc: 'Beat a boss with your coin pile full.', test: (b) => !!b.perkWon.fortify, reward: { perk: 'fortify' } },
     { id: 'perk_wellspring', name: 'Never Idle', desc: 'Win a level from level 10 on without your mana ever filling up.', test: (b) => !!b.perkWon.wellspring, reward: { perk: 'wellspring' } },
     { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing twelve beasts or fewer.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
-    { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { premium: 15 } },
-    { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { premium: 10 } },
+    // (1.5, Sam: late rewards that matter; comet eggs join these once the comet is built.)
+    { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { income: 360, boost: { mult: 1.5, minutes: 180 } } },
+    { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { income: 240, boost: { mult: 1.5, minutes: 120 } } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */
