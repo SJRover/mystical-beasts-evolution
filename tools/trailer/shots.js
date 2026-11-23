@@ -153,7 +153,7 @@ window.TRAILER = (() => {
   };
 
   /** Start a battle on a level with a deck, everything on the field already won. */
-  async function battle(world, n, deck, prestige = 0) {
+  async function battle(world, n, deck, prestige = 0, evolvedCount = 3) {
     await endBattle();
     for (const id of deck) if (!BATTLE_DATA.LEGENDS[id]) BATTLE.B().bestPrestige[id] = prestige;
     window.triggerDiscoveryModal = () => {};
@@ -164,7 +164,7 @@ window.TRAILER = (() => {
     BATTLE.B().howSeen = true;
     BATTLE.B().tipSeen = true;
     for (const id of deck) { if (BATTLE_DATA.LEGENDS[id]) BATTLE.B().legends[id] = true; else if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
-    state.unlockedEvolved = deck.slice(0, 3).filter((id) => !BATTLE_DATA.LEGENDS[id]);
+    state.unlockedEvolved = deck.slice(0, evolvedCount).filter((id) => !BATTLE_DATA.LEGENDS[id]);
     BATTLE.closeSheets();
     BATTLE.openWorld(BATTLE_DATA.WORLDS[world - 1]);
     await wait(300);
@@ -322,12 +322,12 @@ window.TRAILER = (() => {
   // specials, fast; then rare beasts being won.
   S.sc_wide = async () => { await battle(1, 8, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi']); fight('Battle mode', 'fit', 0, 5); };
   S.sc_minotaur = async () => { await battle(2, 20, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 3); fight('Fight bosses', 1.15, 1); };
-  S.sc_freeze = async () => { await battle(1, 13, ['leviathan', 'aqualion', 'eclipse', 'siren', 'fold_phoenix', 'origami_dragon']); fightZoom('Evolved specials', 1.0, 1); };
-  S.sc_horde = async () => { await battle(3, 25, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 9); fight('Plan your six', 0.5, 0, 5); };
+  S.sc_freeze = async () => { await battle(2, 23, ['leviathan', 'void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'bark_titan'], 4, 1); fightZoom('Evolved specials', 1.0, 1, 4); };
+  S.sc_horde = async () => { await battle(1, 13, ['blazehorn', 'aqualion', 'aeris', 'chronos', 'paper_tiger', 'lantern_koi'], 2, 0); fight('Plan your six', 0.62, 0, 3); };
   S.sc_moon = async () => { await battle(4, 16, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 0); fight('', 1.15, 1); };
   S.sc_gravity = async () => { await battle(6, 25, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 10); fightZoom('', 1.05, 2); };
-  S.sc_pirates = async () => { await battle(5, 13, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 4); fight('', 0.6, 1); };
-  S.sc_fortress = async () => { await battle(3, 28, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 10); fight('', 'fit', 0, 5); };
+  S.sc_pirates = async () => { await battle(5, 13, ['singularity_monarch', 'void_jellyfish', 'astral_monarch', 'cosmic_jellyfish', 'dark_pterodactyl', 'cosmic_wing'], 4); fight('', 0.8, 1, 3); };
+  S.sc_fortress = async () => { await battle(3, 28, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 10); fight('', 0.8, 0, 3); };
   S.sc_gorgon = async () => { await battle(2, 30, ['void_monarch', 'dark_matter_leviathan', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 5); fight('', 1.15, 1); };
   S.sc_starfall = async () => { await battle(3, 33, ['dark_matter_leviathan', 'void_monarch', 'ent_guardian', 'venom_dragon', 'webspinner', 'bark_titan'], 11); fightZoom('', 1.05, 1); };
   S.sc_emperor = async () => {
