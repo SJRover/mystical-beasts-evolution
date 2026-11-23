@@ -917,6 +917,10 @@ dips to about 48 fps at four times slowdown in the busiest World 6 battles.
 - [x] The premium crate's beast flashed a square border: its image went on screen before it had
   loaded. It now comes on once loaded, and its finished picture is made while the crate shakes.
 
+Released 23 Nov: MARKETING_VERSION 1.4.1, merged into main and pushed for a build. Release check:
+a 1.4 save (no mergeStats or evolveProgress) loads with its beasts and prestige, the merge counts
+start at nought, a battle opens, nothing throws.
+
 ## Ideas for later
 
 - Armoured enemies (half damage from light attacks) and fliers only Range 3 and up can hit.
