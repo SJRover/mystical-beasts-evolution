@@ -320,6 +320,11 @@ const MUTANTS = (() => {
   /** A boss's turn: stunned (a wind-up is interrupted), raging, a move under way, or a new one. True: it does nothing else. */
   function think(b, u, dt) {
     const def = u.mutant, now = b.time;
+    // Hurled back at a phase change: sliding up the field, then staggered.
+    if (u.slide && u.slide.until > now) {
+      u.x = clampX(u.x + u.slide.vx * dt, u.r + 10); u.y = Math.max(200, u.y + u.slide.vy * dt);
+      return true;
+    }
     if (u.stunUntil > now) {
       // A giant shakes a stun off quickly, but a stun in a wind-up stops the move.
       if (u.stunUntil > now + 1.2) u.stunUntil = now + 1.2;
@@ -830,6 +835,11 @@ const MUTANTS = (() => {
       if (ph.heads) o.headRate = ph.heads;
       if (ph.shield) o.mirrorShield = b.time + ph.shield;
       for (const [id, n] of ph.spawn || []) for (let k = 0; k < n; k++) spawnAt(b, id, o.x + (k % 2 ? 1 : -1) * (o.r + 50 + 30 * Math.floor(k / 2)), o.y + 30, 0.6);
+      // Knocked hard back up the field (Sam, 23 Nov: a giant at your pile could flatten it), its
+      // wind-up stopped, staggered for a moment.
+      if (o.cast) interrupt(b, o);
+      { const dx = o.x - YOUR_PILE.x, dy = o.y - YOUR_PILE.y, d = Math.hypot(dx, dy) || 1, dist = Math.min(380, Math.max(0, o.y - 240)); o.slide = { vx: ((dx / d) * dist) / 0.45, vy: ((dy / d) * dist) / 0.45, until: b.time + 0.45 }; o.stunUntil = Math.max(o.stunUntil, b.time + 1.6); }
+      b.events.push({ type: 'mutant', kind: 'stagger', unit: o });
       if (ph.burst) { const hit = within(beasts(b), o.x, o.y, ph.burst.r); blast(b, o, hit, o.light * ph.burst.dmg, ph.burst.type); pileHit(b, o.x, o.y, ph.burst.r, 2, o); }
       b.events.push({ type: 'mutant', kind: 'phase', unit: o, phase: o.phase, text: ph.text, burst: ph.burst || null });
       // A wind-up in progress goes on; a new phase's moves may start at once.

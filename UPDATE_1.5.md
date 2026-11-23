@@ -193,7 +193,75 @@ Proposal of mine for the numbers (to tune once built):
 Answered (23 Nov): 1 sixteen biomes; 2 twenty levels; 3 all of them, details to me; 4 eggs bought
 with shards from a prestige-15 Shard Incubator (numbers above to tune); 5 World 7 onward only.
 
-Still open:
-6. Does the comet meadow earn essence and have prestige like the others, or is it a collection and
-   hatchery only?
-7. The automatic Shard Incubator upgrade: in, out, or slow and late as proposed?
+Answered (23 Nov, evening): 6 the comet has its own prestige and earns essence, and its shop drops
+the upgrades that only mattered in the early Prime and Low Gravity worlds; 7 yes, slow and late.
+
+## 5. Sam's brief of 23 Nov (evening), and the plan
+
+### Art, for everything from now on
+The World 7 bosses' level of detail is the bare minimum for any design: every limb and part joined,
+legs, feet and claws drawn properly, several animations each.
+
+### World 7 changes
+- A giant too close to your coin pile could flatten it: at each of its thirds (its phase changes)
+  it is knocked hard back up the field, staggered for a moment. Still very hard.
+- Better rewards, including new beasts: a Tier 20 comet beast for the blue star on every one of
+  World 7's twenty levels (the world chest), and comet shards and eggs for its bosses.
+
+### The Interstellar Comet
+Sam: comet beasts as detailed and animated as World 7's bosses; true alien beasts. His ideas:
+emerald green serpents, onyx serpents, some glowing with constantly changing colours (never
+clashing with the rarity glow), alien concepts of all kinds, golden-leaf miniature dragons, aliens,
+humans from the future with extreme intelligence and extraterrestrial companions; creative freedom.
+Merging must be rewarding but super hard and long; base stats already very high; abilities and
+animations aimed at World 7's bosses, with more strategy.
+
+A new rarity, **Cosmic**, for the rarest few comet beasts: its colour a reflecting, starry black
+that sweeps across the name from left to right, and round the beast a black hole with flashing
+stars of different colours circling it. Tier 20 at most, as everywhere; super stats and abilities;
+extremely hard to get even on the comet.
+
+My plan for how the comet works (Sam left it to me):
+- Its own meadow, essence and prestige (0 to 10, eleven comet biomes). Its shop: Meadow Expansion,
+  Egg Speed, Egg Quality, Auto Collector, Essence Magnet and a new Fusion Speed; Luck Charms,
+  Active Clicks, Crate Auto-Opener and Double Merge are gone.
+- Comet eggs instead of crates: they fall slowly, and shards from the Shard Incubators (Prime and
+  Low Gravity at prestige 15) buy more. An egg hatches Super Rare 55%, Ultra Rare 27%, Legendary 12%,
+  Godly 5%, Dark Matter 0.8%, Cosmic 0.2%, at a low tier (higher with Egg Quality and prestige).
+- Each comet species is one creature that grows through Tiers 1 to 20, its look growing with it in
+  four stages (hatchling, young, adult, ascended: bigger, more horns, crests, wings, light).
+- **Fusion, not merging:** two comet beasts of the same tier fuse into one a tier up, taking the
+  form of the rarer of the two. The pair wraps itself in a glowing cocoon on the meadow for a
+  while (longer each tier), and only a few cocoons can grow at once (more with prestige). So a
+  rare one can climb by feeding it common ones of its tier, but every tier takes twice the beasts
+  and longer. Cosmic beasts never come from fusion of lesser ones, except two Tier 20 Dark Matter
+  comet beasts, which fuse into a Cosmic.
+- In battle (World 7 onward only): more points than any other beast of their tier, a passive from
+  the start (fireproof, parry, thorns, lifesteal, haste aura, reflect, unshakeable, split, frostproof,
+  revive) and a special from Tier 10, many of them made for giants: stagger (a big knockback),
+  anchor (a boss cannot start a move), dispel (cancels a telegraphed attack), ward (a shield over
+  beasts against the next big attack), sunder (ignores armour).
+- First designs (originals; nothing copied from other games): Emerald Serpent, Onyx Wyrm,
+  Gilded Leafwing (a golden-leaf miniature dragon), Grey Envoy (an alien with a psionic orb), Void
+  Stalker, Nebula Jelly (colours always shifting), Prism Stag, Mind Leviathan, Quasar Phoenix,
+  Chrononaut (a human from the future with a little alien companion drone), Astral Sage (a future
+  scholar with an alien familiar on her shoulder); Cosmic: the Singularity Dragon, the Ouroboros
+  (a serpent eating its tail round a galaxy), the Architect (a being of light with three moons).
+
+### Limited-time beasts (after World 7 and the comet, Sam said; but see the timing note)
+- A shiny silver theme: the name with a metallic shine sweeping left to right, a reflective
+  metallic glow round the beast.
+- Won by several hard challenges within a time window; once the window closes it can never be
+  won by challenges (Sam may later sell a missed one for 6.99, within its window only).
+- Their own Beastopedia section in silver: how to unlock each; won ones in colour; ones whose time
+  ran out as silhouettes with what it took.
+- On opening the game while one is live, a bright banner with the beast popping out: "Limited now:
+  see Limited Achievements for how to unlock it", a close button top right.
+- The first: an Abominable Snowman, Tier 18 with specials, before 27 December. Challenges like:
+  merge 1,000 beasts above Tier 5; earn 100 stars in different levels (a counter that remembers;
+  levels already starred count when you beat them under the star time again, and the challenge
+  lists the levels still open to you); throw 100 beasts of Tier 15 or higher in the trash; evolve a
+  beast above Tier 5.
+- **Timing:** for the Snowman to be won before 27 December, a build with it has to be on the App
+  Store early in December. Suggestion: 1.5 = prestige 15, World 7 and the Snowman event (early
+  December); 1.6 = the comet (it is the biggest piece by far).

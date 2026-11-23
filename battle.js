@@ -1062,6 +1062,7 @@ const BATTLE = (() => {
         if (ev.burst) { ring(u.x, u.y, ev.burst.r, '#9dff4a'); burst(u.x, u.y - u.r, '#9dff4a', 30, 300, 'wisp'); }
         break;
       case 'enrage': run.banner = { text: ev.text, t: 2.4, max: 2.4, champ: true }; sfx('m_enrage'); break;
+      case 'stagger': bigText(u.x, u.y - u.r * 3.4, '💥 Staggered!', '#ffe066', 1.6); burst(u.x, u.y, '#c8b8a0', 30, 360, 'smoke'); ring(u.x, u.y, u.r * 2.4, '#ffe066'); run.shake = Math.max(run.shake, 18); sfx('m_slam'); break;
       case 'interrupt': bigText(u.x, u.y - u.r * 3.1, '💫 Interrupted!', '#9ae6ff', 1.6); sfx('m_clang'); ring(u.x, u.y, u.r * 2, '#9ae6ff'); break;
       case 'blink': burst(ev.from.x, ev.from.y - 60, '#e8e0ff', 16, 200, 'star'); burst(u.x, u.y - 60, '#e8e0ff', 16, 200, 'star'); sfx('m_blink'); break;
       case 'revive': run.banner = { text: ev.text, t: 2.2, max: 2.2, champ: true }; ring(u.x, u.y, u.r * 3, '#ffe066'); burst(u.x, u.y - u.r, '#ffe066', 30, 260, 'star'); sfx('m_revive'); break;
