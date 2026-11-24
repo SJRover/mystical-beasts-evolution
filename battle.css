@@ -309,7 +309,7 @@ body.bt-in-battle #toast-container { display: none !important; }
 .bt-evo-toggle.on { background: linear-gradient(180deg, #8a4aff, #5a2ad0); color: #fff; border-color: #e0c0ff; box-shadow: 0 0 8px rgba(160,100,255,0.7); }
 
 /* Achievements: battle or merge. */
-.bt-ach-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 2px 0 8px; }
+.bt-ach-tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 6px; margin: 2px 0 8px; }
 .bt-ach-tabs button { padding: 9px 0; border-radius: 12px; border: 2px solid var(--bt-line); background: rgba(20,28,64,0.9); color: #c4cbe0; font-family: var(--font-game); font-size: 15px; cursor: pointer; }
 .bt-ach-tabs button.on { background: linear-gradient(180deg, #ffd84a, #e8a020); color: #2a1a00; border-color: #fff2b0; }
 .bt-rw.relic img { width: 44px; height: 44px; }
@@ -379,3 +379,54 @@ body.bt-sheets-open #toast-container .toast-alert:not(.warn) { display: none !im
 .bt-foes .bt-foe { flex: 0 0 auto; }
 .bt-tip.low { top: auto; }
 .bt-finale { margin: 4px 0 6px; padding: 8px 10px; border-radius: 12px; background: linear-gradient(180deg, rgba(255,212,59,0.25), rgba(255,140,0,0.15)); border: 1px solid #ffd43b; color: #fff3c0; font-weight: 800; }
+
+/* 1.5: World 7, the Universal Mutants: blue stars, the boss bars, bleeding stars, the boss card. */
+.bt-bluestar { color: #5ac8ff; }
+.bt-sheet.mutants .bt-gold, .bt-sheet.mutants .bt-level-done em, .bt-sheet.mutants .bt-chest em, #battle-screen.mutants #bt-star .bt-gold { color: #5ac8ff; }
+.bt-sheet.mutants .bt-level-done em { text-shadow: 0 0 4px rgba(90,200,255,0.8); }
+#battle-screen.mutants .bt-result-star.on { color: #5ac8ff; text-shadow: 0 0 20px rgba(90,200,255,0.85); }
+.bt-system.mutants { color: #c8ff8a; }
+.bt-world.bt-theme-mutants { border-color: rgba(160,255,90,0.45); }
+.bt-bossbars { position: absolute; left: 10px; right: 10px; top: calc(54px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 4px; pointer-events: none; z-index: 3; }
+.bt-bossbar { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; background: rgba(10,6,16,0.75); border: 1px solid rgba(255,90,90,0.5); border-radius: 8px; padding: 3px 8px 5px; transition: opacity 0.4s; }
+.bt-bossbar.dead { opacity: 0.3; }
+.bt-bb-name { font: 800 12px Fredoka, sans-serif; color: #ffd8d0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bt-bb-tag { font: 800 11px Fredoka, sans-serif; color: #ffb43a; white-space: nowrap; }
+.bt-bossbar.enraged { border-color: #ff3a3a; box-shadow: 0 0 10px rgba(255,40,40,0.5); }
+.bt-bossbar.enraged .bt-bb-tag { color: #ff4a4a; }
+.bt-bb-track { grid-column: 1 / -1; position: relative; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.bt-bb-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a0a1e, #ff5a3c); transition: width 0.15s linear; }
+.bt-bb-track i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255,255,255,0.75); }
+#battle-screen.mutants .bt-tip { top: calc(118px + env(safe-area-inset-top)); }
+/* (1.5: a low toast in Worlds 7 and 8 keeps to its line at the bottom: with the top above as well it
+   stretched into a dark panel over the whole field each time a giant hit your coins.) */
+#battle-screen.mutants .bt-tip.low { top: auto; }
+.bt-bloods { display: inline-flex; gap: 2px; }
+.bt-blood { display: inline-block; width: 22px; height: 29px; opacity: 0.16; filter: grayscale(1); }
+.bt-blood.full { opacity: 1; filter: none; }
+.bt-blood.half { opacity: 0.6; filter: saturate(0.6); }
+.bt-blood svg { width: 100%; height: 100%; overflow: visible; }
+.bt-blood.full .drip { animation: bt-drip 2.6s ease-in infinite; }
+.bt-blood.full .drip.d2 { animation-delay: 1.3s; }
+@keyframes bt-drip { 0%, 55% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(7px); opacity: 0; } }
+.bt-mutcard { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(120,255,90,0.06); border: 1px solid rgba(160,255,90,0.25); display: flex; flex-direction: column; gap: 6px; }
+.bt-mut-rule { font-weight: 800; color: #c8ff8a; font-size: 13px; }
+.bt-mut-tip { font-size: 13px; color: #e8f0d8; }
+.bt-mut-row { display: flex; flex-direction: column; gap: 3px; }
+.bt-mut-row b { color: #ffd8d0; }
+.bt-mut-chips { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.bt-mut-row .bt-mut-chips { justify-content: flex-start; }
+.bt-mchip { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
+.bt-mchip.weak { color: #8aff8a; border-color: rgba(138,255,138,0.45); }
+.bt-mchip.resist { color: #ff9a8a; border-color: rgba(255,154,138,0.45); }
+
+/* 1.5, World 8: a card deafened by a sonic attack (no special for a while). */
+.bt-cardbtn.silenced::after { content: "🔇"; position: absolute; top: 4px; left: 4px; font-size: 16px; filter: drop-shadow(0 1px 2px #000); }
+.bt-cardbtn.silenced { box-shadow: 0 0 0 2px #ff8ad8 inset; }
+.bt-world.bt-theme-abyss { border-color: rgba(176,106,255,0.55); box-shadow: 0 0 14px rgba(176,106,255,0.25); }
+#battle-screen.abyss .bt-bossbar .bt-bb-fill { background: linear-gradient(90deg, #6a2aaa, #b06aff); }
+/* 1.5: a comet beast as an achievement reward. */
+.bt-rw.comet-rw { display: inline-flex; flex-direction: column; align-items: center; gap: 0; padding: 4px 6px; border-color: rgba(200,168,255,0.6); }
+.bt-rw.comet-rw svg { width: 46px; height: 46px; }
+.bt-rw.comet-rw b { font-size: 10px; color: #e6dcff; }
+.bt-rw.comet-rw small { font-size: 9px; color: #c8a8ff; }

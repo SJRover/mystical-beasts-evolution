@@ -255,6 +255,11 @@ body {
 #meadow-bg.biome-11 .hill-layer-2 {
   background: linear-gradient(to top, #020005, #0a0014);
 }
+/* 1.5: prestige 12 to 15 (the painted biome covers these; they show for a moment as it loads). */
+#meadow-bg.biome-12 { background: linear-gradient(to bottom, #04121a 0%, #1e4650 60%, #122e36 100%); }
+#meadow-bg.biome-13 { background: linear-gradient(to bottom, #0a0620 0%, #3a2a6a 60%, #24184a 100%); }
+#meadow-bg.biome-14 { background: linear-gradient(to bottom, #1a0a2e 0%, #5a4a72 60%, #3a2e52 100%); }
+#meadow-bg.biome-15 { background: linear-gradient(to bottom, #1a1408 0%, #d8b860 60%, #a8862e 100%); }
 
 /* --- PREMIUM LABORATORY INCUBATORS --- */
 .incubator-pedestal-container {
@@ -2537,6 +2542,11 @@ input:checked + .slider:before {
   --space-arms: #e91e63;
   background: linear-gradient(to bottom, #110514 0%, #320d3a 60%, #110514 100%);
 }
+/* 1.5: prestige 12 to 15. */
+#meadow-bg.low-gravity.biome-12 { --space-glow: #e0f7ff; --space-core: #7cf7ff; --space-arms: #1e4aaa; background: linear-gradient(to bottom, #020814 0%, #16285a 60%, #020814 100%); }
+#meadow-bg.low-gravity.biome-13 { --space-glow: #f3e5ff; --space-core: #c86aff; --space-arms: #3ff6ff; background: linear-gradient(to bottom, #12001e 0%, #2e1450 60%, #12001e 100%); }
+#meadow-bg.low-gravity.biome-14 { --space-glow: #e0fff6; --space-core: #3ff6c6; --space-arms: #ff7ab6; background: linear-gradient(to bottom, #001418 0%, #0e4a4a 60%, #001418 100%); }
+#meadow-bg.low-gravity.biome-15 { --space-glow: #fff6d6; --space-core: #ffcf3d; --space-arms: #ff6a1a; background: linear-gradient(to bottom, #000000 0%, #2a1a0c 60%, #000000 100%); }
 
 /* --- SANCTUARY FILTER BAR & POPUP MODALS --- */
 .sanctuary-filter-bar {
@@ -2910,3 +2920,109 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 
 /* 1.4: the rarity stays on one line (SUPER RARE wrapped over the picture). */
 .beastopedia-card-rarity { white-space: nowrap; letter-spacing: -0.2px; }
+
+/* 1.5: the Interstellar Comet: its eggs, cocoons growing, the starry name of the Cosmic rarity. */
+#meadow-bg.comet { background: linear-gradient(to bottom, #04060e 0%, #262c3c 60%, #04060e 100%); }
+.crate-container.comet-egg { filter: drop-shadow(0 0 10px rgba(200,168,255,0.7)); }
+.crate-container.comet-egg svg { width: 100%; height: 100%; }
+.comet-cocoon { position: absolute; width: 64px; height: 64px; transform: translate(-50%, -80%); pointer-events: none; z-index: 4; animation: cocoon-breathe 2.4s ease-in-out infinite; }
+.comet-cocoon .cocoon-svg { width: 100%; height: 100%; filter: drop-shadow(0 0 12px rgba(200,168,255,0.8)); }
+.comet-cocoon .cocoon-ring { position: absolute; left: 50%; bottom: -14px; width: 46px; height: 10px; transform: translateX(-50%); border-radius: 6px; background: conic-gradient(#c8a8ff var(--k, 0deg), rgba(255,255,255,0.15) 0); }
+.comet-cocoon .cocoon-time { position: absolute; left: 50%; bottom: -32px; transform: translateX(-50%); font: 800 12px Fredoka, sans-serif; color: #fff; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+@keyframes cocoon-breathe { 0%, 100% { transform: translate(-50%, -80%) scale(1); } 50% { transform: translate(-50%, -82%) scale(1.06); } }
+.cosmic-name { background: linear-gradient(100deg, #140c28 0%, #140c28 32%, #ffffff 46%, #c8a8ff 53%, #140c28 68%, #140c28 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: drop-shadow(0 0 1.2px #ffffff) drop-shadow(0 0 6px #a88aff); animation: cosmic-sheen 3.2s linear infinite; }
+@keyframes cosmic-sheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.unlock-beast-rarity.cosmic, .trophy-rarity.cosmic, .beastopedia-card-rarity.rarity-cosmic { background: radial-gradient(1px 1px at 18% 30%, #ffffff 60%, transparent 61%), radial-gradient(1px 1px at 64% 70%, #c8a8ff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 82% 28%, #7ad8ff 60%, transparent 61%), radial-gradient(1px 1px at 40% 78%, #ffd36b 60%, transparent 61%), linear-gradient(100deg, transparent 0%, transparent 36%, rgba(255,255,255,0.5) 48%, transparent 60%, transparent 100%), #000 !important; background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 260% 100%, auto !important; color: #ffffff !important; border: 1.5px solid #c8a8ff !important; text-shadow: 0 0 4px #c8a8ff; box-shadow: 0 0 10px rgba(200,168,255,0.7); animation: cosmic-badge 2.8s linear infinite; font-weight: 800 !important; }
+@keyframes cosmic-badge { from { background-position: 0 0, 0 0, 0 0, 0 0, 130% 0; } to { background-position: 0 0, 0 0, 0 0, 0 0, -130% 0; } }
+#details-beast-evolve b { color: #c8a8ff; }
+
+/* 1.5: the Shard Incubator, above Incubator Alpha, in the comet's violet. */
+#shard-pedestal { left: 25px; bottom: 182px; }
+#shard-pedestal .shard-base { background: linear-gradient(135deg, #2a1a5a 0%, #0a0618 100%); border-color: #8a6ad8; }
+#shard-pedestal .shard-glass { border-color: rgba(200,168,255,0.5); box-shadow: inset 0 0 12px rgba(200,168,255,0.25); }
+#shard-slot-render { width: 80%; height: 80%; display: flex; justify-content: center; align-items: center; z-index: 5; }
+#shard-slot-render .beast-svg, #shard-slot-render svg { animation: float-bob 2.2s ease-in-out infinite; filter: hue-rotate(20deg) saturate(0.8); }
+#shard-pedestal .shard-label { color: #c8a8ff; }
+#shard-pedestal .shard-count { font: 800 10px Fredoka, sans-serif; color: #e6dcff; text-shadow: 0 1px 2px #000; margin-top: 1px; white-space: nowrap; }
+/* (On phones the three incubators are one row at the bottom: the Shard Incubator sits above Alpha.) */
+@media (max-width: 1024px), (max-height: 600px), (orientation: portrait) {
+  #shard-pedestal { bottom: calc(max(25px, calc(10px + env(safe-area-inset-bottom))) + 146px + 132px) !important; left: 14px !important; right: auto !important; transform: none; }
+}
+/* 1.5: the Beastopedia's comet section: violet, the best tier you have had, unfound ones as shadows. */
+.comet-section-head { margin: 15px 0 5px; padding: 10px 14px; background: linear-gradient(90deg, rgba(200,168,255,0.10), rgba(255,255,255,0.03)); border: 1px solid rgba(200,168,255,0.3); border-radius: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+.comet-section-head > div { display: flex; align-items: center; gap: 8px; font-size: 14px; font-family: "Outfit", sans-serif; }
+.comet-section-head .comet-dot { width: 8px; height: 8px; border-radius: 50%; background: #c8a8ff; box-shadow: 0 0 8px #c8a8ff; }
+.comet-section-head .comet-count { font-size: 11px; color: var(--color-text-dim); background: rgba(255,255,255,0.07); padding: 2px 8px; border-radius: 20px; font-family: monospace; }
+.comet-card { border-color: rgba(200,168,255,0.28); background: radial-gradient(circle at 50% 40%, rgba(200,168,255,0.08), rgba(255,255,255,0.02) 70%); }
+.comet-card .comet-shadow svg { filter: brightness(0) opacity(0.35); }
+.comet-card-tier { font: 700 8px "Outfit", sans-serif; color: #c8a8ff; margin-top: 1px; white-space: nowrap; }
+.comet-card .beastopedia-card-icon svg { transform: scale(1.2); transform-origin: 50% 75%; }
+.comet-card .beastopedia-card-num { z-index: 3; }
+.comet-card .beastopedia-card-icon { position: relative; z-index: 1; }
+/* (Sam, 24 Nov: the rarity tag sits where it does on every other card. The number never shrinks and
+   the tag gives way instead, so the two never overlap.) */
+.beastopedia-card-num { gap: 4px; }
+.beastopedia-card-num > span:first-child { flex: none; }
+.beastopedia-card-num .beastopedia-card-rarity.rarity-dark_matter, .beastopedia-card-num .beastopedia-card-rarity.rarity-cosmic, .beastopedia-card-num .beastopedia-card-rarity.rarity-limited { font-size: 7px !important; padding: 1px 3px !important; letter-spacing: -0.3px; white-space: nowrap; }
+/* The shining rarity text, Cosmic and Limited (not the names). */
+.rarity-shine { -webkit-background-clip: text; background-clip: text; color: transparent !important; background-size: 250% 100%; }
+.cosmic-shine { background-image: linear-gradient(100deg, #ffffff 0%, #ffffff 34%, #c8a8ff 44%, #ffffff 50%, #7ad8ff 57%, #ffffff 66%, #ffffff 100%); animation: cosmic-sheen 2.4s linear infinite; }
+.limited-shine { background-image: linear-gradient(100deg, #1a2232 0%, #1a2232 36%, #ffffff 47%, #1a2232 58%, #1a2232 100%); animation: limited-sheen 2.4s linear infinite; text-shadow: none; }
+.limited-plain { color: #eef3f8; }
+/* 1.5: Cosmic hatches: a black glow rimmed in violet, and stars flying out (fx.js cosmicBurst). */
+.fx-cosmic-burst { position: fixed; width: 0; height: 0; z-index: 9000; pointer-events: none; }
+.fx-cosmic-burst .cb-glow { position: absolute; width: calc(240px * var(--k, 1)); height: calc(240px * var(--k, 1)); left: calc(-120px * var(--k, 1)); top: calc(-120px * var(--k, 1)); border-radius: 50%; background: radial-gradient(circle, #000 0%, #05010d 36%, rgba(60,24,140,0.75) 54%, rgba(180,107,255,0.35) 63%, transparent 72%); animation: cb-glow 1.6s ease-out forwards; }
+@keyframes cb-glow { 0% { transform: scale(0.15); opacity: 0; } 15% { opacity: 1; } 55% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1.35); opacity: 0; } }
+.fx-cosmic-burst i { position: absolute; left: 0; top: 0; width: 12px; height: 12px; margin: -6px; background: currentColor; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 4px currentColor); opacity: 0; animation: cb-star 1.45s ease-out forwards; }
+@keyframes cb-star { 0% { transform: translate(0, 0) scale(0.2); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(90deg); opacity: 0; } }
+.fx-cosmic .fx-glow { background: radial-gradient(circle, #000 0%, #04010c 40%, rgba(80,36,170,0.6) 57%, transparent 70%) !important; }
+.fx-cosmic .fx-glow.on { opacity: 1; }
+.fx-cosmic .fx-rays { background: repeating-conic-gradient(from 0deg, #12052a 0deg 7deg, transparent 7deg 18deg, #b46bff 18deg 21deg, transparent 21deg 30deg) !important; }
+.fx-cosmic .fx-starfield { position: absolute; left: 0; top: 0; width: 440px; height: 440px; margin: -220px 0 0 -220px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
+  background: radial-gradient(1.6px 1.6px at 22% 30%, #fff 60%, transparent 61%), radial-gradient(1.2px 1.2px at 70% 22%, #c8a8ff 60%, transparent 61%), radial-gradient(2px 2px at 82% 60%, #fff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 35% 76%, #7ad8ff 60%, transparent 61%), radial-gradient(1.2px 1.2px at 56% 48%, #fff 60%, transparent 61%), radial-gradient(1.8px 1.8px at 14% 58%, #ffd36b 60%, transparent 61%), radial-gradient(1.2px 1.2px at 62% 84%, #fff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 44% 16%, #ff9ae8 60%, transparent 61%), radial-gradient(1px 1px at 90% 38%, #fff 60%, transparent 61%), radial-gradient(1.6px 1.6px at 28% 46%, #fff 60%, transparent 61%);
+  -webkit-mask: radial-gradient(circle, #000 45%, transparent 70%); mask: radial-gradient(circle, #000 45%, transparent 70%); animation: fx-spin 40s linear infinite reverse; }
+.fx-cosmic .fx-starfield.on { opacity: 1; }
+.cocoon-cosmic { filter: drop-shadow(0 0 8px rgba(122,60,255,0.8)); }
+.comet-section-note { margin: -2px 4px 6px; padding: 8px 12px; border-radius: 10px; background: rgba(200,168,255,0.08); color: #d8c8ff; font: 600 11px/1.4 "Outfit", sans-serif; }
+
+/* 1.5: limited-time beasts, in silver: a metallic shine sweeping across the name, the banner, their Beastopedia cards. */
+.limited-name { background: linear-gradient(100deg, #8a96a8 0%, #c8d2de 30%, #ffffff 45%, #e8eef6 50%, #9aa6b8 62%, #c8d2de 80%, #8a96a8 100%); background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6)); animation: limited-sheen 2.6s linear infinite; }
+@keyframes limited-sheen { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+.limited-banner-wrap { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(6,10,20,0.6); animation: limited-in 0.35s ease-out; }
+.limited-banner-wrap.out { opacity: 0; transition: opacity 0.3s; }
+@keyframes limited-in { from { opacity: 0; } to { opacity: 1; } }
+.limited-banner { position: relative; width: min(340px, 88vw); max-height: 92vh; overflow: hidden auto; padding: 14px 18px 18px; border-radius: 22px; text-align: center; background: linear-gradient(160deg, #f4f8fc 0%, #b8c4d2 40%, #6a7a90 100%); border: 3px solid #ffffff; box-shadow: 0 0 0 3px #8a96a8, 0 0 40px rgba(220,235,255,0.7), inset 0 2px 0 rgba(255,255,255,0.9); animation: limited-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes limited-pop { from { transform: scale(0.6); } to { transform: scale(1); } }
+.limited-banner::before { content: ""; position: absolute; inset: 0; border-radius: 20px; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.75) 45%, transparent 60%); background-size: 260% 100%; animation: limited-sheen 2.4s linear infinite; pointer-events: none; }
+.limited-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #ffffff; background: #4a5668; color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; z-index: 2; }
+.limited-pop { position: relative; width: min(210px, 52vw); aspect-ratio: 1; margin: 0 auto -4px; animation: limited-bob 2.4s ease-in-out infinite; filter: drop-shadow(0 8px 14px rgba(0,0,0,0.45)); }
+.limited-pop img { width: 100%; height: 100%; }
+@keyframes limited-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.03); } }
+.limited-tag { display: inline-block; padding: 3px 12px; border-radius: 20px; background: #2a3444; color: #e8f2ff; font: 800 12px Fredoka, sans-serif; letter-spacing: 2px; margin-bottom: 4px; }
+.limited-title { font: 800 24px Fredoka, sans-serif; margin: 2px 0 6px; filter: drop-shadow(0 1px 0 #ffffff) drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+.limited-text { font: 600 13px/1.4 "Outfit", sans-serif; color: #1a2232; margin-bottom: 12px; position: relative; }
+.limited-go { position: relative; padding: 10px 18px; border-radius: 14px; border: 2px solid #ffffff; background: linear-gradient(180deg, #4a5a74, #2a3444); color: #fff; font: 800 15px Fredoka, sans-serif; cursor: pointer; }
+.limited-section-head { margin: 15px 0 5px; padding: 10px 14px; background: linear-gradient(90deg, rgba(220,232,245,0.16), rgba(255,255,255,0.03)); border: 1px solid rgba(220,232,245,0.45); border-radius: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+.limited-section-head > div { display: flex; align-items: center; gap: 8px; font-size: 14px; font-family: "Outfit", sans-serif; }
+.limited-dot { width: 8px; height: 8px; border-radius: 50%; background: #e8eef6; box-shadow: 0 0 8px #ffffff; }
+.limited-card { border-color: rgba(220,232,245,0.6) !important; background: radial-gradient(circle at 50% 40%, rgba(220,232,245,0.16), rgba(255,255,255,0.02) 70%) !important; }
+.limited-card.limited-shadow .beastopedia-card-icon svg { filter: brightness(0) opacity(0.4); }
+.limited-badge { padding: 1px 6px; border-radius: 6px; background: linear-gradient(90deg, #8a96a8, #ffffff, #8a96a8); color: #1a2232; font: 800 7px "Outfit", sans-serif; letter-spacing: 1px; }
+.limited-how { font: 600 7px/1.2 "Outfit", sans-serif; color: #c8d2de; text-align: center; margin-top: 2px; }
+.limited-reward { display: flex; gap: 10px; align-items: center; padding: 10px; margin: 4px 0 8px; border-radius: 14px; background: rgba(220,232,245,0.08); border: 1px solid rgba(220,232,245,0.3); }
+.limited-reward .limited-pic { width: 70px; height: 70px; flex: none; }
+.limited-reward .limited-pic svg { width: 100%; height: 100%; }
+.limited-reward b { display: block; font: 800 15px Fredoka, sans-serif; }
+.limited-reward span { font: 600 11px/1.35 "Outfit", sans-serif; color: #c8d2de; }
+/* The Limited rarity: a shining silver badge (Sam: not Godly). */
+.unlock-beast-rarity.limited, .beastopedia-card-rarity.rarity-limited, .trophy-rarity.limited { background: linear-gradient(100deg, #6a7688 0%, #b8c4d2 30%, #ffffff 45%, #dfe7f0 52%, #8a96a8 65%, #b8c4d2 85%, #6a7688 100%) !important; background-size: 260% 100% !important; color: #1a2232 !important; border: 1.5px solid #ffffff !important; box-shadow: 0 0 10px rgba(230,238,248,0.8); text-shadow: 0 1px 0 rgba(255,255,255,0.7); animation: limited-sheen 2.6s linear infinite; font-weight: 800 !important; }
+.comet-intro .comet-intro-egg { width: 70px; height: 84px; margin: 4px auto 8px; filter: drop-shadow(0 0 12px rgba(200,168,255,0.8)); }
+.comet-intro .comet-intro-egg svg { width: 100%; height: 100%; }
+.comet-intro p { margin: 0 0 8px; }
+
+/* 1.5: the comet's wheel (Sam, 24 Nov): violet and silver, a starry spin button. */
+.comet-wheel .wheel-container { border-color: #b48cff; box-shadow: 0 0 22px rgba(138, 92, 255, 0.75), 0 0 0 3px #f2eaff inset; }
+.comet-wheel .wheel-container .fx-bulbs i { background: radial-gradient(circle at 40% 35%, #ffffff, #d8c8ff 60%, #6a3cd0); border-color: #2a1060; box-shadow: 0 0 6px rgba(200, 168, 255, 0.8); }
+.comet-wheel .wheel-pointer { filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 8px rgba(180, 140, 255, 0.85)); }
+.comet-wheel .wheel-spin-btn { background: radial-gradient(circle at 40% 35%, #ffffff, #b48cff 55%, #4a20a0) !important; color: #1a0a40 !important; }
+.comet-wheel #daily-spin-title { color: #d8c8ff; text-shadow: 0 0 14px rgba(180, 140, 255, 0.9); }

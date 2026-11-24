@@ -201,6 +201,28 @@ const BATTLE_SFX = (() => {
     sp_gravity(ctx, t) { tone(ctx, 'sawtooth', 700, 55, 0.7, 0.14, t); tone(ctx, 'sine', 90, 45, 0.9, 0.45, t + 0.15); hiss(ctx, 2000, 120, 1.5, 0.7, 0.25, t, 'lowpass'); },
     sp_starfall(ctx, t) { for (let i = 0; i < 5; i++) { const f = 1200 + i * 230; tone(ctx, 'triangle', f, f * 0.5, 0.25, 0.08, t + i * 0.07); tone(ctx, 'sine', 120, 40, 0.25, 0.25, t + 0.25 + i * 0.07); } },
     sp_rally(ctx, t) { [[220, 0], [277, 0.12], [330, 0.24]].forEach(([f, d]) => { tone(ctx, 'sawtooth', f, f, 0.5, 0.09, t + d); tone(ctx, 'sawtooth', f * 1.5, f * 1.5, 0.5, 0.05, t + d); }); tone(ctx, 'sine', 110, 110, 0.7, 0.2, t); },
+    // 1.5: World 7's giants.
+    m_warn(ctx, t) { tone(ctx, 'sawtooth', 160, 420, 0.5, 0.08, t); hiss(ctx, 300, 2400, 2, 0.5, 0.12, t); },
+    m_slam(ctx, t) { tone(ctx, 'sine', 90, 24, 0.9, 0.8, t); hiss(ctx, 1400, 60, 0.8, 0.8, 0.6, t, 'lowpass'); tone(ctx, 'square', 60, 30, 0.3, 0.15, t); },
+    m_step(ctx, t) { tone(ctx, 'sine', 70, 30, 0.35, 0.35, t); hiss(ctx, 500, 80, 0.8, 0.3, 0.2, t, 'lowpass'); },
+    m_roar(ctx, t) { tone(ctx, 'sawtooth', 110, 70, 0.9, 0.22, t); tone(ctx, 'sawtooth', 165, 90, 0.9, 0.14, t, 12); hiss(ctx, 700, 300, 1.5, 0.9, 0.25, t); },
+    m_throw(ctx, t) { hiss(ctx, 400, 3000, 2, 0.4, 0.2, t + 0.3); [880, 1175, 990].forEach((f, i) => tone(ctx, 'square', f, f * 1.1, 0.07, 0.05, t + 0.35 + i * 0.08)); },
+    m_inhale(ctx, t) { hiss(ctx, 200, 1800, 1, 1.1, 0.22, t); tone(ctx, 'sine', 60, 120, 1.1, 0.2, t); },
+    m_breath(ctx, t) { for (let i = 0; i < 4; i++) hiss(ctx, 900 - i * 100, 300, 0.7, 0.5, 0.35, t + i * 0.45, 'lowpass'); tone(ctx, 'sawtooth', 80, 60, 1.9, 0.12, t); },
+    m_whip(ctx, t) { hiss(ctx, 4000, 600, 3, 0.18, 0.35, t); tone(ctx, 'triangle', 1400, 300, 0.12, 0.12, t + 0.08); },
+    m_hiss(ctx, t) { hiss(ctx, 5000, 6000, 3, 0.6, 0.22, t, 'highpass'); },
+    m_buzz(ctx, t) { for (let i = 0; i < 3; i++) tone(ctx, 'sawtooth', 140 + i * 9, 150 + i * 9, 0.8, 0.05, t, i * 7); },
+    m_freeze(ctx, t) { [2637, 1976, 1568].forEach((f, i) => tone(ctx, 'sine', f, f, 0.4, 0.07, t + i * 0.12)); hiss(ctx, 6000, 9000, 6, 0.9, 0.07, t); },
+    m_mirror(ctx, t) { [1568, 2093, 2637, 3136].forEach((f, i) => tone(ctx, 'triangle', f, f * 1.01, 0.5, 0.06, t + i * 0.06)); },
+    m_blink(ctx, t) { tone(ctx, 'sine', 1800, 400, 0.25, 0.1, t); hiss(ctx, 5000, 2000, 4, 0.25, 0.08, t); },
+    m_charge(ctx, t) { tone(ctx, 'sawtooth', 200, 1200, 1.3, 0.08, t); tone(ctx, 'sine', 100, 600, 1.3, 0.1, t); },
+    m_beam(ctx, t) { tone(ctx, 'sawtooth', 900, 300, 0.45, 0.16, t); hiss(ctx, 3000, 800, 2, 0.45, 0.25, t); },
+    m_gas(ctx, t) { hiss(ctx, 300, 1200, 1, 0.8, 0.25, t); tone(ctx, 'square', 90, 70, 0.25, 0.06, t); },
+    m_splat(ctx, t) { tone(ctx, 'sine', 160, 50, 0.2, 0.3, t); hiss(ctx, 1200, 200, 1, 0.2, 0.25, t, 'lowpass'); },
+    m_phase(ctx, t) { tone(ctx, 'sine', 55, 40, 1.3, 0.6, t); [110, 147, 165].forEach((f, i) => tone(ctx, 'sawtooth', f, f, 1.1, 0.08, t + 0.1 + i * 0.05)); },
+    m_enrage(ctx, t) { [98, 104, 139].forEach((f) => tone(ctx, 'sawtooth', f, f * 0.8, 1.3, 0.1, t)); hiss(ctx, 800, 200, 1, 1.1, 0.25, t); },
+    m_clang(ctx, t) { [523, 784, 1046].forEach((f) => tone(ctx, 'triangle', f, f * 0.98, 0.5, 0.1, t)); hiss(ctx, 5000, 3000, 6, 0.2, 0.12, t); },
+    m_revive(ctx, t) { [262, 330, 392, 523].forEach((f, i) => tone(ctx, 'triangle', f, f, 0.6, 0.1, t + i * 0.1)); },
   };
   function play(kind, priority = true) {
     const ctx = ready();
@@ -215,7 +237,7 @@ const BATTLE_SFX = (() => {
   async function manifest() {
     if (list) return list;
     try { list = await (await fetch('battle_music.json', { cache: 'no-store' })).json(); }
-    catch (e) { list = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, victory: [], defeat: [] }; }
+    catch (e) { list = { prime: { casual: [], boss: [] }, low_gravity: { casual: [], boss: [] }, mutants: [], victory: [], defeat: [] }; }
     return list;
   }
   /**
@@ -228,9 +250,11 @@ const BATTLE_SFX = (() => {
     if (typeof audio === 'undefined' || !audio || !audio.musicEnabled) return;
     const m = await manifest();
     const sys = m[system] || m.prime;
-    const pool = boss && sys.boss.length ? sys.boss : sys.casual;
+    let pool = boss && sys.boss.length ? sys.boss : sys.casual;
+    let stretch = Math.floor((n - 1) / 10) + ((world - 1) % 3);
+    // World 7 (1.5): Sam's World 7 tracks in turn, one a level; the boss tracks until there are any.
+    if (world >= 7) { pool = (m.mutants && m.mutants.length) ? m.mutants : [...m.prime.boss, ...m.low_gravity.boss]; stretch = n - 1; }
     if (!pool || !pool.length) return;
-    const stretch = Math.floor((n - 1) / 10) + ((world - 1) % 3);
     const file = pool[stretch % pool.length];
     audio.init();
     resumeSystem = audio.musicPlaying;

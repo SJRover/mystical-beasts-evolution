@@ -22,6 +22,17 @@ To build:
 Decided (Sam, 23 Nov): 15 ascents, so 16 biomes in each system (prestige 0 to 15): four new
 biomes each.
 
+Built (23 Nov, branch update-1.5):
+- PRESTIGE_MAX 15 (game.js). The last three costs carry on the climb: 500Oc, 25No, 1Dc (5e29,
+  2.5e31, 1e33); numbers now have names to 1e45 (No, Dc, UDc, DDc, TDc). At 15 the bar reads
+  "Final Biome / Prestige 15" and the button "Prestige 15, the highest", disabled.
+- Four new biomes in each system, painted like the others (biomes.js), with new skylines
+  (clockwork, aurora, islands, genesis, pulsar, rings, quasar), two new props (hourglass, floating
+  rock) and a new edge (crystal tree). Prime: Chrono Rift, Astral Throne, Shattered Heavens, Edge of
+  Creation. Low Gravity: Pulsar Fields, Magnetar Storm, Wormhole Reef, Event Horizon.
+- A save past 15 loads at 15, with a one-time note. Battle points from prestige stop at 15.
+- A merge achievement, Pinnacle (reach prestige 15): 8 premium crates up to Tier 20.
+
 ## 2. World 7, Universal Mutants (battle mode)
 
 Sam's brief:
@@ -68,6 +79,53 @@ Proposals of mine for World 7 (say which to keep):
 Decided (Sam, 23 Nov): twenty levels for now; he likes the proposals above (telegraphs, phases,
 weak points and armour, damage types, enrage) and the extra bosses below, and leaves the details
 to me.
+
+Built (23 Nov, branch update-1.5): mutants.js (numbers, moves, levels), mutants_art.js (drawing),
+battle.js (screens), battle_engine.js (hooks), battle_audio.js (sounds), tools/battle_sim.mjs.
+- Opens when Worlds 1, 2, 4 and 5 are won in full; beasts of every system battle there. A level is
+  won by beating its bosses (their camp has no coin pile) and lost if they take yours. Beasts go
+  for the nearest enemy wherever it is (nothing waits for them at the top).
+- Ten bosses, each with its own moves, phases at two thirds and one third, rage at three minutes
+  (the Chimera at two and a half): Gorrak the Hulk Goblin (throws his goblin riders over your line,
+  leaps, slams), the Walking Hive (swarms, poison stings; fire makes it burn and let out fewer),
+  Rime the Frost Giant (frost lanes that freeze and leave ice, ice boulders), Trisskar the
+  Three-Headed Serpent (three heads with their own targets and damage types, tail lash,
+  hatchlings down the flanks, a lunge), Vitriel the Mirror Witch (copies your last special,
+  glass doubles, blinks away), the Twin Titans Sol and Luna (mend each other close together, and
+  one fallen rises again unless both fall within six seconds), the Rot Behemoth (lingering poison
+  clouds, plague rats, bursting blisters), the Colossus (footsteps knock back, core beam at your
+  shooters, only shots hurt its core), Pyraxis the Dragon (fire breath sweeping 45 degrees either
+  side of your pile, armour in front, tail for flankers, wing gust, dive), the Omega Chimera
+  (lion, then goat and frost, then wings and fire).
+- Every big attack is telegraphed on the ground true to where it hits; a stun in a wind-up
+  interrupts it. Damage types: fire burns, frost slows and freezes, poison lingers, crushing
+  knocks back, shock stuns; beasts' elements resist some. Each boss is weak to an element and
+  resists another (shown on the level and in the Foe Wiki).
+- Sam (23 Nov): they hit your coin pile directly. An attack whose area covers the pile takes
+  seconds off it (a slam 3, a leap 4, a frost lane 2.5, a beam 3, breath 0.35 a tick), a giant
+  within reach of the pile strikes it every swing whoever is fighting it, and giants shoulder on
+  towards the pile while they fight.
+- Peons: goblin runts (the riders he throws, drawn exactly as on his shoulders), brutes and
+  shamans (who mend him), hive drones, frost sprites, hatchlings, glass doubles, plague rats,
+  mutant medics (mend bosses, a quarter as much on a giant), stone sentries, wyrmlings.
+- Twenty hand-made levels (below), calibrated by the bot with the best six of both systems at
+  prestige 15, from 95% of the most it beats at level 1 to 110% at level 20 (the bot never uses a
+  special or plays to a weakness, so the last ones need both).
+- Blue stars; the Foe Wiki rates World 7 in one to five bleeding, dripping red stars against
+  World 7 only; a cover painting with Pyraxis, Gorrak and Trisskar; Sam's three World 7 tracks
+  (BattleWorld7Music, 2 and 3), one a level in turn (build.js files names with "world7" as
+  mutants). Achievements: Mutation Ended (clear it), Monster Hunter (beat all ten bosses).
+- Art (Sam, 23 Nov: more detail, legs above all; nothing should look unjoined): every limb, neck
+  and tail is one shape (all outlines drawn first, then the fills), roots tucked behind bodies or
+  under shoulders; feet with toes, paws with claws, scales, stitches, runes.
+
+Levels: 1 Gorrak; 2 the Walking Hive; 3 Rime; 4 Trisskar; 5 Vitriel; 6 the Twin Titans; 7 the Rot
+Behemoth (medics); 8 the Colossus; 9 Pyraxis; 10 Gorrak's War Band (brutes, shamans); 11 Frost on
+the Hive (two bosses); 12 the Serpent's Nest (medics, hatchlings); 13 Glass and Stone (Colossus and
+Witch); 14 Dragonfire (wyrmlings); 15 the Plague Twins (rats, a medic); 16 the Long Winter (Colossus
+and Rime); 17 Fire and Fang (Trisskar and Pyraxis); 18 the Swarm Queen's Mirror (Hive and Witch);
+19 the Gauntlet (Gorrak, then the Twins, then Pyraxis, each after the last falls); 20 the Omega
+Chimera.
 
 More boss ideas of mine, in the same spirit: a hive that walks (its back opens and lets out
 swarms; burn the hive to stop them); a frost giant who freezes the ground in lanes; a mirror witch
@@ -135,7 +193,206 @@ Proposal of mine for the numbers (to tune once built):
 Answered (23 Nov): 1 sixteen biomes; 2 twenty levels; 3 all of them, details to me; 4 eggs bought
 with shards from a prestige-15 Shard Incubator (numbers above to tune); 5 World 7 onward only.
 
-Still open:
-6. Does the comet meadow earn essence and have prestige like the others, or is it a collection and
-   hatchery only?
-7. The automatic Shard Incubator upgrade: in, out, or slow and late as proposed?
+Answered (23 Nov, evening): 6 the comet has its own prestige and earns essence, and its shop drops
+the upgrades that only mattered in the early Prime and Low Gravity worlds; 7 yes, slow and late.
+
+## 5. Sam's brief of 23 Nov (evening), and the plan
+
+### Art, for everything from now on
+The World 7 bosses' level of detail is the bare minimum for any design: every limb and part joined,
+legs, feet and claws drawn properly, several animations each.
+
+### World 7 changes
+- A giant too close to your coin pile could flatten it: at each of its thirds (its phase changes)
+  it is knocked hard back up the field, staggered for a moment. Still very hard.
+- Better rewards, including new beasts: a Tier 20 comet beast for the blue star on every one of
+  World 7's twenty levels (the world chest), and comet shards and eggs for its bosses.
+
+### The Interstellar Comet
+Sam: comet beasts as detailed and animated as World 7's bosses; true alien beasts. His ideas:
+emerald green serpents, onyx serpents, some glowing with constantly changing colours (never
+clashing with the rarity glow), alien concepts of all kinds, golden-leaf miniature dragons, aliens,
+humans from the future with extreme intelligence and extraterrestrial companions; creative freedom.
+Merging must be rewarding but super hard and long; base stats already very high; abilities and
+animations aimed at World 7's bosses, with more strategy.
+
+A new rarity, **Cosmic**, for the rarest few comet beasts: its colour a reflecting, starry black
+that sweeps across the name from left to right, and round the beast a black hole with flashing
+stars of different colours circling it. Tier 20 at most, as everywhere; super stats and abilities;
+extremely hard to get even on the comet.
+
+My plan for how the comet works (Sam left it to me):
+- Its own meadow, essence and prestige (0 to 10, eleven comet biomes). Its shop: Meadow Expansion,
+  Egg Speed, Egg Quality, Auto Collector, Essence Magnet and a new Fusion Speed; Luck Charms,
+  Active Clicks, Crate Auto-Opener and Double Merge are gone.
+- Comet eggs instead of crates: they fall slowly, and shards from the Shard Incubators (Prime and
+  Low Gravity at prestige 15) buy more. An egg hatches Super Rare 55%, Ultra Rare 27%, Legendary 12%,
+  Godly 5%, Dark Matter 0.8%, Cosmic 0.2%, at a low tier (higher with Egg Quality and prestige).
+- Each comet species is one creature that grows through Tiers 1 to 20, its look growing with it in
+  four stages (hatchling, young, adult, ascended: bigger, more horns, crests, wings, light).
+- **Fusion, not merging:** two comet beasts of the same tier fuse into one a tier up, taking the
+  form of the rarer of the two. The pair wraps itself in a glowing cocoon on the meadow for a
+  while (longer each tier), and only a few cocoons can grow at once (more with prestige). So a
+  rare one can climb by feeding it common ones of its tier, but every tier takes twice the beasts
+  and longer. Cosmic beasts never come from fusion of lesser ones, except two Tier 20 Dark Matter
+  comet beasts, which fuse into a Cosmic.
+- In battle (World 7 onward only): more points than any other beast of their tier, a passive from
+  the start (fireproof, parry, thorns, lifesteal, haste aura, reflect, unshakeable, split, frostproof,
+  revive) and a special from Tier 10, many of them made for giants: stagger (a big knockback),
+  anchor (a boss cannot start a move), dispel (cancels a telegraphed attack), ward (a shield over
+  beasts against the next big attack), sunder (ignores armour).
+- First designs (originals; nothing copied from other games): Emerald Serpent, Onyx Wyrm,
+  Gilded Leafwing (a golden-leaf miniature dragon), Grey Envoy (an alien with a psionic orb), Void
+  Stalker, Nebula Jelly (colours always shifting), Prism Stag, Mind Leviathan, Quasar Phoenix,
+  Chrononaut (a human from the future with a little alien companion drone), Astral Sage (a future
+  scholar with an alien familiar on her shoulder); Cosmic: the Singularity Dragon, the Ouroboros
+  (a serpent eating its tail round a galaxy), the Architect (a being of light with three moons).
+
+### Built so far (23 Nov, late)
+- World 7: at each phase change a giant is hurled about 380 back up the field and staggered (its
+  wind-up stopped); recalibrated.
+- comet_art.js: all fifteen species drawn in four stages, each with a blow and a special pose, the
+  Cosmic three with the black-hole aura and circling stars (sheet: App Store 1.4/Comet beasts.jpg).
+  Waiting on Sam's look at the designs before the comet's systems are built.
+- New reward kinds (battle.js grant): `boost: { mult, minutes }` (an essence boost, stacks with the
+  bought x2, saved as rewardBoostUntil/rewardBoostMult, its own badge) and `income: minutes` (that
+  much of your current income at once). Pinnacle, Mutation Ended and Monster Hunter now pay these
+  instead of premium crates (Sam: premium crates mean nothing late on). Comet eggs join them once
+  the comet exists. Achievement progress is always counted from saved totals, so a changed
+  achievement picks up where a player already is.
+- Sam's answer on timing (23 Nov): the Snowman was only an idea; finish 1.5's ideas first.
+
+### Built on 24 Nov (branch update-1.5, all [skip ci])
+- **The comet's meadow** (9c203e6). Warp buttons for every world you can reach (two in Settings).
+  Its own essence and prestige (up to 10, keeping its beasts; essence and upgrades restart), eleven
+  biomes (Comet Crust to The Origin), Sam's two comet tracks. Comet eggs fall instead of crates
+  (2.5 times slower) and hatch a comet beast; two of one tier fuse in a cocoon (20 seconds a tier,
+  less with Fusion Speed, a few at once). The shop sells comet eggs for essence (dearer each time)
+  or 120 shards. A premium crate opened there is a premium egg (Ultra Rare or better, Tier 3 to 10,
+  odds shown in the shop for Apple's rule 3.1.1). The daily spin there gives a comet beast at a third
+  of the tier. No evolution incubators on the comet. The details card shows a comet beast's stage,
+  passive and special; Cosmic has a starry badge and a black name outlined in starlight.
+- **Shard Incubators** (5f60f2c). Prime and Low Gravity at prestige 15, above Incubator Alpha on
+  phones. Shards for a beast: 2^(tier/3) x rarity (Common 1 to Dark Matter 13) x2 if evolved;
+  30 + 6 x tier seconds each. Legendary and rarer ask first. Shard Feeder upgrade (prestige 15,
+  from 2Dc, five levels): Common to Super Rare, not evolved, up to Tier 6 (+2 a level), one every
+  25 minutes (5 sooner a level).
+- **Comet beasts in battle** (0654eef). World 7 only. Passives always on; specials from Tier 10
+  in the three left slots (Stagger, Anchor 6 s, Dispel, Ward 10 s, Sunder 10 s). A comet beast
+  always has the full fifteen prestige points in battle, plus one per comet prestige (without this
+  a Tier 20 comet beast was weaker than the Dark Matter beasts players bring). Simulator, Dragonfire:
+  reference deck 1 win in 3, with three Tier 20 comet beasts 3 in 3. Also fixed Gust (it blew
+  enemies towards your own pile). The battle simulator does not load comet.js, so calibration is
+  unchanged.
+- **World 7's rewards** (ad71b9e). Its chest is now The Singularity Dragon (Tier 20 Cosmic), which
+  waits on the comet. (The commit says the old chest was empty; it was not: it always gave the Rose
+  Window relic, the only Tier 20 Dark Matter beast of system "any".) Comet shards for first clears
+  (20 + 5 x level) and stars (60); Mutation Ended +600 shards, Monster Hunter +360.
+- Still to do (then): the Beastopedia's comet section; comet beasts animated in the meadow; limited-time beasts.
+
+### Built on 24 Nov, later (8756029 to 8865574)
+- World 7 a tenth harder (battle.js FOE_MUL, applied at battle start, after calibration). Comet
+  beasts cost a fifth more mana and rest a quarter longer, and are half as big again in battle.
+- **World 8, the Apex Mutants** (mutants8.js, mutants8_art.js; 16ca6d5): opened by beating World 7.
+  Eleven giants, four new damage types (acid, void, sonic, gravity), seventeen new moves through
+  extension points in mutants.js (EXT, STEP/DEATH/POSE hooks), twenty levels, up to 24 enemies at
+  once. Calibrated (tools/battle_sim.mjs --calibrate 8) against three comet beasts (Tier 12 rising to
+  20) and three of the best old beasts, from the most the bot beats to 115% of it. Each giant has a
+  `top` line it keeps below so it shows whole. Chest: the Ouroboros. Achievements Apex Predator and
+  Giant Slayer.
+- Comet beasts move on the meadow (field.js draws them live). Comet section always at the bottom
+  of the Beastopedia.
+- Battle: scenery fills the black bars beside the field on phones (the field is unchanged); the
+  first drop spot is centred; Worlds 1 to 6 bosses (+60% health, +30% blows, drawn 40% bigger) and
+  champions (+50%, +25%, 25% bigger), applied at battle start.
+- Achievements, Comet tab (comet.js COMET.ACH): twelve for the comet, eight hardest in the Mutant
+  Worlds (all stars in 7, in 8, in both; the Old Ways: beating five giants with no comet beasts).
+  New rewards: comet eggs (state.cometEggBank) and comet beasts. Crate queues are per world now.
+- Area attackers: Low Gravity's sharks and gargoyles and five comet kinds; an area beast that shoots
+  bursts for 35%.
+- Comet prestige targets made steeper with a model of an active player (scratchpad cometecon.mjs):
+  prestige 1 about an hour, 5 about a day, 8 about 200 hours of play; adult 7.5 h, ascended 29 h,
+  Tier 20 about 225 h.
+- **Limited-time beasts** (limited.js; 8865574): the Abominable Snowman, rarity Limited (silver),
+  Tier 18, Blizzard special, until the end of 6 January 2027: merge 1,000 beasts above Tier 5, earn 100
+  battle stars, trash 100 beasts of Tier 15+, evolve a beast above Tier 5. Banner on opening, a Limited
+  tab in Achievements, a Limited section in the Beastopedia. The £6.99 purchase for a missed one is
+  not built.
+
+### Release prep (24 Nov, evening; RELEASE_1.5.md has the What's New text and the checklist)
+- Worlds 7 and 8 super hard, level by level: tools/harden.mjs finds each level's enemy multiplier so
+  the bot (no specials) wins World 7 about one game in five with the best old six and World 8 about
+  one in ten with whichever deck does best, never zero; each choice is checked again over 24 fresh
+  games. tools/hardjs.mjs writes battle_hard.js (BATTLE_DATA.LEVEL_MUL), applied in battle.js
+  start(). Rerun both after any recalibration of Worlds 7 or 8 (each level starts from its value).
+- World 8 is judged by the best of three decks: the reference deck (three comet beasts, three old),
+  the best six old beasts (refDeck(..., { noComet: true })) and six comet beasts at the expected
+  tier and rarity ({ allComet: true }). The first pass used only the reference deck: the old six then
+  won the last four levels eight times in eight, and six top comet beasts won nearly everything.
+  The simulator is deterministic: each deck plays five lane patterns and the result flips with tiny
+  changes of strength, so "wins of 24" really counts patterns. Fresh check at the final strengths:
+  World 7, best old six 58 of 240 games; World 8, reference deck 5 of 480, old six 24, six comets 52,
+  six top comets (Cosmic too) 179. Four World 8 levels no deck could win (8-8, 8-11, 8-14, 8-18)
+  were eased 3% at a time until one could (scratchpad easefloor.mjs).
+- The Old Ways achievements in World 8 moved to levels the best old six can still win with
+  specials (scratchpad oldways2.mjs, the strategies.mjs 'evolved' way of firing them): Thunderhoof
+  (8-6), Sand and Flesh (8-15), Worm and Brood (8-11). The Wardens, the Hollow King and the
+  World-Eater needed 19 to 23% weaker enemies before the old six could win at all. World 7's two
+  (Pyraxis, the Chimera) stay: the old six win them.
+- The comet's prestige and the Shard Incubator ask with askConfirm (an in-game popup); the browser's
+  confirm box froze the page. A first-visit explanation on the comet (cometIntro, once).
+- The Snowman's event uses state.maxTimeSeen, so turning the clock back does not extend it; the
+  banner waits until no other popup is open.
+- A real 1.4.1 save (from a checkout of main) loads into 1.5. MARKETING_VERSION is 1.5.
+
+### Limited-time beasts (after World 7 and the comet, Sam said)
+- A shiny silver theme: the name with a metallic shine sweeping left to right, a reflective
+  metallic glow round the beast.
+- Won by several hard challenges within a time window; once the window closes it can never be
+  won by challenges (Sam may later sell a missed one for 6.99, within its window only).
+- Their own Beastopedia section in silver: how to unlock each; won ones in colour; ones whose time
+  ran out as silhouettes with what it took.
+- On opening the game while one is live, a bright banner with the beast popping out: "Limited now:
+  see Limited Achievements for how to unlock it", a close button top right.
+- The first: an Abominable Snowman, Tier 18 with specials, before 27 December. Challenges like:
+  merge 1,000 beasts above Tier 5; earn 100 stars in different levels (a counter that remembers;
+  levels already starred count when you beat them under the star time again, and the challenge
+  lists the levels still open to you); throw 100 beasts of Tier 15 or higher in the trash; evolve a
+  beast above Tier 5.
+- **Timing:** for the Snowman to be won before 27 December, a build with it has to be on the App
+  Store early in December. Suggestion: 1.5 = prestige 15, World 7 and the Snowman event (early
+  December); 1.6 = the comet (it is the biggest piece by far).
+
+### Sam's last round before release (24 Nov, night)
+- **Worlds 1 to 6, more variety and a bit harder.** Eight new enemy traits (battle_data.js TRAITS,
+  newTrait for the 88 enemies of those worlds that had none): Snipes (camps by its coins for 20 to
+  30 s, reach 520, slow shots x1.3, a red aiming line), Lobs bombs (camps, a bomb lands 1.2 s later on
+  a red ring), Explodes, Splits (not on swarms), Enrages, Regrows, Spiked, Blinks. Engine
+  (battle_engine.js): one in nine spawns a wildcard of the same role from the world, one in seven
+  from level 3 a giant, runt, long-armed or swift variant (seeded by opts.variant in the tools,
+  random in the game). World 7 and 8 untouched by all of it.
+  The first pass (traits at full strength, x1.08 from level 4) was far too hard: the reference deck
+  won about 60% instead of 90% and 58 levels never. Three things fixed it: softer traits and no
+  multiplier; at most two snipers or bomb-lobbers alive at once (a field full of them held off every
+  beast and nobody won, "S" in tools/strategies.mjs); swarms do not split (a horde doubled). Then
+  x1.05 from level 6 (battle.js start(), fm6): the reference deck wins 81 to 89% per world (it was
+  88 to 95%), the "bit harder" Sam asked for; fm6 is the knob if it is too much.
+  Check with tools/strategies.mjs on single levels (ENG=<folder> runs an older engine for comparison).
+- **Unlocks:** World 7 after Worlds 1 and 4; World 8 after World 7 and reaching the comet.
+- **Beasts:** element markings on the flanks and a rarity gem on the chest from Tier 8 (art.js
+  detail(), ART.setDetail for checking); more movement animations (field.js: lean, heavy steps,
+  wing flutter, swim ripple; stretch, shake, look, stomp, flip-hop, double hop, swoop, barrel roll,
+  hover, drift, wobble, leap); twelve more area attackers (AREA_LOOK).
+- **Comet:** live slots (three beasts animate their art at a time, eight frames a second; the rest
+  hold a frame); young beasts as big as adults in their box (min 96); eggs for shards only; its own
+  spin wheel (Super Rare to Cosmic) and golden premium eggs; banked eggs wait in the queue when
+  automatic drops are off; merge hint uses COMET.fusionOf; Cosmic hatches and the premium reveal in
+  black and stars (FX.cosmicBurst), a Cosmic cocoon black and starry.
+- **Fixes:** the premium button and Reset used the browser's confirm box (it never showed in the
+  Windows app, so no premium egg fell): askConfirm now. The aura image is hidden until loaded (an
+  empty image drew a white frame for a moment). Beastopedia: rarity tags placed the same on every
+  card; Cosmic and Limited rarity text shines, names do not; the Snowman is #01 and counts when
+  unlocked. Deck picker: a Melee / Ranged / Area filter. World 7 and 8 fields a little lighter at the
+  top (it read as a black border).
+- **Store:** `node tools/store_shots.mjs --giants` (World-Eater, Omega Chimera, the comet, Three
+  Titans, comet beasts' specials) into "App Store 1.5/".

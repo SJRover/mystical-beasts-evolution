@@ -25,21 +25,22 @@ const BATTLE = (() => {
   }
   function sysPrestige(sys) {
     if (sys === state.currentSolarSystem) return state.prestigeLevel || 0;
-    const branch = sys === 'prime' ? state.primeSystem : state.lowGravitySystem;
+    const branch = sys === 'prime' ? state.primeSystem : sys === 'comet' ? state.cometSystem : state.lowGravitySystem;
     return (branch && branch.prestigeLevel) || 0;
   }
   /** A beast has been on your field at this prestige: its battle version is at least that. */
   function noteOwned(id) {
     if (!id || state.inBeastHub || !D.canBattle(id) || D.LEGENDS[id]) return;
-    const p = sysPrestige(D.systemOf(id));
+    const p = Math.min(15, sysPrestige(D.systemOf(id)));
     const b = B();
     if ((b.bestPrestige[id] || 0) < p) b.bestPrestige[id] = p;
   }
-  const prestigeOf = (id) => B().bestPrestige[id] || 0;
+  const prestigeOf = (id) => Math.min(15, B().bestPrestige[id] || 0);
   /** Folded Legends you have won: they battle in every world, Prime and Low Gravity. */
   const legendsOwned = () => D.LEGEND_LIST.map((l) => l.id).filter((id) => B().legends[id]);
   // Beasts of the world's system, the Relics (merge rewards, every world) and the Folded Legends.
-  const owned = (sys) => [...state.unlockedBeasts.filter((id) => D.canBattle(id) && (D.systemOf(id) === sys || D.systemOf(id) === 'any') && !D.LEGENDS[id]), ...legendsOwned()];
+  // (World 7: every system's beasts.)
+  const owned = (sys) => [...state.unlockedBeasts.filter((id) => D.canBattle(id) && (sys === 'any' || D.systemOf(id) === sys || D.systemOf(id) === 'any') && !D.LEGENDS[id]), ...legendsOwned()];
   const cleared = (id) => !!B().best[id];
   /** Whether you have reached the Low Gravity solar system (its warp portal opens at Prime prestige 9). */
   const reachedLowGravity = () => state.currentSolarSystem === 'low_gravity' || ((state.primeSystem && state.primeSystem.prestigeLevel) || 0) >= 9 || (state.currentSolarSystem === 'prime' && state.prestigeLevel >= 9);
@@ -50,16 +51,21 @@ const BATTLE = (() => {
    */
   const worldOpen = (w) => {
     if (w.id === 1) return true;
+    // 1.5 (Sam, 24 Nov): World 7 opens once Worlds 1 and 4 are won in full, early, so players see
+    // the fights to come; World 8 once World 7 is won and the comet has been reached.
+    if (w.id === 7) return [1, 4].every((k) => cleared(`${k}-${D.WORLDS[k - 1].levels}`));
+    if (w.id === 8) return cleared('7-20') && cometReached();
     if (w.id === 4) return reachedLowGravity() && cleared(`1-${D.WORLDS[0].levels}`);
     return cleared(`${w.id - 1}-${D.WORLDS[w.id - 2].levels}`);
   };
-  const lockText = (w) => (w.id === 4 ? 'Reach the Low Gravity system and win World 1 to open' : `Clear World ${w.id - 1} to open`);
+  const cometReached = () => !!(state.cometUnlocked || (typeof COMET !== 'undefined' && COMET.unlocked && COMET.unlocked()));
+  const lockText = (w) => (w.id === 7 ? 'Defeat Worlds 1 and 4 to open' : w.id === 8 ? (cleared('7-20') ? 'Reach the Interstellar Comet to open' : 'Defeat World 7 and reach the comet to open') : w.id === 4 ? 'Reach the Low Gravity system and defeat World 1 to open' : `Defeat World ${w.id - 1} to open`);
   /** Any level you have won stays open to play again; the next one opens when you win the one before. */
   const levelOpen = (w, n) => worldOpen(w) && (n === 1 || cleared(`${w.id}-${n}`) || cleared(`${w.id}-${n - 1}`));
   function totals() {
     const b = B();
     let worlds = 0, lgWorlds = 0;
-    for (const w of D.WORLDS) if (cleared(`${w.id}-${w.levels}`)) { if (w.system === 'prime') worlds++; else lgWorlds++; }
+    for (const w of D.WORLDS) if (cleared(`${w.id}-${w.levels}`)) { if (w.system === 'prime') worlds++; else if (w.system === 'low_gravity') lgWorlds++; }
     // Kills, by kind of enemy, by world and by the enemy itself (for the legends' challenges).
     const killsByRole = {}, killsByWorld = {};
     let kills = 0;
@@ -76,6 +82,12 @@ const BATTLE = (() => {
       clears: Object.keys(b.best).length, stars: Object.keys(b.stars).length, bosses: Object.keys(b.bosses).length,
       worlds, lgWorlds, seen: Object.keys(b.seen).length, flawless: b.flawless || 0, fastest: b.fastest || 0, underdog: !!b.underdog,
       kills, killsOf: b.kills, killsByRole, killsByWorld, lowTierWin: !!b.lowTierWin, achDone, achTotal, blitz: !!b.blitz, perkWon: b.perkWon || {},
+      // 1.5: World 7 won, and how many of its ten bosses beaten (the twins count as one).
+      w7: cleared('7-20') ? 1 : 0,
+      mutantBosses: new Set(Object.keys(b.kills).filter((id) => D.ENEMIES[id] && D.ENEMIES[id].role === 'mutant' && D.ENEMIES[id].world === 7).map((id) => (id === 'twin_luna' ? 'twin_sol' : id))).size,
+      // (World 8: won, and its eleven giants beaten: the three Wardens count as one, the lesser abominations not at all.)
+      w8: cleared('8-20') ? 1 : 0,
+      apexBosses: new Set(Object.keys(b.kills).filter((id) => D.ENEMIES[id] && D.ENEMIES[id].role === 'mutant' && D.ENEMIES[id].world === 8 && id !== 'lesser_abomination').map((id) => (id.startsWith('warden_') ? 'wardens' : id))).size,
     };
   }
 
@@ -116,6 +128,8 @@ const BATTLE = (() => {
   const baseOf = (x) => String(x).replace(/\*$/, '');
   const isEvo = (x) => String(x).endsWith('*');
   const evolvedOwned = (id) => !D.LEGENDS[id] && ((state.unlockedEvolved || []).includes(id));
+  // (1.5: a comet beast has a special from Tier 10 without evolving.)
+  const specialOwned = (id) => evolvedOwned(id) || (!!((BEAST_TEMPLATES[id] || {}).comet || (BEAST_TEMPLATES[id] || {}).limited) && !!D.abilityOf(id));
   /** How a beast or enemy fights, as a little label. */
   const KIND = { single: ['⚔️', 'Single'], area: ['💥', 'Area'], ranged: ['🎯', 'Ranged'] };
   const kindChip = (k) => `<span class="bt-kindchip ${k}">${KIND[k][0]} ${KIND[k][1]}</span>`;
@@ -176,12 +190,14 @@ const BATTLE = (() => {
       moon: { sky: ['#03040a', '#1c2038'], ground: ['#a4a8b8', '#5a5e70'] },
       rings: { sky: ['#06071a', '#2e2458'], ground: ['#6a5644', '#2a2018'] },
       eclipse: { sky: ['#040208', '#30143e'], ground: ['#3c2654', '#160c24'] },
+      mutants: { sky: ['#07020f', '#3a1450'], ground: ['#3a2a3a', '#120a14'] },
+      abyss: { sky: ['#020008', '#2a0a3a'], ground: ['#241a2e', '#08040c'] },
     }[w.theme];
     const sky = g.createLinearGradient(0, 0, 0, 120);
     sky.addColorStop(0, LOOK.sky[0]); sky.addColorStop(1, LOOK.sky[1]);
     g.fillStyle = sky; g.fillRect(0, 0, 240, 180);
     // Stars over the dark worlds.
-    if (['shadow', 'moon', 'rings', 'eclipse', 'invasion'].includes(w.theme)) for (let i = 0; i < 40; i++) { g.globalAlpha = 0.3 + r() * 0.6; g.fillStyle = '#fff'; g.fillRect(r() * 240, r() * 100, 1.5, 1.5); }
+    if (['shadow', 'moon', 'rings', 'eclipse', 'invasion', 'mutants', 'abyss'].includes(w.theme)) for (let i = 0; i < 40; i++) { g.globalAlpha = 0.3 + r() * 0.6; g.fillStyle = '#fff'; g.fillRect(r() * 240, r() * 100, 1.5, 1.5); }
     g.globalAlpha = 1;
     const disc = (x, y, rad, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); };
     const glowAt = (x, y, rad, col) => { const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); };
@@ -212,6 +228,17 @@ const BATTLE = (() => {
       g.strokeStyle = 'rgba(240,220,180,0.8)'; g.lineWidth = 4; g.beginPath(); g.ellipse(170, 52, 56, 13, -0.3, 0, Math.PI * 2); g.stroke();
       g.fillStyle = '#3a2a1a'; g.fillRect(28, 68, 6, 52); g.fillStyle = '#e8e0d0'; g.beginPath(); g.moveTo(34, 70); g.lineTo(70, 84); g.lineTo(34, 100); g.fill();
       g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc(46, 84, 5, 0, Math.PI * 2); g.fill();
+    } else if (w.theme === 'abyss') {
+      // World 8: a violet rift torn across the sky, moons drifting by it.
+      glowAt(120, 44, 130, 'rgba(176,106,255,0.35)');
+      g.strokeStyle = '#e0c0ff'; g.lineWidth = 3; g.beginPath(); g.moveTo(40, 20); g.lineTo(84, 44); g.lineTo(112, 30); g.lineTo(150, 58); g.lineTo(204, 40); g.stroke();
+      g.strokeStyle = 'rgba(176,106,255,0.6)'; g.lineWidth = 9; g.stroke();
+      disc(206, 22, 9, '#c8c0d8'); disc(30, 52, 6, '#a8a0c0');
+    } else if (w.theme === 'mutants') {
+      // A sick green glow, a cracked moon.
+      glowAt(120, 50, 120, 'rgba(160,255,90,0.3)');
+      disc(196, 30, 18, '#c8ff9a'); glowAt(196, 30, 30, 'rgba(200,255,150,0.4)');
+      g.strokeStyle = '#4a7a2a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(186, 22); g.lineTo(196, 31); g.lineTo(190, 42); g.moveTo(196, 31); g.lineTo(209, 33); g.stroke();
     } else {
       glowAt(120, 46, 70, 'rgba(255,200,90,0.65)'); disc(120, 46, 26, '#05030a');
       g.strokeStyle = '#ffd27a'; g.lineWidth = 2; g.beginPath(); g.arc(120, 46, 27, 0, Math.PI * 2); g.stroke();
@@ -228,9 +255,25 @@ const BATTLE = (() => {
     const front = list.filter((e) => e.role !== 'boss').slice(0, 6);
     const pose = { t: 0.3, walk: 0.15, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 1 };
     const put = (id, x, y, px) => { g.save(); g.translate(x, y); ENEMY_ART.draw(g, id, pose, px); g.restore(); };
-    if (boss) put(boss.id, 124, 150, 78 / Math.max(1, boss.look.size || 1) * 1.15);
-    if (front[1]) put(front[3] ? front[3].id : front[1].id, 62, 170, 62);
-    if (front[0]) put(front[0].id, 186, 172, 62);
+    if (w.theme === 'mutants') {
+      // Pools of glowing slime, then three of its giants: Pyraxis behind, Gorrak and Trisskar in front.
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(140,255,90,0.35)'; g.beginPath(); g.ellipse(26 + i * 62, 150 + (i % 2) * 14, 18, 5, 0, 0, Math.PI * 2); g.fill(); }
+      const giant = (id, x, y, h, mut) => { const e = D.ENEMIES[id]; g.save(); g.translate(x, y); ENEMY_ART.draw(g, id, { ...pose, mut: mut || {} }, ((h / 80) * 60) / e.look.size); g.restore(); };
+      giant('dragon', 120, 128, 96, { phase: 1 });
+      giant('hulk_goblin', 54, 178, 86, { riders: 3 });
+      giant('three_headed_serpent', 190, 178, 84, {});
+    } else if (w.theme === 'abyss') {
+      // Rifts glowing on the ground, then three of World 8's giants: the World-Eater behind, Vex and Thunderhoof in front.
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(176,106,255,0.35)'; g.beginPath(); g.ellipse(26 + i * 62, 150 + (i % 2) * 14, 18, 5, 0, 0, Math.PI * 2); g.fill(); }
+      const giant = (id, x, y, h, mut) => { const e = D.ENEMIES[id]; g.save(); g.translate(x, y); ENEMY_ART.draw(g, id, { ...pose, mut: mut || {} }, ((h / 80) * 60) / e.look.size); g.restore(); };
+      giant('world_eater', 120, 124, 92, { phase: 2 });
+      giant('brood_queen', 52, 178, 70, {});
+      giant('storm_bull', 190, 178, 76, {});
+    } else {
+      if (boss) put(boss.id, 124, 150, 78 / Math.max(1, boss.look.size || 1) * 1.15);
+      if (front[1]) put(front[3] ? front[3].id : front[1].id, 62, 170, 62);
+      if (front[0]) put(front[0].id, 186, 172, 62);
+    }
     // A soft dark edge.
     const vg = g.createRadialGradient(120, 90, 60, 120, 90, 150);
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
@@ -259,7 +302,7 @@ const BATTLE = (() => {
         <div class="bt-world-art" style="background-image:url(${worldArt(w)})"></div>
         <div class="bt-world-body">
           <div class="bt-world-name">World ${w.id}: ${w.name}</div>
-          <div class="bt-world-meta">${open ? `${done >= w.levels ? 'All won' : `Level ${Math.min(w.levels, done + 1)} of ${w.levels}`} · <span class="${w.system === 'low_gravity' ? 'bt-lgstar' : 'bt-gold'}">★ ${stars}/${w.levels}</span>` : lockText(w)}</div>
+          <div class="bt-world-meta">${open ? `${done >= w.levels ? 'All won' : `Level ${Math.min(w.levels, done + 1)} of ${w.levels}`} · <span class="${w.system === 'low_gravity' ? 'bt-lgstar' : w.system === 'any' ? 'bt-bluestar' : 'bt-gold'}">★ ${stars}/${w.levels}</span>` : lockText(w)}</div>
           <div class="bt-bar"><i style="width:${(done / w.levels) * 100}%"></i></div>
         </div>
         <div class="bt-world-go">${open ? '▶' : '🔒'}</div>
@@ -267,6 +310,7 @@ const BATTLE = (() => {
     };
     const primeWorlds = D.WORLDS.filter((w) => w.system === 'prime').map(worldCard).join('');
     const lgWorlds = D.WORLDS.filter((w) => w.system === 'low_gravity').map(worldCard).join('');
+    const mutantWorlds = D.WORLDS.filter((w) => w.system === 'any').map(worldCard).join('');
     const spins = b.freeSpins || 0;
     sec.innerHTML = `
       <div class="shop-section-title">Battle</div>
@@ -280,9 +324,10 @@ const BATTLE = (() => {
       ${primeWorlds}
       <div class="bt-system">Low Gravity Solar System</div>
       ${lgWorlds}
+      ${mutantWorlds ? `<div class="bt-system mutants">The Mutant Worlds</div>${mutantWorlds}` : ''}
       <div class="bt-row">
         <button class="bt-btn" id="bt-open-legends">Folded Legends <small>${legendsOwned().length}/${D.LEGEND_LIST.length}</small></button>
-        <button class="bt-btn" id="bt-open-ach">Achievements <small>${Object.keys(b.ach).length + Object.keys(b.mach || {}).length}/${D.ACHIEVEMENTS.length + MERGE_ACH.length}</small></button>
+        <button class="bt-btn" id="bt-open-ach">Achievements <small>${Object.keys(b.ach).length + Object.keys(b.mach || {}).length + Object.keys(b.cach || {}).length}/${D.ACHIEVEMENTS.length + MERGE_ACH.length + (typeof COMET !== 'undefined' ? COMET.ACH.length : 0)}</small></button>
       </div>
       <div class="bt-row">
         <button class="bt-btn" id="bt-open-wiki">Foe Wiki <small>${t.seen}/${D.ENEMY_LIST.length}</small></button>
@@ -290,7 +335,7 @@ const BATTLE = (() => {
       </div>`;
     sec.querySelectorAll('.bt-world[data-world]').forEach((btn) => btn.addEventListener('click', () => {
       const w = D.WORLDS[Number(btn.dataset.world) - 1];
-      if (!worldOpen(w)) { showWarning('World locked', w.id === 4 ? 'Win World 1 and reach the Low Gravity system first.' : `Win World ${w.id - 1} first.`); return; }
+      if (!worldOpen(w)) { showWarning('World locked', w.id === 8 ? 'Defeat World 7 in full and reach the Interstellar Comet first. World 8 is harder still: bring comet beasts, and ascended ones (Tier 16 and up) for its last levels.' : w.id === 7 ? 'Defeat Worlds 1 and 4 in full first. World 7 shows the fights to come: its giants are the hardest yet, so expect to need your strongest beasts from both solar systems, and later the comet.' : w.id === 4 ? 'Defeat World 1 and reach the Low Gravity system first.' : `Defeat World ${w.id - 1} first.`); return; }
       click();
       openWorld(w);
     }));
@@ -325,6 +370,7 @@ const BATTLE = (() => {
   function openWorld(w) {
     const sh = sheet(`World ${w.id}: ${w.name}`);
     if (w.system === 'low_gravity') sh.el.classList.add('lg');
+    if (w.id >= 7) sh.el.classList.add('mutants');
     const draw = () => {
       const b = B();
       let stars = 0;
@@ -350,7 +396,7 @@ const BATTLE = (() => {
         </button>`;
       }
       sh.body.innerHTML = `
-        <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>Earn every star in this world for a ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.</span></div><em>${chest}</em></div>
+        <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>${w.chest.comet ? `Earn every star in this world for ${BEAST_TEMPLATES[w.chest.comet].name}, a Tier 20 Cosmic comet beast.` : `Earn every star in this world for a ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.`}</span></div><em>${chest}</em></div>
         <div class="bt-levels">${tiles}</div>`;
       fillStills(sh.body);
       sh.body.querySelectorAll('.bt-level').forEach((btn) => btn.addEventListener('click', () => {
@@ -389,11 +435,11 @@ const BATTLE = (() => {
     for (const id of pool) if (picked.length < max && !picked.includes(id)) picked.push(id);
     const six = picked;
     // Evolved beasts first, into the ability slots.
-    return [...six.filter(evolvedOwned), ...six.filter((id) => !evolvedOwned(id))];
+    return [...six.filter(specialOwned), ...six.filter((id) => !specialOwned(id))];
   }
   /** The ability slots: the left three of the six (Sam, 19 Nov). */
   const ABILITY_SLOTS = 3;
-  const hasSpecial = (id, i) => i < ABILITY_SLOTS && evolvedOwned(id);
+  const hasSpecial = (id, i) => i < ABILITY_SLOTS && specialOwned(id);
   /**
    * Sync down (Sam, 19 Nov): when a level's rule leaves you fewer beasts than it allows, your
    * beasts can battle as the rule's own level (no higher than its tier, no rarer than it lets in),
@@ -433,9 +479,13 @@ const BATTLE = (() => {
     if (!deck.length) deck = bestDeck(sys, level, ok, synced() ? cap : null);
     if (!b.pickSort) b.pickSort = { key: 'tier', dir: -1, rarity: 'all' };
     const sort = b.pickSort;
+    // (1.5, Sam 24 Nov: pick by how they attack too: up close, from range, or on an area.)
+    if (!sort.kind) sort.kind = 'all';
+    const kindOf = (id) => { const k = D.attackKind(id, prestigeOf(id)); return k === 'single' ? 'melee' : k; };
     const known = !!b.played[level.id] || cleared(level.id);
     const sh = sheet(level.boss ? `${n}. ${known ? level.name : 'Boss level'}` : `${w.name} ${n}`, level.boss ? (known ? 'Boss level' : 'Who is it? Play to find out') : D.PATTERNS[level.pattern].name);
     if (sys === 'low_gravity') sh.el.classList.add('lg');
+    if (w.id >= 7) sh.el.classList.add('mutants');
     let io = null;
     const draw = () => {
       const played = !!b.played[level.id] || cleared(level.id);
@@ -443,7 +493,7 @@ const BATTLE = (() => {
         const known = played && !!b.seen[id];
         const e = D.ENEMIES[id];
         const tr = known && D.traitOf(id) ? D.TRAITS[D.traitOf(id)] : null;
-        return `<div class="bt-foe ${known ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${id}">${stillImg(id, 112, !known)}${tr ? `<i class="bt-foe-trait" title="${tr.name}">${tr.icon}</i>` : ''}<span>${known ? e.name : '???'}</span></div>`;
+        return `<div class="bt-foe ${known ? '' : 'unseen'} ${e.role === 'boss' || e.role === 'mutant' ? 'boss' : ''}" data-id="${id}">${stillImg(id, 112, !known)}${tr ? `<i class="bt-foe-trait" title="${tr.name}">${tr.icon}</i>` : ''}<span>${known ? e.name : '???'}</span></div>`;
       }).join('');
       const slots = [0, 1, 2, 3, 4, 5].map((i) => {
         if (i >= max) return '<div class="bt-slot barred"><span>✕</span></div>';
@@ -454,7 +504,7 @@ const BATTLE = (() => {
         const sp = hasSpecial(id, i);
         return `<button class="bt-slot${abil} ${t.legend ? 'legend' : ''} ${sp ? 'evo' : ''}" data-id="${id}" data-slot="${i}" style="--rc:${rarityColour(id)}"><img data-pic="${id}" ${evolvedOwned(id) ? 'data-evo="1"' : ''} alt=""><b>T${synced() && cap.tier ? Math.min(t.tier, cap.tier) : t.tier}</b>${sp ? `<em>${D.ABILITIES[D.abilityOf(id)].icon}</em>` : ''}${prestigeOf(id) && !synced() ? `<i>P${prestigeOf(id)}</i>` : ''}</button>`;
       }).join('');
-      let pool = mine.filter((id) => sort.rarity === 'all' || D.T(id).rarity === sort.rarity);
+      let pool = mine.filter((id) => (sort.rarity === 'all' || D.T(id).rarity === sort.rarity) && (sort.kind === 'all' || kindOf(id) === sort.kind));
       pool.sort((a, c) => (sortValue(a, sort.key) - sortValue(c, sort.key)) * sort.dir);
       pool = [...pool.filter((id) => ok(id)), ...pool.filter((id) => !ok(id))];
       const list = pool.map((id) => {
@@ -464,7 +514,7 @@ const BATTLE = (() => {
         const tierNow = sy && cap.tier ? Math.min(t.tier, cap.tier) : t.tier;
         const inDeck = deck.includes(id);
         const allowed = ok(id);
-        const ab = evolvedOwned(id) ? D.ABILITIES[D.abilityOf(id)] : null;
+        const ab = specialOwned(id) ? D.ABILITIES[D.abilityOf(id)] : null;
         return `<button class="bt-pick ${inDeck ? 'in' : ''} ${allowed ? '' : 'barred'} ${t.legend ? 'legend' : ''}" data-id="${id}">
           <img data-pic="${id}" alt="">
           <div class="bt-pick-body"><div class="bt-pick-name">${t.name}${prestigeOf(id) ? ` <i class="bt-prest">Prestige ${prestigeOf(id)}</i>` : ''}${t.legend ? ' <i class="bt-prest legend">Legend</i>' : ''}</div>
@@ -482,6 +532,7 @@ const BATTLE = (() => {
         <div class="bt-card">
           <div class="bt-card-row"><div><b>Enemies</b></div><div class="bt-goal"><span class="bt-gold">★</span> win in under ${fmt(level.starTime)}${best ? `<br><span class="bt-dim">best ${fmt(best)}${b.stars[level.id] ? ' ★' : ''}</span>` : ''}</div></div>
           <div class="bt-foes">${foes}</div>
+          ${w.id >= 7 ? mutantCard(level, played) : ''}
           <div class="bt-tags"><span class="bt-tag" data-tip="${pat.tip}">${pat.name} ⓘ</span>${theme ? `<span class="bt-tag" data-tip="${theme.tip}">${theme.name} ⓘ</span>` : ''}</div>
           ${cleared(level.id) ? '' : `<div class="bt-dim bt-reward">First win: essence${level.boss ? ' and a premium crate' : ''}</div>`}
         </div>
@@ -499,6 +550,7 @@ const BATTLE = (() => {
         <div class="bt-sortbar">
           <div class="bt-sorts">${SORTS.map(([k, name]) => `<button class="bt-sort ${sort.key === k ? 'on' : ''}" data-k="${k}">${name}</button>`).join('')}<button class="bt-sort dir" data-dir="1">${sort.dir < 0 ? '↓ High' : '↑ Low'}</button></div>
           <select class="bt-rarity-filter" aria-label="Rarity">${['all', ...RANK].map((r) => `<option value="${r}" ${sort.rarity === r ? 'selected' : ''}>${r === 'all' ? 'All rarities' : RARITIES[r].name}</option>`).join('')}</select>
+          <select class="bt-rarity-filter bt-kind-filter" aria-label="Attack">${[['all', 'All attacks'], ['melee', 'Melee'], ['ranged', 'Ranged'], ['area', 'Area']].map(([k, name]) => `<option value="${k}" ${sort.kind === k ? 'selected' : ''}>${name}</option>`).join('')}</select>
         </div>
         <div class="bt-picks">${list || '<div class="bt-dim">No beasts match.</div>'}</div>
         <div class="bt-go-bar"><button class="bt-go" ${deck.length ? '' : 'disabled'}>Battle!</button></div>`;
@@ -572,7 +624,8 @@ const BATTLE = (() => {
         if (btn.dataset.dir) sort.dir = -sort.dir; else sort.key = btn.dataset.k;
         draw();
       }));
-      sh.body.querySelector('.bt-rarity-filter').addEventListener('change', (e) => { sort.rarity = e.target.value; draw(); });
+      sh.body.querySelector('.bt-rarity-filter:not(.bt-kind-filter)').addEventListener('change', (e) => { sort.rarity = e.target.value; draw(); });
+      sh.body.querySelector('.bt-kind-filter').addEventListener('change', (e) => { sort.kind = e.target.value; draw(); });
       sh.body.querySelectorAll('.bt-perk').forEach((btn) => btn.addEventListener('click', () => {
         const p = D.PERKS.find((x) => x.id === btn.dataset.perk);
         if (!p.unlock(totals())) { showWarning(`${p.name} is locked`, `${p.how} to earn it.`); return; }
@@ -594,15 +647,24 @@ const BATTLE = (() => {
   // ================================================================== the battle
   let run = null;
 
+  /** How much stronger a world's enemies are than calibrated (Sam, 24 Nov: World 7 a tenth harder). */
+  const FOE_MUL = { 7: 1.1 };
   function start(level, deck, onDone, sync = null) {
     if (run) return;
+    // (Each World 7 and 8 level's own strength, from tools/harden.mjs, else the world's.)
+    const fm = (D.LEVEL_MUL && D.LEVEL_MUL[level.id]) || FOE_MUL[level.world];
+    // (Sam, 24 Nov: Worlds 1 to 6 a bit harder, from level 6: five per cent, beside their new traits.)
+    const fm6 = level.world <= 6 && level.n >= 6 ? 1.05 : 0;
+    if (fm || fm6) level = { ...level, foeMul: fm || fm6 };
+    // (Sam, 24 Nov: Worlds 1 to 6's bosses and champions bigger, so they stand out, and stronger.)
+    if (level.world <= 6) level = { ...level, bigFoes: { boss: { hp: 1.6, atk: 1.3, r: 1.25, draw: 1.4 }, champ: { hp: 1.5, atk: 1.25, r: 1.15, draw: 1.25 } } };
     const cards = deck.map(baseOf).map((id, i) => ({ id, prestige: sync ? 0 : prestigeOf(id), evolved: hasSpecial(id, i), sync }));
     const perk = D.PERKS.find((p) => p.id === B().perk && p.unlock(totals()));
     const battle = new BE.Battle(level, cards, perk ? { ...perk.opts, perk: perk.id } : {});
     // Played once (won, lost or left), a level shows who is in it.
     B().played[level.id] = true;
     const rule = level.rule ? ` · ${D.RULES[level.rule.kind].name}` : '';
-    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : ''}">
+    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : level.world >= 7 ? `mutants${level.world >= 8 ? ' abyss' : ''}` : ''}">
       <canvas id="bt-canvas"></canvas>
       <div class="bt-hud">
         <button class="bt-hud-btn" id="bt-pause" aria-label="Pause">❚❚</button>
@@ -610,6 +672,7 @@ const BATTLE = (() => {
         <button class="bt-hud-btn" id="bt-view" aria-label="Zoom">⤢</button>
         <button class="bt-hud-btn" id="bt-speed">1×</button>
       </div>
+      <div class="bt-bossbars" id="bt-bossbars"></div>
       <div class="bt-tip" id="bt-tip">Tap your blue zone, then a card.</div>
       <div class="bt-deck">
         <div class="bt-deck-info"><span id="bt-count">0/10 on the field</span><span id="bt-star"></span></div>
@@ -623,7 +686,7 @@ const BATTLE = (() => {
     run = {
       level, battle, screen, canvas, ctx: canvas.getContext('2d'), onDone,
       sprites: {}, whites: {}, cam: { zoom: 1, x: W / 2, y: H / 2 }, fit: 1, max: 2,
-      marker: 0.3, markY: 1720, speed: 1, paused: false, over: false, last: performance.now(), acc: 0,
+      marker: 0.5, markY: 1720, speed: 1, paused: false, over: false, last: performance.now(), acc: 0,
       fx: [], shots: [], shake: 0, flash: 0, bg: null, dpr: Math.min(2, window.devicePixelRatio || 1),
       cardEls: [...screen.querySelectorAll('.bt-cardbtn')], walk: new Map(), coinsAt: 0, tipUntil: B().tipSeen ? 0 : performance.now() + 9000,
       toastUntil: 0, alarmAt: 0, ended: false,
@@ -963,7 +1026,17 @@ const BATTLE = (() => {
     if (ev.kind === 'heal') { ring(u.x, u.y, 220, '#7af0a0'); for (const o of ev.targets) burst(o.x, o.y - o.r, '#7af0a0', 4, 70, 'star'); }
     if (ev.kind === 'summon') { ring(u.x, u.y, u.r * 2.6, '#c070ff'); burst(u.x, u.y, '#c070ff', 12, 140, 'wisp'); }
     if (ev.kind === 'cloak') burst(u.x, u.y - u.r, '#d8e0ff', 8, 90, 'wisp');
-    if (T && ev.kind !== 'cloak') bigText(u.x, u.y - u.r * 2.6, `${T.icon} ${T.name}!`, '#ffb0b0', 1.2);
+    // 1.5: the Worlds 1 to 6 traits.
+    if (ev.kind === 'blink') { burst(ev.from.x, ev.from.y - u.r, '#c8b0ff', 12, 140, 'wisp'); ring(ev.from.x, ev.from.y, u.r * 1.8, '#c8b0ff'); burst(u.x, u.y - u.r, '#ffffff', 10, 160, 'star'); }
+    if (ev.kind === 'split') { burst(u.x, u.y - u.r * 0.6, '#b8ff8a', 16, 180, 'drop'); ring(u.x, u.y, u.r * 2.2, '#b8ff8a'); }
+    if (ev.kind === 'enrage') { ring(u.x, u.y, u.r * 2.4, '#ff3030'); burst(u.x, u.y - u.r, '#ff5030', 16, 200, 'spark'); run.shake = Math.max(run.shake, 4); }
+    if (ev.kind === 'regen') burst(u.x, u.y - u.r, '#7af0a0', 8, 80, 'star');
+    if (ev.kind === 'bomb') {
+      burst(u.x, u.y - u.r * 0.4, '#ffb43a', 34, 360, 'spark'); burst(u.x, u.y, '#3a2a20', 18, 220, 'smoke'); ring(u.x, u.y, 170, '#ffb43a'); ring(u.x, u.y, 110, '#ffffff');
+      run.shake = Math.max(run.shake, 9); if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.play('explosion');
+    }
+    if (T && ev.kind !== 'cloak' && ev.kind !== 'bomb') bigText(u.x, u.y - u.r * 2.6, `${T.icon} ${T.name}!`, '#ffb0b0', 1.2);
+    if (ev.kind === 'bomb') bigText(u.x, u.y - u.r * 2.6, '🧨 Boom!', '#ffd08a', 1.2);
   }
   /** Over a unit: frozen (an icy sheen), stunned (stars going round), shielded (a bubble), roused by
    * a war cry (a red glow), dashing (streaks behind). */
@@ -987,8 +1060,305 @@ const BATTLE = (() => {
     if (u.buffUntil > now) { ctx.globalAlpha = 0.35; ctx.drawImage(ENEMY_ART.glowSprite('#ff6a5a'), x - R * 1.5, y - R * 2.6, R * 3, R * 3); ctx.globalAlpha = 1; }
     if (u.slowUntil > now) { ctx.globalAlpha = 0.6; ctx.drawImage(ENEMY_ART.glowSprite('#7ab8ff'), x - R * 1.3, y - R * 2.4, R * 2.6, R * 2.6); ctx.globalAlpha = 0.95; ctx.fillStyle = '#bfe8ff'; ctx.font = `800 ${Math.max(10, 15 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('❄', x - R * 0.9, y - R * 2.3); ctx.globalAlpha = 1; }
     if (u.trait === 'aura') { ctx.globalAlpha = 0.22 + 0.08 * Math.sin(t * 3); ctx.strokeStyle = '#8ad8ff'; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.ellipse(x, y, 180 * z, 180 * z * 0.35, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; }
+    // World 7: burning (flames licking up) and poisoned (green bubbles).
+    if (u.burnUntil > now) { for (let i = 0; i < 3; i++) { const fx = x + (i - 1) * R * 0.5, k = (t * 3 + i * 0.37) % 1; ctx.globalAlpha = 0.85 * (1 - k); ctx.fillStyle = i % 2 ? '#ffb43a' : '#ff6a1a'; ctx.beginPath(); ctx.ellipse(fx, y - R * (0.6 + k * 1.4), R * 0.16 * (1 - k * 0.5), R * 0.3 * (1 - k * 0.4), 0, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1; }
+    if (u.poisonUntil > now) { for (let i = 0; i < 3; i++) { const k = (t * 1.2 + i / 3) % 1; ctx.globalAlpha = 0.8 * (1 - k); ctx.strokeStyle = '#9dff4a'; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.arc(x + Math.sin(t * 3 + i * 2) * R * 0.6, y - R * (1 + k * 1.6), Math.max(2, R * 0.12), 0, Math.PI * 2); ctx.stroke(); } ctx.globalAlpha = 1; }
     if (u.dashUntil > now || u.charging) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1.5, 3 * z); for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(x + i * R * 0.5, y + R * 0.4); ctx.lineTo(x + i * R * 0.5, y + R * 2.4); ctx.stroke(); } }
   }
+
+  // ------------------------------------------------------------------ World 7 (1.5): the giants on screen
+  const MOVE_WORD = { shockwave: 'Shockwave', meteor: 'Meteors', pull: 'Gravity well', sweep: 'Laser sweep', spikes: 'Spikes', burrow: 'Burrow', drain: 'Drain', grab: 'Grab', scream: 'Scream', harden: 'Harden', eggs: 'Eggs', rift: 'Rift', chain: 'Chain lightning', orbit: 'Orbs', raise: 'Raise the fallen', mark: 'Mark of doom', stampede: 'Stampede', throw: 'Goblin throw', leap: 'Leap', slam: 'Slam', swarm: 'Swarm', sting: 'Stings', lane: 'Frost lane', boulder: 'Ice boulder', tail: 'Tail swipe', brood: 'Hatchlings', charge: 'Lunge', mirror: 'Mirror', clones: 'Glass doubles', beam: 'Beam', gas: 'Poison clouds', breath: 'Fire breath', gust: 'Wing gust', roar: 'Roar', steps: 'Footsteps', blink: 'Blink' };
+  const MOVE_SFX = { shockwave: 'm_warn', meteor: 'm_warn', pull: 'm_charge', sweep: 'm_charge', spikes: 'm_hiss', burrow: 'm_roar', drain: 'm_mirror', grab: 'm_hiss', scream: 'm_roar', harden: 'm_clang', eggs: 'm_hiss', rift: 'm_blink', chain: 'm_charge', orbit: 'm_mirror', raise: 'm_revive', mark: 'm_warn', stampede: 'm_roar', throw: 'm_throw', leap: 'm_roar', slam: 'm_warn', breath: 'm_inhale', tail: 'm_hiss', swarm: 'm_buzz', sting: 'm_buzz', lane: 'm_freeze', boulder: 'm_warn', brood: 'm_hiss', charge: 'm_roar', mirror: 'm_mirror', clones: 'm_mirror', blink: 'm_blink', beam: 'm_charge', gas: 'm_gas', gust: 'm_warn', roar: 'm_roar' };
+  const TYPE_RGB = { fire: '255,122,42', frost: '154,232,255', poison: '157,255,74', crush: '255,176,90', shock: '255,242,122', acid: '200,255,42', void: '176,106,255', sonic: '255,138,216', gravity: '138,154,255' };
+  /** A boss's move as it starts and lands, its phases, rage, a stun that stops it. */
+  function mutantFx(ev) {
+    const u = ev.unit;
+    const TY = typeof MUTANTS !== 'undefined' ? MUTANTS.TYPES : {};
+    switch (ev.kind) {
+      case 'cast':
+        if (ev.move !== 'steps' && ev.move !== 'blink') bigText(u.x, u.y - u.r * 3.1, `${ev.name || MOVE_WORD[ev.move] || ''}!`, '#ffb8a8', 1.2);
+        if (MOVE_SFX[ev.move]) sfx(MOVE_SFX[ev.move]);
+        break;
+      case 'land': {
+        const col = (TY[ev.mtype] || {}).col || '#e0b070';
+        if (ev.move === 'slam' || ev.move === 'leap' || ev.move === 'steps') {
+          const big = ev.move !== 'steps';
+          ring(ev.x, ev.y, ev.r || 150, col); if (big) ring(ev.x, ev.y, (ev.r || 150) * 0.6, col);
+          burst(ev.x, ev.y, '#a89880', big ? 24 : 6, big ? 300 : 140, 'smoke');
+          run.shake = Math.max(run.shake, big ? 16 : 3); sfx(big ? 'm_slam' : 'm_step');
+        } else if (ev.move === 'roar') { ring(u.x, u.y, 250, '#ffe8a0'); ring(u.x, u.y, 160, '#ffe8a0'); run.shake = Math.max(run.shake, 8); }
+        else if (ev.move === 'tail') { ring(u.x, u.y - u.r * 0.3, 240, '#ffd08a'); run.shake = Math.max(run.shake, 8); sfx('m_whip'); }
+        else if (ev.move === 'gust') { burst(u.x, u.y + u.r, '#eaffff', 26, 380, 'smoke'); sfx('sp_gust'); }
+        else if (ev.move === 'breath') sfx('m_breath');
+        else if (ev.move === 'mirror') { ring(u.x, u.y, 220, '#e0d0ff'); burst(u.x, u.y - u.r, '#ffffff', 20, 260, 'star'); }
+        else if (ev.move === 'swarm' || ev.move === 'clones' || ev.move === 'brood') burst(u.x, u.y - u.r * 1.2, ev.move === 'clones' ? '#e8f0ff' : ev.move === 'brood' ? '#c8ff8a' : '#ffe27a', 18, 220, 'spark');
+        else if (ev.move === 'charge') run.shake = Math.max(run.shake, 10);
+        else if (ev.move === 'burrow') { burst(u.x, u.y, '#8a6a48', 26, 300, 'smoke'); run.shake = Math.max(run.shake, 8); }
+        else if (ev.move === 'eggs') burst(u.x, u.y + u.r, '#e8dcc0', 14, 200, 'spark');
+        else if (ev.move === 'harden') { ring(u.x, u.y, u.r * 1.8, '#c8c8e8'); burst(u.x, u.y - u.r, '#e0e0ff', 16, 200, 'star'); }
+        else if (ev.move === 'orbit') ring(u.x, u.y, 200, '#b06aff');
+        else if (ev.move === 'rift' || ev.move === 'raise') burst(u.x, u.y - u.r, '#b06aff', 20, 240, 'wisp');
+        break;
+      }
+      case 'emerge': ring(u.x, u.y, ev.r || 200, (TY[ev.mtype] || {}).col || '#c8ff2a'); ring(u.x, u.y, (ev.r || 200) * 0.6, '#a89880'); burst(u.x, u.y, '#8a6a48', 34, 380, 'smoke'); run.shake = Math.max(run.shake, 18); sfx('m_slam'); bigText(u.x, u.y - u.r * 3, 'It bursts up!', '#ffb8a8', 1.2); break;
+      case 'scream': for (let k = 0; k < 3; k++) ring(u.x + Math.cos(ev.a) * ev.r * (0.3 + k * 0.3), u.y + Math.sin(ev.a) * ev.r * (0.3 + k * 0.3), 80 + k * 50, '#ff8ad8'); run.shake = Math.max(run.shake, 10); sfx('m_roar'); break;
+      case 'pull': ring(ev.x, ev.y, ev.r, '#8a9aff'); ring(ev.x, ev.y, ev.r * 0.5, '#8a9aff'); burst(ev.x, ev.y, '#c8d0ff', 20, 240, 'wisp'); run.shake = Math.max(run.shake, 8); sfx('m_slam'); break;
+      case 'chain': (run.chains = run.chains || []).push({ pts: ev.pts, until: run.battle.time + 0.5 }); for (const p of ev.pts.slice(1)) burst(p.x, p.y, '#fff27a', 6, 160, 'spark'); sfx('m_beam'); run.shake = Math.max(run.shake, 6); break;
+      case 'hatch': burst(u.x, u.y - 20, '#e8dcc0', 18, 220, 'spark'); bigText(u.x, u.y - 60, 'Hatched!', '#ffb8a8', 1.1); sfx('m_splat'); break;
+      case 'rift-spawn': burst(u.x, u.y, '#b06aff', 10, 160, 'wisp'); break;
+      case 'doom': ring(u.x, u.y, u.r * 3, '#b06aff'); burst(u.x, u.y - u.r, '#e0c0ff', 30, 320, 'star'); bigText(u.x, u.y - u.r * 2.6, '☠ Doom!', '#e0c0ff', 1.4); run.shake = Math.max(run.shake, 14); sfx('m_slam'); break;
+      case 'zone-land': {
+        const z = ev.zone, col = (TY[z.type] || {}).col || '#ffffff';
+        if (z.shape === 'lane') { for (let y = z.y; y < BE.ARENA.h; y += 150) burst(z.x, y, '#e8fbff', 5, 160, 'star'); run.shake = Math.max(run.shake, 8); sfx('sp_freeze'); }
+        else { ring(z.x, z.y, z.r, col); burst(z.x, z.y, col, z.small ? 10 : 16, 220, z.type === 'poison' ? 'wisp' : 'smoke'); sfx(z.small ? 'm_splat' : z.type === 'poison' ? 'm_gas' : 'm_slam'); if (!z.small) run.shake = Math.max(run.shake, 6); }
+        break;
+      }
+      case 'throw': (run.throws = run.throws || []).push({ from: ev.from, to: ev.to, start: run.battle.time, dur: ev.dur, peon: ev.peon, spin: Math.random() * 6 }); break;
+      case 'beam': (run.beams = run.beams || []).push({ x: u.x, y: u.y - u.r * 1.4, a: ev.a, len: ev.len, w: ev.w, until: run.battle.time + 0.45, col: (TY[ev.mtype] || {}).col || '#fff27a' }); sfx('m_beam'); run.shake = Math.max(run.shake, 8); break;
+      case 'phase':
+        run.banner = { text: ev.text, t: 2.4, max: 2.4, champ: true }; sfx('m_phase'); run.shake = Math.max(run.shake, 12); ring(u.x, u.y, u.r * 3, '#ff6a3c');
+        if (ev.burst) { ring(u.x, u.y, ev.burst.r, '#9dff4a'); burst(u.x, u.y - u.r, '#9dff4a', 30, 300, 'wisp'); }
+        break;
+      case 'enrage': run.banner = { text: ev.text, t: 2.4, max: 2.4, champ: true }; sfx('m_enrage'); break;
+      case 'stagger': bigText(u.x, u.y - u.r * 3.4, '💥 Staggered!', '#ffe066', 1.6); burst(u.x, u.y, '#c8b8a0', 30, 360, 'smoke'); ring(u.x, u.y, u.r * 2.4, '#ffe066'); run.shake = Math.max(run.shake, 18); sfx('m_slam'); break;
+      case 'interrupt': bigText(u.x, u.y - u.r * 3.1, '💫 Interrupted!', '#9ae6ff', 1.6); sfx('m_clang'); ring(u.x, u.y, u.r * 2, '#9ae6ff'); break;
+      case 'blink': burst(ev.from.x, ev.from.y - 60, '#e8e0ff', 16, 200, 'star'); burst(u.x, u.y - 60, '#e8e0ff', 16, 200, 'star'); sfx('m_blink'); break;
+      case 'revive': run.banner = { text: ev.text, t: 2.2, max: 2.2, champ: true }; ring(u.x, u.y, u.r * 3, '#ffe066'); burst(u.x, u.y - u.r, '#ffe066', 30, 260, 'star'); sfx('m_revive'); break;
+      case 'text': bigText(u.x, u.y - u.r * 3.1, ev.text, ev.col || '#ffd0a0', 1.5); break;
+      case 'pile': {
+        // A giant's blow lands on your coins.
+        const p = BE.PILES.you;
+        burst(p.x + (Math.random() - 0.5) * 60, p.y - 20, '#ffd84a', Math.min(30, 6 + ev.sec * 6), 260, 'coin');
+        text(p.x + 100, p.y - 130, `-${ev.sec.toFixed(1)}s`, '#ff6a6a');
+        run.shake = Math.max(run.shake, 3 + ev.sec * 2);
+        if (ev.sec >= 1) sfx('alarm');
+        if (!(run.pileToastAt > performance.now())) { run.pileToastAt = performance.now() + 6000; toast('A giant is smashing your coins!'); }
+        break;
+      }
+      case 'shards': for (const o of ev.targets) run.shots.push({ x: u.x, y: u.y - u.r * 1.4, tx: o.x, ty: o.y - o.r * 0.7, t: 0, dur: 0.28, arc: 40, wobble: 0, style: 'star', col: '#e8e0ff', heavy: true, side: 'foe', seed: Math.random() * 6 }); break;
+      default: break;
+    }
+  }
+  /** What a blow on a boss did (weak spot, resisted, armour, flanked, core), now and then. */
+  const TAG = { weak: ['Weak spot!', '#8aff8a'], resist: ['Resisted', '#c8c8d8'], armour: ['Armour', '#c8c8d8'], flank: ['Flanked!', '#ffe066'], core: ['Core hit!', '#ffd86a'] };
+  function tagFx(u, tag) {
+    if (!TAG[tag] || (u._tagAt || 0) > run.battle.time) return;
+    u._tagAt = run.battle.time + 1.4;
+    run.fx.push({ kind: 'text', x: u.x + (Math.random() - 0.5) * u.r, y: u.y - u.r * 2.2, s: TAG[tag][0], col: TAG[tag][1], life: 1, max: 1, vy: -60 });
+  }
+  /**
+   * The ground where a big attack will land, drawn true to where it hits (no squashing): faint at
+   * first, filling towards its edge as the moment comes, its rim blinking faster; frost left on a
+   * lane, clouds of poison.
+   */
+  function drawZones(ctx, t, z) {
+    const now = run.battle.time;
+    for (const q of run.battle.zones) {
+      const rgb = TYPE_RGB[q.type] || '255,90,90';
+      const k = q.linger ? 1 : Math.max(0, Math.min(1, (now - q.start) / Math.max(0.05, q.at - q.start)));
+      const blink = 0.5 + 0.5 * Math.sin(t * (10 + k * 14));
+      const path = (s = 1) => {
+        ctx.beginPath();
+        if (q.shape === 'ring') ctx.arc(sx(q.x), sy(q.y), Math.max(1, q.r * z * s), 0, Math.PI * 2);
+        else if (q.shape === 'cone') { const cx = sx(q.x), cy = sy(q.y); ctx.moveTo(cx, cy); ctx.arc(cx, cy, Math.max(1, q.r * z * s), q.a - q.spread, q.a + q.spread); ctx.closePath(); }
+        else if (q.shape === 'line') { const L = q.len * s, hw = q.w / 2, ca = Math.cos(q.a), sa = Math.sin(q.a); [[q.x - sa * hw, q.y + ca * hw], [q.x + ca * L - sa * hw, q.y + sa * L + ca * hw], [q.x + ca * L + sa * hw, q.y + sa * L - ca * hw], [q.x + sa * hw, q.y - ca * hw]].forEach(([x, y], i) => (i ? ctx.lineTo(sx(x), sy(y)) : ctx.moveTo(sx(x), sy(y)))); ctx.closePath(); }
+        else if (q.shape === 'lane') ctx.rect(sx(q.x - q.w / 2), sy(q.y), q.w * z, (q.y2 - q.y) * z * s);
+        else if (q.shape === 'wave') ctx.arc(sx(q.x), sy(q.y), Math.max(1, q.r * z * s), 0, Math.PI * 2);
+      };
+      ctx.save();
+      if (q.shape === 'wave') {
+        // A shockwave racing out: a bright front, a fading wake, the edge of where it will stop.
+        const rgbW = TYPE_RGB[q.type] || '255,176,90', f = (q.front || 0) * z;
+        ctx.strokeStyle = `rgba(${rgbW},0.35)`; ctx.lineWidth = Math.max(1, 2 * z); ctx.setLineDash([Math.max(4, 12 * z), Math.max(3, 8 * z)]); ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), q.r * z, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = `rgba(${rgbW},0.25)`; ctx.lineWidth = Math.max(4, 50 * z); ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), Math.max(1, f - 20 * z), 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = `rgba(${rgbW},0.9)`; ctx.lineWidth = Math.max(2, 10 * z); ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), Math.max(1, f), 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = Math.max(1, 3 * z); ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+      if (q.linger && q.kind !== 'ice' && q.kind !== 'gas') {
+        const left = Math.max(0, Math.min(1, (q.until - now) / 1.2)), cx = sx(q.x), cy = sy(q.y), R = q.r * z;
+        if (q.kind === 'rift') {
+          // A tear in the world: a jagged violet slit, glowing, turning slowly.
+          ctx.translate(cx, cy); ctx.rotate(Math.sin(t * 0.7) * 0.2);
+          const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.6); gr.addColorStop(0, `rgba(176,106,255,${0.6 * left})`); gr.addColorStop(1, 'rgba(176,106,255,0)');
+          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R * 1.6, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(8,2,16,${0.95 * left})`; ctx.strokeStyle = `rgba(224,192,255,${left})`; ctx.lineWidth = Math.max(1.5, 4 * z);
+          ctx.beginPath(); for (let i = 0; i <= 12; i++) { const a = (i / 12) * Math.PI * 2, rr = (i % 2 ? 0.35 : 1) * R * (0.9 + 0.1 * Math.sin(t * 6 + i)); ctx.lineTo(Math.cos(a) * rr * 0.45, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else {
+          const col = { burn: '255,122,42', acid: '200,255,42', voiddust: '176,106,255', web: '235,235,245' }[q.kind] || '255,255,255';
+          if (q.kind === 'web') {
+            ctx.strokeStyle = `rgba(${col},${0.55 * left})`; ctx.lineWidth = Math.max(1, 1.6 * z);
+            ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.6); } ctx.stroke();
+            for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.ellipse(cx, cy, R * k / 3, R * 0.6 * k / 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+          } else {
+            for (let i = 0; i < 5; i++) { const a = i * 1.26 + t * (q.kind === 'burn' ? 1.4 : 0.4), px = cx + Math.cos(a) * R * 0.45, py = cy + Math.sin(a) * R * 0.35, RR = R * 0.7; const g2 = ctx.createRadialGradient(px, py, 0, px, py, RR); g2.addColorStop(0, `rgba(${col},${0.36 * left})`); g2.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(px, py, RR, 0, Math.PI * 2); ctx.fill(); }
+            if (q.kind === 'burn') for (let i = 0; i < 6; i++) { const k2 = (t * 1.5 + i / 6) % 1, px = cx + Math.sin(i * 2.4) * R * 0.6; ctx.globalAlpha = left * (1 - k2); ctx.fillStyle = i % 2 ? '#ffb43a' : '#ff6a1a'; ctx.beginPath(); ctx.ellipse(px, cy + Math.cos(i * 1.7) * R * 0.3 - k2 * 26 * z, 5 * z, 9 * z * (1 - k2 * 0.5), 0, 0, Math.PI * 2); ctx.fill(); }
+            if (q.kind === 'acid') for (let i = 0; i < 5; i++) { const k2 = (t * 0.9 + i / 5) % 1; ctx.globalAlpha = left * (1 - k2); ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = Math.max(1, 1.5 * z); ctx.beginPath(); ctx.arc(cx + Math.sin(i * 3) * R * 0.5, cy + Math.cos(i * 2) * R * 0.3, (2 + k2 * 6) * z, 0, Math.PI * 2); ctx.stroke(); }
+            ctx.globalAlpha = 1;
+          }
+        }
+        ctx.restore();
+        continue;
+      }
+      if (q.linger) {
+        if (q.kind === 'ice') {
+          path(); ctx.fillStyle = `rgba(200,240,255,${0.22 + 0.05 * Math.sin(t * 3)})`; ctx.fill(); ctx.strokeStyle = 'rgba(230,250,255,0.6)'; ctx.lineWidth = Math.max(1, 2 * z); ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          for (let i = 0; i < 8; i++) { const yy = q.y + ((i * 211 + t * 30) % Math.max(1, q.y2 - q.y)); ctx.beginPath(); ctx.arc(sx(q.x + Math.sin(i * 7) * q.w * 0.35), sy(yy), Math.max(1.2, 3 * z), 0, Math.PI * 2); ctx.fill(); }
+        } else if (q.kind === 'gas') {
+          const left = Math.max(0, Math.min(1, (q.until - now) / 1.5));
+          for (let i = 0; i < 5; i++) { const a = i * 1.26 + t * 0.4, cx = sx(q.x + Math.cos(a) * q.r * 0.45), cy = sy(q.y + Math.sin(a) * q.r * 0.35), R = q.r * z * 0.7; const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, R); gr.addColorStop(0, `rgba(157,255,74,${0.34 * left})`); gr.addColorStop(1, 'rgba(157,255,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill(); }
+        }
+        ctx.restore();
+        continue;
+      }
+      path(); ctx.fillStyle = `rgba(${rgb},${0.1 + 0.1 * k})`; ctx.fill();
+      ctx.strokeStyle = `rgba(${rgb},${0.5 + 0.45 * blink})`; ctx.lineWidth = Math.max(1.5, 4 * z);
+      if (!q.small) ctx.setLineDash([Math.max(4, 14 * z), Math.max(3, 8 * z)]);
+      ctx.stroke(); ctx.setLineDash([]);
+      path(k); ctx.fillStyle = `rgba(${rgb},${0.18 + 0.22 * k})`; ctx.fill();
+      // (World 8: something falling onto the mark, getting bigger as it comes; a skull on a Mark of doom.)
+      if (q.fall && k > 0.1) { const cx = sx(q.x), cy = sy(q.y), h = (1 - k) * 600 * z, R2 = Math.max(2, q.r * z * 0.3 * (0.5 + k * 0.5)); const fc = { fire: '#ff7a1a', burn: '#ff7a1a', acid: '#c8ff2a', frost: '#e8fbff', gravity: '#c8d0ff', crush: '#c8b8a0', void: '#b06aff', voiddust: '#b06aff', web: '#ffffff' }[q.fall] || '#e8e0ff'; ctx.globalAlpha = 0.9; ctx.fillStyle = fc; ctx.beginPath(); ctx.arc(cx, cy - h, R2, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.moveTo(cx - R2, cy - h); ctx.lineTo(cx, cy - h - R2 * 5); ctx.lineTo(cx + R2, cy - h); ctx.fill(); ctx.globalAlpha = 1; }
+      if (q.mark) { ctx.font = `${Math.max(14, 34 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.globalAlpha = 0.6 + 0.4 * blink; ctx.fillText('☠', sx(q.x), sy(q.y) - q.r * z * 1.6); ctx.globalAlpha = 1; }
+      if (q.small) { const cx = sx(q.x), cy = sy(q.y), R = q.r * z; ctx.strokeStyle = `rgba(${rgb},0.9)`; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.moveTo(cx - R * 0.5, cy); ctx.lineTo(cx + R * 0.5, cy); ctx.moveTo(cx, cy - R * 0.5); ctx.lineTo(cx, cy + R * 0.5); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+  const lerpN = (a, b2, k) => a + (b2 - a) * k;
+  /** Fire from a dragon's jaws, goblins in the air, beams, and the twins' tether. */
+  function drawMutantFx(ctx, t, z) {
+    const b = run.battle, now = b.time;
+    for (const u of b.units) {
+      const c = u.cast;
+      if (!c || c.move.kind !== 'breath' || c.stage !== 'act' || u.state === 'dying') continue;
+      // From the jaws (high on the body) down onto the ground it burns: the cone from its feet.
+      const a = c.angle != null ? c.angle : c.a0, R = c.move.range;
+      const mx = u.x + Math.cos(a) * u.r * 0.3, my = u.y - u.r * 2.7;
+      const x0 = sx(mx), y0 = sy(my), fx = sx(u.x + Math.cos(a) * R), fy = sy(u.y + Math.sin(a) * R);
+      const gr = ctx.createLinearGradient(x0, y0, fx, fy);
+      gr.addColorStop(0, 'rgba(255,250,200,0.95)'); gr.addColorStop(0.25, 'rgba(255,190,60,0.85)'); gr.addColorStop(0.7, 'rgba(255,90,20,0.55)'); gr.addColorStop(1, 'rgba(200,30,0,0)');
+      const sp = 0.2 + 0.03 * Math.sin(t * 30);
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x0, y0);
+      for (let k = 0; k <= 8; k++) { const aa = a - sp + (2 * sp * k) / 8; ctx.lineTo(sx(u.x + Math.cos(aa) * R), sy(u.y + Math.sin(aa) * R)); }
+      ctx.closePath(); ctx.fill();
+      if (Math.random() < 0.7) { const d = 0.2 + Math.random() * 0.8; burst(lerpN(mx, u.x + Math.cos(a) * R, d), lerpN(my, u.y + Math.sin(a) * R, d), Math.random() < 0.5 ? '#ffb43a' : '#ff6a1a', 2, 120, 'spark'); }
+    }
+    if (run.throws) {
+      run.throws = run.throws.filter((th) => now - th.start < th.dur);
+      for (const th of run.throws) {
+        const k = (now - th.start) / th.dur;
+        const gx = th.from.x + (th.to.x - th.from.x) * k, gy = th.from.y + (th.to.y - th.from.y) * k;
+        const lift = Math.sin(k * Math.PI) * 520;
+        ctx.globalAlpha = 0.35; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(sx(th.to.x + (gx - th.to.x) * 0.3), sy(th.to.y + (gy - th.to.y) * 0.3), 22 * z * (0.4 + k * 0.6), 7 * z * (0.4 + k * 0.6), 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+        const e = D.ENEMIES[th.peon];
+        ctx.save(); ctx.translate(sx(gx), sy(gy - lift) + 20 * z); ctx.rotate(th.spin + k * 9); ctx.translate(0, -20 * z);
+        ENEMY_ART.draw(ctx, th.peon, { t: now * 3, walk: 0, walkRaw: now * 4, atk: -1, heavy: false, hurt: 0, dying: 0, seed: 7, mut: {} }, (90 * z * D.enemySize(th.peon)) / (e.look.size || 1));
+        ctx.restore();
+      }
+    }
+    if (run.beams) {
+      run.beams = run.beams.filter((bm) => bm.until > now);
+      for (const bm of run.beams) {
+        const k = (bm.until - now) / 0.45;
+        const x0 = sx(bm.x), y0 = sy(bm.y), x1 = sx(bm.x + Math.cos(bm.a) * bm.len), y1 = sy(bm.y + Math.sin(bm.a) * bm.len);
+        ctx.lineCap = 'round';
+        ctx.globalAlpha = 0.5 * k; ctx.strokeStyle = bm.col; ctx.lineWidth = bm.w * z; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.globalAlpha = 0.95 * k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = bm.w * z * 0.3; ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // World 8 (1.5): a sweeping laser, draining tethers, orbs circling, the Wardens' link, held beasts, lightning.
+    for (const u of b.units) {
+      if (u.state === 'dying') continue;
+      const c = u.cast;
+      if (c && c.move.kind === 'sweep' && c.stage === 'act' && c.angle != null) {
+        const col = TYPE_RGB[c.move.type] || '255,242,122', x0 = sx(u.x), y0 = sy(u.y - u.r * 1.6), x1 = sx(u.x + Math.cos(c.angle) * c.move.len), y1 = sy(u.y + Math.sin(c.angle) * c.move.len);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = `rgba(${col},0.45)`; ctx.lineWidth = c.move.w * z; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = c.move.w * z * 0.28; ctx.stroke();
+        if (Math.random() < 0.6) burst(u.x + Math.cos(c.angle) * c.move.len * Math.random(), u.y + Math.sin(c.angle) * c.move.len * Math.random(), `rgb(${col})`, 2, 120, 'spark');
+      }
+      if (c && c.move.kind === 'drain' && c.stage === 'act') for (const o of c.targets || []) {
+        const x0 = sx(u.x), y0 = sy(u.y - u.r * 1.8), x1 = sx(o.x), y1 = sy(o.y - o.r);
+        ctx.strokeStyle = 'rgba(176,106,255,0.75)'; ctx.lineWidth = Math.max(2, 5 * z); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, y0); for (let i = 1; i <= 10; i++) { const k = i / 10; ctx.lineTo(x0 + (x1 - x0) * k + Math.sin(k * 12 + t * 10) * 6 * z * Math.sin(k * Math.PI), y0 + (y1 - y0) * k); } ctx.stroke();
+        const k = (t * 1.5) % 1; ctx.fillStyle = '#e0c0ff'; ctx.beginPath(); ctx.arc(x1 + (x0 - x1) * k, y1 + (y0 - y1) * k, Math.max(2, 5 * z), 0, Math.PI * 2); ctx.fill();
+      }
+      if (u.orbitUntil > now) {
+        const n = u.orbitN || 6, R = u.orbitR, col = TYPE_RGB[u.orbitType] || '176,106,255';
+        for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + (now - (u.orbitStart || 0)) * 2.4, x = sx(u.x + Math.cos(a) * R), y = sy(u.y + Math.sin(a) * R * 0.5) - 30 * z; const gr = ctx.createRadialGradient(x, y, 0, x, y, 26 * z); gr.addColorStop(0, `rgba(${col},0.95)`); gr.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 26 * z, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, 6 * z, 0, Math.PI * 2); ctx.fill(); }
+      }
+      if (u.side === 'you' && u.heldUntil > now) {
+        // Held: tentacles, pincers or arms wrapped round it.
+        const x = sx(u.x), y = sy(u.y), R = u.r * z, col = u.heldLook === 'pincer' ? '#c89a4a' : u.heldLook === 'arm' ? '#b88a7a' : '#4a2a5a';
+        ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, R * 0.22);
+        for (let i = 0; i < 3; i++) { const a = -Math.PI / 2 + (i - 1) * 0.9; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R * 1.3, y + R * 0.2); ctx.quadraticCurveTo(x + Math.cos(a + 0.8) * R * 1.1, y - R * (0.6 + i * 0.3), x - Math.cos(a) * R * 0.6, y - R * (0.9 + 0.1 * Math.sin(t * 6 + i))); ctx.stroke(); }
+      }
+    }
+    for (const w of b.units.filter((u) => u.mutant && u.mutant.link && u.state !== 'dying')) {
+      for (const o of b.units) if (o !== w && o.uid > w.uid && o.mutant && o.mutant.link === w.mutant.link && o.state !== 'dying' && Math.hypot(o.x - w.x, o.y - w.y) < 380) {
+        const x0 = sx(w.x), y0 = sy(w.y - w.r * 1.8), x1 = sx(o.x), y1 = sy(o.y - o.r * 1.8);
+        ctx.strokeStyle = `rgba(200,208,255,${0.5 + 0.3 * Math.sin(t * 6)})`; ctx.lineWidth = Math.max(2, 5 * z); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      }
+    }
+    if (run.chains) {
+      run.chains = run.chains.filter((ch) => ch.until > now);
+      for (const ch of run.chains) {
+        const k = (ch.until - now) / 0.5;
+        ctx.strokeStyle = `rgba(255,242,122,${k})`; ctx.lineWidth = Math.max(2, 5 * z); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ch.pts.forEach((p, i) => { if (!i) { ctx.moveTo(sx(p.x), sy(p.y)); return; } const q = ch.pts[i - 1]; for (let s = 1; s <= 5; s++) { const f = s / 5; ctx.lineTo(sx(q.x + (p.x - q.x) * f + (s < 5 ? (Math.random() - 0.5) * 40 : 0)), sy(q.y + (p.y - q.y) * f + (s < 5 ? (Math.random() - 0.5) * 30 : 0))); } });
+        ctx.stroke(); ctx.strokeStyle = `rgba(255,255,255,${k})`; ctx.lineWidth = Math.max(1, 2 * z); ctx.stroke();
+      }
+    }
+    const sol = b.units.find((u) => u.kind === 'twin_sol' && u.state !== 'dying'), luna = b.units.find((u) => u.kind === 'twin_luna' && u.state !== 'dying');
+    if (sol && luna && sol.linked) {
+      const x0 = sx(sol.x), y0 = sy(sol.y - sol.r * 1.6), x1 = sx(luna.x), y1 = sy(luna.y - luna.r * 1.6);
+      const gr = ctx.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, 'rgba(255,207,58,0.7)'); gr.addColorStop(1, 'rgba(154,216,255,0.7)');
+      ctx.strokeStyle = gr; ctx.lineWidth = Math.max(2, 6 * z); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x0, y0);
+      for (let i = 1; i <= 12; i++) { const k = i / 12; ctx.lineTo(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k + Math.sin(k * Math.PI * 4 + t * 8) * 8 * z * Math.sin(k * Math.PI)); }
+      ctx.stroke();
+    }
+  }
+  /** Each boss's health along the top: its name, phase marks, rage coming. */
+  function bossBars(b) {
+    const host = run.screen.querySelector('#bt-bossbars');
+    if (!host) return;
+    const bosses = b.units.filter((u) => u.mutant && u.side === 'foe');
+    const key = bosses.map((u) => u.uid).join(',');
+    if (host.dataset.key !== key) {
+      host.dataset.key = key;
+      host.innerHTML = bosses.map((u) => `<div class="bt-bossbar" data-uid="${u.uid}"><span class="bt-bb-name">${D.ENEMIES[u.kind].name}</span><span class="bt-bb-tag"></span><div class="bt-bb-track"><div class="bt-bb-fill"></div>${(u.mutant.phases || []).map((p) => `<i style="left:${p.at * 100}%"></i>`).join('')}</div></div>`).join('');
+    }
+    for (const u of bosses) {
+      const row = host.querySelector(`[data-uid="${u.uid}"]`);
+      if (!row) continue;
+      row.querySelector('.bt-bb-fill').style.width = `${Math.max(0, (u.hp / u.maxHp) * 100).toFixed(1)}%`;
+      row.classList.toggle('dead', u.state === 'dying');
+      row.classList.toggle('enraged', !!u.enraged);
+      const left = (u.mutant.enrage || 180) - (b.time - u.spawnT);
+      const tag = u.enraged ? 'Enraged!' : left < 45 ? `Rage in ${Math.ceil(left)}s` : u.phase ? `Phase ${u.phase + 1}` : '';
+      const tg = row.querySelector('.bt-bb-tag');
+      if (tg.textContent !== tag) tg.textContent = tag;
+    }
+  }
+  /** A World 7 level's card: how it is won, the hint, and each boss's weaknesses once met. */
+  function mutantCard(level, played) {
+    const b = B();
+    const rows = (level.bossIds || []).map((id) => {
+      const e = D.ENEMIES[id], n = MUTANTS.bossNotes(id);
+      if (!(played && b.seen[id])) return '<div class="bt-mut-row"><b>???</b><span class="bt-dim">Play the level to learn about this boss.</span></div>';
+      return `<div class="bt-mut-row"><b>${e.name}</b><div class="bt-mut-chips">${n.weak ? `<span class="bt-mchip weak">Weak to ${n.weak}</span>` : ''}${n.resist ? `<span class="bt-mchip resist">Resists ${n.resist}</span>` : ''}${n.type ? `<span class="bt-mchip">${n.type.icon} ${n.type.name}: ${n.type.text}</span>` : ''}</div>${n.armour ? `<span class="bt-dim">${n.armour}</span>` : ''}${n.twin ? `<span class="bt-dim">${n.twin}</span>` : ''}${n.extra ? `<span class="bt-dim">${n.extra}</span>` : ''}</div>`;
+    }).join('');
+    return `<div class="bt-mutcard"><div class="bt-mut-rule">Beat the boss to win. Their camp has no coin pile, so guard yours.</div>${level.tip ? `<div class="bt-mut-tip">💡 ${level.tip}</div>` : ''}${rows}</div>`;
+  }
+  /** One to five bleeding, dripping red stars: how dangerous a World 7 foe is, against World 7 only (Sam, 23 Nov). */
+  const BLOOD_STAR = '<svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5 1.4-7.1-5.3-5 7.2-.9z" fill="#c8102e" stroke="#4a0008" stroke-width="1.4" stroke-linejoin="round"/><path d="M7.6 18.4c-.2 2.4.4 4 .9 5.6.5-1.4.9-2.8.9-4.6zM15.4 18.8c.1 2.2.6 3.4 1.1 4.6.4-1.2.6-2.3.4-3.7z" fill="#c8102e" stroke="#4a0008" stroke-width=".9"/><circle class="drip" cx="8.5" cy="26" r="1.4" fill="#c8102e"/><circle class="drip d2" cx="16.5" cy="25" r="1.2" fill="#c8102e"/><path d="M8.6 7.4l2.2-1" stroke="#ff8a9a" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  const bloodHtml = (d) => { let s = ''; for (let i = 1; i <= 5; i++) s += `<span class="bt-blood ${d >= i ? 'full' : d >= i - 0.5 ? 'half' : ''}">${BLOOD_STAR}</span>`; return s; };
+  const dangerHtml = (id) => (D.ENEMIES[id].world >= 7 && typeof MUTANTS !== 'undefined' ? `<span class="bt-bloods">${bloodHtml(MUTANTS.bloodStars(id))}</span>` : heartsHtml(D.difficulty(id)));
 
   function events(list) {
     for (const ev of list) {
@@ -1001,12 +1371,25 @@ const BATTLE = (() => {
           if (u.elite) { burst(u.x, u.y - u.r, '#ffd84a', 16, 200, 'star'); ring(u.x, u.y, u.r * 2.2, '#ffd84a'); }
           if (u.champ) { burst(u.x, u.y - u.r, '#ff6a3c', 26, 260, 'spark'); ring(u.x, u.y, u.r * 2.6, '#ff6a3c'); run.shake = Math.max(run.shake || 0, 7); }
           if (!B().seen[u.kind]) seenNow(u.kind);
+          if (u.variant === 'giant') bigText(u.x, u.y - u.r * 2.8, 'Giant!', '#ffd08a', 1.1);
           break;
         case 'wave': run.banner = { text: ev.text, t: 2.2, max: 2.2, champ: !!ev.champ }; sfx('rally'); break;
         case 'special': specialFx(ev); break;
         case 'special-miss': bigText(u.x, u.y - u.r * 2.4, 'Nothing in reach', '#c8d0e8', 1.1); sfx('nope'); break;
         case 'portal': for (const [rr, life] of [[2.8, 1.3], [2, 1.1], [1.3, 0.9]]) run.fx.push({ kind: 'ring', x: u.x, y: u.y, r: u.r * rr, life, max: life, col: '#b080ff' }); burst(u.x, u.y - u.r, '#b080ff', 22, 170, 'wisp'); bigText(u.x, u.y - u.r * 2.6, '🌀 Portal!', '#d8b0ff', 1.1); break;
         case 'trait': traitFx(ev); break;
+        case 'lob': {
+          const sh = ev.shell;
+          run.shots.push({ x: u.x, y: u.y - u.r * 1.2, tx: sh.x, ty: sh.y, t: 0, dur: ev.dur, arc: 300, wobble: 0, style: 'cannonball', col: '#3a2a20', heavy: false, side: 'foe', seed: 0 });
+          run.fx.push({ kind: 'marker', x: sh.x, y: sh.y, r: sh.r, life: ev.dur, max: ev.dur });
+          burst(u.x, u.y - u.r * 1.2, '#c8b8a0', 5, 90, 'smoke');
+          break;
+        }
+        case 'boom':
+          burst(ev.x, ev.y, '#ffb43a', 22, 280, 'spark'); burst(ev.x, ev.y, '#4a3a30', 12, 160, 'smoke'); ring(ev.x, ev.y, ev.r * 1.4, '#ffd08a');
+          run.shake = Math.max(run.shake, 5); if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.play('explosion');
+          break;
+        case 'mutant': mutantFx(ev); break;
         case 'swing':
           if (ev.ranged) {
             const style = shotStyle(u);
@@ -1032,10 +1415,13 @@ const BATTLE = (() => {
           if (ev.heavy && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(u, true);
           break;
         case 'hit':
-          if (!ev.heavy && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(ev.by, false);
+          // A burn's or poison's tick: a small number now and then, no blow.
+          if (ev.dot) { if (Math.random() < 0.3) text(u.x + u.r * 0.8, u.y - u.r * 1.4, `${Math.round(ev.dmg)}`, u.burnUntil > run.battle.time ? '#ffb43a' : '#b8ff6a'); break; }
+          if (!ev.heavy && ev.by && typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.hit(ev.by, false);
           hitFx(u, ev.by, ev.heavy);
           if (ev.heavy) text(u.x + u.r * 1.1, u.y - u.r * 1.6, `${Math.round(ev.dmg)}`, '#ffe066');
           u._hurt = 1;
+          if (ev.tag && u.mutant) tagFx(u, ev.tag);
           break;
         case 'death':
           if (typeof BATTLE_SFX !== 'undefined') BATTLE_SFX.death(u);
@@ -1140,12 +1526,14 @@ const BATTLE = (() => {
 
   // ------------------------------------------------------------------ the arena's look
   /** The battlefield, painted once for the level: the world's theme, varied by the level. */
+  const SIDE = 500;
   function paintArena(level) {
     const k = 1;
     const c = document.createElement('canvas');
-    c.width = W * k; c.height = H * k;
+    c.width = (W + SIDE * 2) * k; c.height = H * k;
     const g = c.getContext('2d');
     g.scale(k, k);
+    g.translate(SIDE, 0);
     const r = D.seeded(D.hash('arena|' + level.id));
     const theme = D.WORLDS[level.world - 1].theme;
     const T = {
@@ -1154,11 +1542,23 @@ const BATTLE = (() => {
       invasion: { top: '#4a2a22', mid: '#7a4a2e', low: '#8a6a3a', path: 'rgba(40,30,30,0.35)', blob: ['#8a5634', '#6a3a26', '#9a6a3c', '#5a3424'], edge: '#2a1810' },
       moon: { top: '#3a3e52', mid: '#6a6e82', low: '#8a8e9e', path: 'rgba(220,225,240,0.22)', blob: ['#7a7e90', '#5a5e70', '#9a9eae', '#6a6e80'], edge: '#1a1c28' },
       rings: { top: '#141830', mid: '#2a2a48', low: '#3a3a5a', path: 'rgba(240,210,160,0.2)', blob: ['#4a4060', '#3a3050', '#5a5070', '#2a2a44'], edge: '#0a0a18' },
+      mutants: { top: '#2c1f38', mid: '#2a2236', low: '#34304a', path: 'rgba(160,255,90,0.14)', blob: ['#3a2a4a', '#2a3a2a', '#4a3a5a', '#2a4a34'], edge: '#0a0610' },
+      abyss: { top: '#221634', mid: '#1c1228', low: '#2a1e3a', path: 'rgba(176,106,255,0.14)', blob: ['#2a1a3a', '#1a1028', '#3a2a4e', '#2a1a2e'], edge: '#050208' },
       eclipse: { top: '#0e0818', mid: '#1e1230', low: '#2e1c44', path: 'rgba(255,200,100,0.14)', blob: ['#2a1a40', '#3a2050', '#1a1030', '#4a2a5a'], edge: '#05030a' },
     }[theme];
     const grd = g.createLinearGradient(0, 0, 0, H);
     grd.addColorStop(0, T.top); grd.addColorStop(0.5, T.mid); grd.addColorStop(1, T.low);
-    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    g.fillStyle = grd; g.fillRect(-SIDE, 0, W + SIDE * 2, H);
+    // (Beyond the field's sides: the same ground, darker, with rocks and patches of its own.)
+    {
+      const rs = D.seeded(D.hash('arena-side|' + level.id));
+      for (const [x0] of [[-SIDE], [W]]) {
+        for (let i = 0; i < 90; i++) { g.globalAlpha = 0.18 + rs() * 0.22; g.fillStyle = T.blob[Math.floor(rs() * T.blob.length)]; g.beginPath(); g.ellipse(x0 + rs() * SIDE, rs() * H, 20 + rs() * 70, 12 + rs() * 40, rs() * 3, 0, Math.PI * 2); g.fill(); }
+        g.globalAlpha = 0.42; g.fillStyle = T.edge; g.fillRect(x0, 0, SIDE, H);
+        for (let i = 0; i < 26; i++) { const x = x0 + 30 + rs() * (SIDE - 60), y = rs() * H, s = 14 + rs() * 30; g.globalAlpha = 0.55; g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x + 4, y + s * 0.5, s, s * 0.35, 0, 0, Math.PI * 2); g.fill(); g.globalAlpha = 0.8; g.fillStyle = T.blob[i % T.blob.length]; g.beginPath(); g.moveTo(x - s, y + s * 0.4); g.lineTo(x - s * 0.5, y - s * 0.6); g.lineTo(x + s * 0.4, y - s * 0.8); g.lineTo(x + s, y + s * 0.4); g.closePath(); g.fill(); }
+        g.globalAlpha = 1;
+      }
+    }
     // Patches of colour over the ground.
     for (let i = 0; i < 260; i++) {
       g.globalAlpha = 0.18 + r() * 0.22;
@@ -1254,7 +1654,8 @@ const BATTLE = (() => {
     }
     // The ends: their camp at the top, your meadow at the bottom.
     const topGrad = g.createLinearGradient(0, 0, 0, 380);
-    topGrad.addColorStop(0, 'rgba(0,0,0,0.5)'); topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    // (Sam, 24 Nov: on Worlds 7 and 8, already dark, the full shade read as a black border above the lair: half as much there.)
+    topGrad.addColorStop(0, theme === 'mutants' || theme === 'abyss' ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.5)'); topGrad.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = topGrad; g.fillRect(0, 0, W, 380);
     // Your zone (where beasts can be placed): plainly blue, edged, and named (reviewer 2: it was not).
     const lowGrad = g.createLinearGradient(0, SAFE_Y, 0, H);
@@ -1276,6 +1677,18 @@ const BATTLE = (() => {
     if (theme === 'rings') { // the planet's rings sweeping across
       for (let i = 0; i < 5; i++) { g.strokeStyle = `rgba(${210 - i * 15},${180 - i * 10},${140 - i * 10},0.18)`; g.lineWidth = 40 + i * 12; g.beginPath(); g.ellipse(500, 1000, 1400 + i * 90, 360 + i * 30, -0.35, 0, Math.PI * 2); g.stroke(); }
     }
+    if (theme === 'mutants' || theme === 'abyss') { // Worlds 7 and 8: no coin pile at their end, but the lair the giants come out of (violet for World 8)
+      const lc = theme === 'abyss' ? '176,106,255' : '150,255,90', lc2 = theme === 'abyss' ? '200,150,255' : '160,255,90';
+      const gl = g.createRadialGradient(500, 110, 20, 500, 110, 300); gl.addColorStop(0, `rgba(${lc},0.5)`); gl.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gl; g.beginPath(); g.arc(500, 110, 300, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#2a2230'; g.beginPath(); g.moveTo(250, 200); for (let i = 0; i <= 12; i++) { const a = Math.PI + (i / 12) * Math.PI; g.lineTo(500 + Math.cos(a) * 270 + (r() - 0.5) * 30, 200 + Math.sin(a) * 200 + (r() - 0.5) * 24); } g.lineTo(750, 200); g.closePath(); g.fill();
+      g.fillStyle = '#07040c'; g.beginPath(); g.moveTo(320, 205); for (let i = 0; i <= 10; i++) { const a = Math.PI + (i / 10) * Math.PI; g.lineTo(500 + Math.cos(a) * 180 + (r() - 0.5) * 20, 205 + Math.sin(a) * 140 + (r() - 0.5) * 16); } g.lineTo(680, 205); g.closePath(); g.fill();
+      const inner = g.createRadialGradient(500, 170, 10, 500, 170, 150); inner.addColorStop(0, `rgba(${lc2},0.35)`); inner.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = inner; g.beginPath(); g.arc(500, 170, 150, 0, Math.PI * 2); g.fill();
+      for (const [x, y] of [[452, 150], [476, 148], [532, 158], [556, 156]]) { g.fillStyle = '#ff4a3a'; g.beginPath(); g.ellipse(x, y, 5, 3, 0, 0, Math.PI * 2); g.fill(); }
+      g.strokeStyle = '#efe6d2'; g.lineWidth = 6; g.lineCap = 'round';
+      for (let i = 0; i < 9; i++) { const x = 300 + r() * 400, y = 230 + r() * 70, a = r() * Math.PI; g.beginPath(); g.moveTo(x - Math.cos(a) * 18, y - Math.sin(a) * 8); g.lineTo(x + Math.cos(a) * 18, y + Math.sin(a) * 8); g.stroke(); }
+    }
     if (theme === 'eclipse') { // the eclipse itself above their pile
       const gl = g.createRadialGradient(500, 60, 60, 500, 60, 260); gl.addColorStop(0, 'rgba(255,200,90,0.55)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gl; g.beginPath(); g.arc(500, 60, 260, 0, Math.PI * 2); g.fill();
@@ -1288,13 +1701,16 @@ const BATTLE = (() => {
       g.fillStyle = '#4a5058'; g.beginPath(); g.ellipse(500, -40, 520, 120, 0, 0, Math.PI); g.fill();
       for (let i = 0; i < 9; i++) { g.fillStyle = i % 2 ? '#7aff5a' : '#ff5a3a'; g.beginPath(); g.arc(80 + i * 105, 40, 7, 0, Math.PI * 2); g.fill(); }
     }
-    // A soft edge so the map fades out at its sides.
-    const ed = g.createLinearGradient(0, 0, 120, 0);
+    // A soft edge so the field's sides read, and a low ridge along each.
+    const ed = g.createLinearGradient(0, 0, 90, 0);
     ed.addColorStop(0, T.edge); ed.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = ed; g.fillRect(0, 0, 120, H);
-    const ed2 = g.createLinearGradient(W, 0, W - 120, 0);
+    g.globalAlpha = 0.55; g.fillStyle = ed; g.fillRect(0, 0, 90, H);
+    const ed2 = g.createLinearGradient(W, 0, W - 90, 0);
     ed2.addColorStop(0, T.edge); ed2.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = ed2; g.fillRect(W - 120, 0, 120, H);
+    g.fillStyle = ed2; g.fillRect(W - 90, 0, 90, H);
+    g.globalAlpha = 0.5; g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 4;
+    for (const x of [0, W]) { g.beginPath(); for (let y = 0; y <= H; y += 40) g.lineTo(x + Math.sin(y * 0.03) * 6, y); g.stroke(); }
+    g.globalAlpha = 1;
     return c;
   }
 
@@ -1514,10 +1930,12 @@ const BATTLE = (() => {
     ctx.fillRect(0, 0, run.vw, run.vh);
     ctx.save();
     if (run.shake > 0) ctx.translate((Math.random() - 0.5) * run.shake, (Math.random() - 0.5) * run.shake);
-    ctx.drawImage(run.bg, sx(0), sy(0), W * z, H * z);
+    ctx.drawImage(run.bg, sx(-SIDE), sy(0), (W + SIDE * 2) * z, H * z);
     // Your zone lights up for a moment when you tap it.
     if (run.markPulse > 0 || run.drag) { ctx.fillStyle = `rgba(120,210,255,${0.14 * Math.max(run.markPulse, run.drag ? 1 : 0)})`; ctx.fillRect(sx(0), sy(SAFE_Y), W * z, (H - SAFE_Y) * z); }
-    pile(ctx, 'foe', battle.piles.foe, battle.pileMax.foe, t);
+    // (World 7: no coin pile at their end; the giants' attacks show on the ground first.)
+    if (!battle.bossFight) pile(ctx, 'foe', battle.piles.foe, battle.pileMax.foe, t);
+    if (battle.zones && battle.zones.length) drawZones(ctx, t, z);
     pile(ctx, 'you', battle.piles.you, battle.pileMax.you, t);
     run.pileLabels = [];
     // The marker: where the next beast comes out.
@@ -1533,9 +1951,10 @@ const BATTLE = (() => {
     const units = [...battle.units].sort((a, c) => a.y - c.y);
     for (const u of units) { (u.side === 'you' ? drawBeast : drawFoe)(ctx, u, t); if (u.state !== 'dying' && !u.burrowed) statusFx(ctx, u, t, z); }
     for (const s of run.shots) if (s.t >= 0) drawShot(ctx, s, z, t);
+    if (battle.mut) drawMutantFx(ctx, t, z);
     // Hearts over everyone still standing, over the top of each one's head.
     for (const u of units) {
-      if (u.state === 'dying' || u.burrowed || u.cloakUntil > battle.time) continue;
+      if (u.state === 'dying' || u.burrowed || u.cloakUntil > battle.time || u.mutant) continue;
       const hgt = u.side === 'you' ? u.r * 2.85 : u.r * (D.ENEMIES[u.kind].look.plan === 'float' ? 3.0 : 3.5);
       const size = Math.max(15, Math.min(u.boss ? 42 : 30, u.r * z * (u.boss ? 0.9 : 0.85)));
       const size2 = u.champ ? Math.min(40, size * 1.25) : size;
@@ -1897,6 +2316,14 @@ const BATTLE = (() => {
   function drawFoe(ctx, u, t) {
     const z = run.cam.zoom;
     const e = D.ENEMIES[u.kind];
+    if (u.trait === 'snipe' && u.state === 'fight' && u.target && u.target.state !== 'dying') {
+      const k = 1 - Math.max(0, Math.min(1, u.swing)), tx = sx(u.target.x), ty = sy(u.target.y - u.target.r * 0.7);
+      ctx.globalAlpha = 0.35 + 0.6 * k; ctx.strokeStyle = '#ff3c3c'; ctx.lineWidth = Math.max(1.6, (2 + 2.5 * k) * z);
+      ctx.beginPath(); ctx.moveTo(sx(u.x), sy(u.y - u.r * 1.2)); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle = '#ff5c5c'; ctx.beginPath(); ctx.arc(tx, ty, Math.max(2.5, 5 * z * (0.6 + k)), 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    if (u.trait === 'regen' && u.state !== 'dying' && u.hp < u.maxHp && run.battle.time - u.lastHurt > 2 && Math.random() < 0.06) burst(u.x + (Math.random() - 0.5) * u.r, u.y - u.r * 1.4, '#7af0a0', 1, 50, 'star');
     if (u.burrowed) {
       // A mound of earth on the move, with a spray of dirt.
       const x = sx(u.x), y = sy(u.y), R = u.r * z;
@@ -1913,11 +2340,12 @@ const BATTLE = (() => {
       t: t + u.uid * 0.37, walk: (run.walk.get(u.uid) || 0) % 1, walkRaw: run.walk.get(u.uid) || 0, atk: ph, heavy: heavyNow,
       hurt: u._hurt || 0, dying: u.state === 'dying' ? Math.min(1, u.dyingT / BE.DYING) : 0,
       capture: u.state === 'capture', seed: u.uid, ranged: shoots(u),
+      mut: u.mutant || u.hatchAt ? MUTANTS.pose(run.battle, u) : null,
     };
     ctx.save();
     ctx.translate(sx(u.x), sy(u.y));
     // Drawn to fill its footprint (battle_data.js enemyRadius), an elite a size up.
-    const px = (90 * z * D.enemySize(u.kind) * (u.elite ? 1.15 : 1) * (u.champ ? 1.45 : 1)) / (e.look.size || 1);
+    const px = (90 * z * D.enemySize(u.kind) * (u.elite ? 1.15 : 1) * (u.champ ? 1.45 : 1) * (u.drawK || 1)) / (e.look.size || 1);
     if (u.champ && u.state !== 'dying') {
       // A champion: a red-gold glow and a pulsing ring on the ground round it.
       ctx.globalAlpha = 0.5 + 0.15 * Math.sin(t * 4 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ff6a3c'), -u.r * z * 1.8, -u.r * z * 2.9, u.r * z * 3.6, u.r * z * 3.6);
@@ -1926,7 +2354,8 @@ const BATTLE = (() => {
       ctx.beginPath(); ctx.ellipse(0, 0, u.r * z * (0.9 + k * 0.7), u.r * z * (0.3 + k * 0.22), 0, 0, Math.PI * 2); ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    if (u.boss) { ctx.globalAlpha = 0.25; ctx.drawImage(ENEMY_ART.glowSprite('#ff3c3c'), -u.r * z * 2.2, -u.r * z * 3.4, u.r * z * 4.4, u.r * z * 4.4); ctx.globalAlpha = 1; }
+    if (u.enraged && u.state !== 'dying') { ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 8 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ff2a2a'), -u.r * z * 1.9, -u.r * z * 3.2, u.r * z * 3.8, u.r * z * 3.8); ctx.globalAlpha = 1; }
+    if (u.boss && !u.mutant) { ctx.globalAlpha = 0.25; ctx.drawImage(ENEMY_ART.glowSprite('#ff3c3c'), -u.r * z * 2.2, -u.r * z * 3.4, u.r * z * 4.4, u.r * z * 4.4); ctx.globalAlpha = 1; }
     if (u.elite && u.state !== 'dying') {
       ctx.globalAlpha = 0.32 + 0.1 * Math.sin(t * 5 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ffd43b'), -u.r * z * 1.9, -u.r * z * 3.3, u.r * z * 3.8, u.r * z * 3.8); ctx.globalAlpha = 1;
     }
@@ -1943,6 +2372,13 @@ const BATTLE = (() => {
       if (p.kind === 'ring') {
         ctx.globalAlpha = a; ctx.strokeStyle = p.col; ctx.lineWidth = Math.max(1.5, 5 * z * a);
         ctx.beginPath(); ctx.ellipse(sx(p.x), sy(p.y), p.r * z * (1 - a * 0.7), p.r * z * (1 - a * 0.7) * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
+      } else if (p.kind === 'marker') {
+        const k = 1 - a, X = sx(p.x), Y = sy(p.y), R = p.r * z;
+        ctx.globalAlpha = 0.18 + 0.32 * k; ctx.fillStyle = '#ff3c3c';
+        ctx.beginPath(); ctx.ellipse(X, Y, R * k, R * k * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.65 + 0.3 * Math.sin(k * 30); ctx.strokeStyle = '#ff5c5c'; ctx.lineWidth = Math.max(1.5, 3 * z);
+        ctx.setLineDash([8 * z, 6 * z]); ctx.beginPath(); ctx.ellipse(X, Y, R, R * 0.45, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
       } else if (p.kind === 'text') {
         ctx.globalAlpha = Math.min(1, a * 1.5);
         const fs = Math.max(p.big ? 19 : 12, 26 * z * (p.big ? 1.5 : 1.2));
@@ -2005,7 +2441,10 @@ const BATTLE = (() => {
       btn.classList.toggle('full', b.yours.length >= b.cap);
       // An evolved card whose beast is out with its special unused: the card names the special.
       btn.classList.toggle('special', b.canSpecial(i) && run.countdown <= 0);
+      // (World 8: deafened by a sonic attack, no special for a while.)
+      btn.classList.toggle('silenced', c.silencedUntil > b.time);
     });
+    if (b.mut) bossBars(b);
   }
 
   // ------------------------------------------------------------------ pause, finish, results
@@ -2047,6 +2486,8 @@ const BATTLE = (() => {
     if (won) {
       b.best[level.id] = Math.min(b.best[level.id] || Infinity, Math.round(time));
       if (starNow) b.stars[level.id] = true;
+      if (starNow && typeof LIMITED !== 'undefined') LIMITED.noteStar(level.id);
+      if (level.world >= 7 && !battle.cards.some((c) => (BEAST_TEMPLATES[c.id] || {}).comet)) (b.noComet || (b.noComet = {}))[level.id] = true;
       if (level.boss) b.bosses[level.id] = true;
       const full = battle.piles.you >= battle.pileMax.you;
       if (full && level.n >= 5) b.flawless = (b.flawless || 0) + 1;
@@ -2065,8 +2506,9 @@ const BATTLE = (() => {
       if (first) {
         const cps = typeof calculateTotalCps === 'function' ? calculateTotalCps() : 0;
         const ess = Math.max(150 * level.n * level.world * level.world, cps * 60 * D.clearMinutes(level.world, level.n));
-        grant({ essence: ess, premium: level.boss ? 1 : 0, cap: D.BOSS_CRATE_CAP[level.world] }, rewards, '', level);
+        grant({ essence: ess, premium: level.boss ? 1 : 0, cap: D.BOSS_CRATE_CAP[level.world], shards: level.world === 7 ? 20 + 5 * level.n : level.world === 8 ? 40 + 8 * level.n : 0 }, rewards, '', level);
       }
+      if (newStar && level.world >= 7) grant({ shards: level.world === 8 ? 100 : 60 }, rewards, '', level);
       if (newStar) {
         const s = totals().stars;
         while (Math.floor(s / 5) > (b.starGifts || 0)) { b.starGifts = (b.starGifts || 0) + 1; grant({ spins: 1 }, rewards, '5 stars', level); }
@@ -2078,6 +2520,7 @@ const BATTLE = (() => {
     }
     // Achievements first (the last of them gives a legend), then any legends now earned.
     const ach = checkAchievements(level);
+    checkCometAch();
     const legends = checkLegends();
     const newPerks = D.PERKS.filter((p) => p.unlock(totals()) && !perksBefore.includes(p.id));
     if (legends.length && typeof renderBeastopedia === 'function') { try { renderBeastopedia(); } catch (e) { console.error(e); } }
@@ -2088,7 +2531,7 @@ const BATTLE = (() => {
     const next = level.n < w.levels ? level.n + 1 : null;
     const m = el(`<div class="bt-modal"><div class="bt-panel ${won ? 'won' : 'lost'}">
       <h2>${won ? 'Victory!' : r.retreated ? 'Retreated' : 'Defeat'}</h2>
-      ${first && level.n === w.levels && (level.world === 3 || level.world === 6) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : 'You have beaten every world of the Low Gravity solar system!'}</div>` : ''}
+      ${first && level.n === w.levels && (level.world === 3 || level.world === 6 || level.world >= 7) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : level.world === 6 ? 'You have beaten every world of the Low Gravity solar system!' : level.world === 8 ? 'You have beaten the World-Eater and the Apex Mutants. Nothing in any universe is stronger than your beasts.' : 'You have beaten the Universal Mutants! World 8, the Apex Mutants, is open.'}</div>` : ''}
       <div class="bt-result-star ${starNow ? 'on' : ''}">★</div>
       <div class="bt-dim">${won ? `Won in ${fmt(time)}` : battle.piles.you <= 0 ? 'They took your coin pile.' : 'You retreated.'} · star under ${fmt(level.starTime)}${starNow ? (newStar ? ': earned!' : '') : ''}</div>
       ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}, ${D.LEGENDS[id].title}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}</span></div></div>`).join('')}
@@ -2131,6 +2574,14 @@ const BATTLE = (() => {
   /** Pay out a reward and note it for the results. */
   function grant(rw, notes, why = '', level = null) {
     if (rw.essence) { state.essence += rw.essence; notes.push(`+${formatNumber(rw.essence)} essence`); }
+    // 1.5: hours of your income at once, and an essence boost for a while.
+    if (rw.income) { const cps = typeof calculateTotalCps === 'function' ? calculateTotalCps() : 0; const ess = Math.max(1e6, cps * 60 * rw.income); state.essence += ess; notes.push(`+${formatNumber(ess)} essence (${rw.income >= 60 ? `${rw.income / 60} hours` : `${rw.income} minutes`} of your income)`); }
+    if (rw.boost) {
+      const now = Date.now(), live = (state.rewardBoostUntil || 0) > now;
+      state.rewardBoostMult = Math.max(live ? state.rewardBoostMult || 1 : 1, rw.boost.mult);
+      state.rewardBoostUntil = Math.max(now, state.rewardBoostUntil || 0) + rw.boost.minutes * 60000;
+      notes.push(`Essence x${rw.boost.mult} for ${rw.boost.minutes >= 60 ? `${rw.boost.minutes / 60} hour${rw.boost.minutes > 60 ? 's' : ''}` : `${rw.boost.minutes} minutes`}`);
+    }
     if (rw.crates) {
       let dropped = 0, paid = 0;
       for (let i = 0; i < rw.crates; i++) { if (crateRoom()) { spawnCrateOnField(); dropped++; } else paid++; }
@@ -2147,7 +2598,15 @@ const BATTLE = (() => {
     }
     if (rw.spins) { B().freeSpins = (B().freeSpins || 0) + rw.spins; if (typeof updateDailySpinHUD === 'function') updateDailySpinHUD(); notes.push(`+${rw.spins} free spin${rw.spins > 1 ? 's' : ''}${why ? ` (${why})` : ''}`); }
     if (rw.legend) notes.push(`The ${D.LEGENDS[rw.legend].name.replace(/^The /, '')} joins you`);
-    if (rw.chest) {
+    if (rw.eggs) { state.cometEggBank = (state.cometEggBank || 0) + rw.eggs; notes.push(`+${rw.eggs} comet egg${rw.eggs > 1 ? 's' : ''} (${typeof COMET !== 'undefined' && COMET.inComet() ? 'falling now' : 'waiting on the comet'})`); }
+    if (rw.comet && typeof deliverCometBeast === 'function' && BEAST_TEMPLATES[rw.comet]) { const t = BEAST_TEMPLATES[rw.comet]; deliverCometBeast(rw.comet); notes.push(`${t.name}, Tier ${t.tier} ${typeof COMET !== 'undefined' ? COMET.STAGE_WORD[t.comet.stage].toLowerCase() : ''}, joins you on the comet`); }
+    // 1.5: comet shards (they buy comet eggs on the comet).
+    if (rw.shards) { state.cometShards = (state.cometShards || 0) + rw.shards; notes.push(`+${formatNumber(rw.shards)} comet shards`); }
+    if (rw.chest && rw.chest.chest.comet && typeof deliverCometBeast === 'function') {
+      const id = rw.chest.chest.comet;
+      deliverCometBeast(id);
+      notes.push(`World chest: ${BEAST_TEMPLATES[id].name} (Tier ${BEAST_TEMPLATES[id].tier} ${RARITIES[BEAST_TEMPLATES[id].rarity].name}), waiting on the comet`);
+    } else if (rw.chest) {
       const w = rw.chest;
       const pool = Object.keys(BEAST_TEMPLATES).filter((id) => D.canBattle(id) && D.systemOf(id) === w.system && BEAST_TEMPLATES[id].tier >= w.chest.tier && RANK.indexOf(BEAST_TEMPLATES[id].rarity) >= RANK.indexOf(w.chest.rarity));
       const id = pool[Math.floor(Math.random() * pool.length)];
@@ -2159,11 +2618,61 @@ const BATTLE = (() => {
     }
   }
 
+  /** 1.5: the comet's achievements (comet.js COMET.ACH): what they count, from saved totals. */
+  function cometTotals() {
+    const b = B(), cs = state.cometStats || {};
+    const ids = state.unlockedBeasts.filter((id) => (BEAST_TEMPLATES[id] || {}).comet);
+    const cp = state.currentSolarSystem === 'comet' ? state.prestigeLevel || 0 : (state.cometSystem || {}).prestigeLevel || 0;
+    const stars = (w) => Object.keys(b.stars).filter((k) => k.startsWith(w + '-')).length;
+    return {
+      reached: state.cometUnlocked || state.currentSolarSystem === 'comet' ? 1 : 0, fusions: cs.fusions || 0, shardsMade: cs.shardsMade || 0, cosmicFused: cs.cosmicFused || 0,
+      bestTier: cs.bestGrown || 0, species: new Set(ids.map((id) => BEAST_TEMPLATES[id].comet.species)).size,
+      prestige: cp, w7stars: stars(7), w8stars: stars(8), noComet: b.noComet || {},
+    };
+  }
+  function checkCometAch() {
+    if (typeof COMET === 'undefined') return;
+    const done = B().cach || (B().cach = {});
+    const c = cometTotals();
+    let any = false;
+    for (const a of COMET.ACH) {
+      if (done[a.id]) continue;
+      const [have, need] = a.count(c);
+      if (have < need) continue;
+      done[a.id] = Date.now(); any = true;
+      const notes = [];
+      grant(a.reward, notes, a.name);
+      if (typeof spawnToastNotification === 'function') spawnToastNotification('🏅 ' + a.name, notes.join('. '), a.reward.comet ? COMET.svg(a.reward.comet) : '');
+    }
+    if (any && typeof saveGame === 'function') saveGame();
+  }
+  function cometAchHtml() {
+    const done = B().cach || {};
+    const c = cometTotals();
+    let html = '';
+    for (const [name, icon, group] of [['The Comet', '☄', 'comet'], ['The Mutant Worlds', '💀', 'hard']]) {
+      const list = COMET.ACH.filter((a) => a.group === group);
+      html += `<div class="bt-system">${name} <small>${list.filter((a) => done[a.id]).length}/${list.length}</small></div><div class="bt-achs">`;
+      for (const a of list) {
+        const got = !!done[a.id];
+        const [have, need] = a.count(c);
+        html += `<div class="bt-ach ${got ? 'done' : ''}">
+          <div class="bt-medal"><span>${icon}</span></div>
+          <div class="bt-ach-body"><b>${a.name}</b><span>${a.desc}</span>
+            ${got ? '<em class="bt-ach-got">Earned</em>' : `<div class="bt-bar"><i style="width:${Math.min(100, (have / need) * 100)}%"></i></div><em>${Math.min(have, need).toLocaleString()}/${need.toLocaleString()}</em>`}</div>
+          <div class="bt-ach-rw">${rewardChips(a.reward, true)}</div>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    return html;
+  }
+
   /** The merge achievements (relics.js): the counts they test. */
   function mergeTotals() {
     const s = state.mergeStats || {};
     const boss = ['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'];
-    const all = Object.values(BEAST_TEMPLATES).filter((t) => !t.relic && !boss.includes(t.id));
+    const all = Object.values(BEAST_TEMPLATES).filter((t) => !t.relic && !t.comet && !boss.includes(t.id));
     return [
       { merges: s.merges || 0, mergesOf: s.mergesOf || {}, mutations: s.mutations || 0, cures: s.cures || 0, evolved: s.evolved || 0 },
       { discovered: all.filter((t) => state.unlockedBeasts.includes(t.id)).length, allBeasts: all.length, prestige: Math.max(state.prestigeLevel || 0, (state.primeSystem && state.primeSystem.prestigeLevel) || 0) },
@@ -2316,7 +2825,7 @@ const BATTLE = (() => {
       html += `<div class="bt-system">World ${w.id}: ${w.name} <small>${list.filter((e) => b.seen[e.id]).length}/${list.length}</small></div><div class="bt-wiki">`;
       for (const e of list) {
         const seen = !!b.seen[e.id];
-        html += `<button class="bt-wiki-cell ${seen ? '' : 'unseen'} ${e.role === 'boss' ? 'boss' : ''}" data-id="${e.id}">${stillImg(e.id, 160, !seen)}<span>${seen ? e.name : '???'}</span></button>`;
+        html += `<button class="bt-wiki-cell ${seen ? '' : 'unseen'} ${e.role === 'boss' || e.role === 'mutant' ? 'boss' : ''}" data-id="${e.id}">${stillImg(e.id, 160, !seen)}<span>${seen ? e.name : '???'}</span></button>`;
       }
       html += '</div>';
     }
@@ -2331,15 +2840,16 @@ const BATTLE = (() => {
   function openFoe(id) {
     const e = D.ENEMIES[id];
     const s = D.enemyStats(id, D.levelPoints(e.world, e.debut));
-    const roles = { grunt: 'Foot soldier', tank: 'Tough', runner: 'Fast', ranged: 'Shoots from afar', caster: 'Magic from afar', brute: 'Hits hard', swarm: 'Comes in crowds', boss: 'Boss: hits three at once' };
+    const roles = { grunt: 'Foot soldier', tank: 'Tough', runner: 'Fast', ranged: 'Shoots from afar', caster: 'Magic from afar', brute: 'Hits hard', swarm: 'Comes in crowds', boss: 'Boss: hits three at once', mutant: 'Giant: many attacks of its own' };
     const kills = B().kills[id] || 0;
     const m = el(`<div class="bt-modal"><div class="bt-panel bt-foe-card">
       <img src="${ENEMY_ART.still(id, 240)}" alt="">
       <h2>${e.name}</h2>
-      <div class="bt-diff">${heartsHtml(D.difficulty(id))}</div>
+      <div class="bt-diff">${dangerHtml(id)}</div>
       <div class="bt-dim">World ${e.world}: ${D.WORLDS[e.world - 1].name} · first seen at level ${e.debut} · ${roles[e.role]}</div>
       <div>${kindChip(D.enemyAttackKind(id))}${D.traitOf(id) ? ` <span class="bt-kindchip trait">${D.TRAITS[D.traitOf(id)].icon} ${D.TRAITS[D.traitOf(id)].name}</span>` : ''}</div>
       ${D.traitOf(id) ? `<div class="bt-dim">${D.TRAITS[D.traitOf(id)].text}</div>` : ''}
+      ${e.role === 'mutant' ? (() => { const n = MUTANTS.bossNotes(id), mv = [...new Set(MUTANTS.BOSSES[id].moves.map((x) => x.name || MOVE_WORD[x.kind]).filter(Boolean))]; return `<div class="bt-mut-chips">${n.weak ? `<span class="bt-mchip weak">Weak to ${n.weak}</span>` : ''}${n.resist ? `<span class="bt-mchip resist">Resists ${n.resist}</span>` : ''}${n.type ? `<span class="bt-mchip">${n.type.icon} ${n.type.name}</span>` : ''}</div><div class="bt-dim">Its attacks: ${mv.join(', ')}.</div>${n.armour ? `<div class="bt-dim">${n.armour}</div>` : ''}${n.twin ? `<div class="bt-dim">${n.twin}</div>` : ''}`; })() : ''}
       <p>${e.note}</p>
       <div class="bt-stats">${statChips(s)}</div>
       <div class="bt-dim">Defeated: ${kills}</div>
@@ -2381,6 +2891,11 @@ const BATTLE = (() => {
     if (rw.premium) out.push(`<span class="bt-rw premium"><i>🎁</i>${rw.premium}${rw.cap && rw.cap < 20 ? `<small>≤T${rw.cap}</small>` : ''}</span>`);
     if (rw.spins) out.push(`<span class="bt-rw"><i>🎡</i>${rw.spins}</span>`);
     if (rw.essence) out.push(`<span class="bt-rw"><i>✨</i>${formatNumber(rw.essence)}</span>`);
+    if (rw.income) out.push(`<span class="bt-rw"><i>✨</i>${rw.income >= 60 ? `${rw.income / 60}h` : `${rw.income}m`} income</span>`);
+    if (rw.boost) out.push(`<span class="bt-rw premium"><i>⚡</i>x${rw.boost.mult} ${rw.boost.minutes >= 60 ? `${rw.boost.minutes / 60}h` : `${rw.boost.minutes}m`}</span>`);
+    if (rw.shards) out.push(`<span class="bt-rw premium"><i>☄</i>${formatNumber(rw.shards)} shards</span>`);
+    if (rw.eggs) out.push(`<span class="bt-rw premium"><i>🥚</i>${rw.eggs} comet egg${rw.eggs > 1 ? 's' : ''}</span>`);
+    if (rw.comet && BEAST_TEMPLATES[rw.comet] && typeof COMET !== 'undefined') { const t = BEAST_TEMPLATES[rw.comet]; out.push(`<span class="bt-rw legend comet-rw ${got ? '' : 'hidden'}">${COMET.svg(rw.comet)}<b>${t.name.replace(/^The /, '')}</b><small>T${t.tier} ${COMET.STAGE_WORD[t.comet.stage]}</small></span>`); }
     if (rw.legend) out.push(`<span class="bt-rw legend"><img data-legend="${rw.legend}" alt="">${D.LEGENDS[rw.legend].name.replace(/^The /, '')}</span>`);
     if (rw.perk) out.push(`<span class="bt-rw perk">${perkIcon(rw.perk)}${D.PERKS.find((p) => p.id === rw.perk).name}</span>`);
     if (rw.relic) out.push(`<span class="bt-rw legend relic ${got ? '' : 'hidden'}"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(RELIC_ART.svg(rw.relic, { evolved: !!rw.evolved, noGround: true }))}" alt="">${BEAST_TEMPLATES[rw.relic].name.replace(/^The /, '')}${rw.evolved ? ' ✦' : ''}</span>`);
@@ -2413,10 +2928,13 @@ const BATTLE = (() => {
     const b = B();
     const t = totals();
     const mergeDone = Object.keys(b.mach || {}).length;
-    const sh = sheet('Achievements', `${Object.keys(b.ach).length + mergeDone} of ${D.ACHIEVEMENTS.length + MERGE_ACH.length} earned`);
-    const tabs = `<div class="bt-ach-tabs"><button class="${which === 'battle' ? 'on' : ''}" data-w="battle">Battle</button><button class="${which === 'merge' ? 'on' : ''}" data-w="merge">Merge</button></div>`;
+    const cometN = typeof COMET !== 'undefined' ? COMET.ACH.length : 0, cometDone = Object.keys(b.cach || {}).length;
+    const sh = sheet('Achievements', `${Object.keys(b.ach).length + mergeDone + cometDone} of ${D.ACHIEVEMENTS.length + MERGE_ACH.length + cometN} earned`);
+    const tabs = `<div class="bt-ach-tabs"><button class="${which === 'battle' ? 'on' : ''}" data-w="battle">Battle</button><button class="${which === 'merge' ? 'on' : ''}" data-w="merge">Merge</button>${cometN ? `<button class="${which === 'comet' ? 'on' : ''}" data-w="comet">Comet</button>` : ''}${typeof LIMITED !== 'undefined' ? `<button class="limited-tab ${which === 'limited' ? 'on' : ''}" data-w="limited">Limited</button>` : ''}</div>`;
     const bindTabs = () => sh.body.querySelectorAll('.bt-ach-tabs button').forEach((btn) => btn.addEventListener('click', () => { click(); sh.close(); openAchievements(btn.dataset.w); }));
     if (which === 'merge') { sh.body.innerHTML = tabs + mergeAchHtml(); bindTabs(); return; }
+    if (which === 'comet' && cometN) { checkCometAch(); sh.body.innerHTML = tabs + cometAchHtml(); bindTabs(); return; }
+    if (which === 'limited' && typeof LIMITED !== 'undefined') { sh.body.innerHTML = tabs + LIMITED.achHtml(rewardChips); bindTabs(); return; }
     let html = tabs;
     for (const [name, icon, test] of ACH_GROUPS) {
       const list = D.ACHIEVEMENTS.filter(test);
@@ -2530,7 +3048,14 @@ const BATTLE = (() => {
     }
     if (typeof renderBeastopedia === 'function' && !renderBeastopedia.battleHooked) {
       const orig = renderBeastopedia;
-      renderBeastopedia = function (...a) { const r = orig.apply(this, a); try { beastopediaLegends(); } catch (e) { console.error(e); } return r; };
+      renderBeastopedia = function (...a) {
+        const r = orig.apply(this, a);
+        try { beastopediaLegends(); } catch (e) { console.error(e); }
+        // (1.5: the comet's section last of all, after the Legends.)
+        const grid = document.getElementById('beastopedia-grid');
+        if (grid) grid.querySelectorAll('[data-comet]').forEach((x) => grid.appendChild(x));
+        return r;
+      };
       renderBeastopedia.battleHooked = true;
       try { renderBeastopedia(); } catch (e) { console.error(e); }
     }
@@ -2559,5 +3084,5 @@ const BATTLE = (() => {
     renderTab();
   }
 
-  return { init, renderTab, start, openWorld, openLevel, openWiki, openAchievements, openHow, openLegends, openLegend, noteOwned, B, totals, get run() { return run; }, closeSheets, checkMergeAch };
+  return { init, renderTab, start, openWorld, openLevel, openWiki, openAchievements, openHow, openLegends, openLegend, noteOwned, B, totals, get run() { return run; }, closeSheets, checkMergeAch, checkCometAch };
 })();

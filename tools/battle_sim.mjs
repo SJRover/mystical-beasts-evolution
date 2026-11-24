@@ -15,7 +15,8 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ctx = vm.createContext({ console, Math });
 ctx.window = ctx;
 const calibrate = process.argv.includes('--calibrate');
-for (const f of ['beasts.js', 'battle_data.js', 'battle_engine.js', ...(calibrate || !fs.existsSync(path.join(root, 'battle_levels.js')) ? [] : ['battle_levels.js'])]) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
+ctx.state = { prestigeLevel: 0, upgrades: {} };
+for (const f of ['beasts.js', 'battle_data.js', 'mutants.js', 'mutants8.js', 'battle_engine.js', 'comet.js', ...(calibrate || !fs.existsSync(path.join(root, 'battle_levels.js')) ? [] : ['battle_levels.js'])]) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 const { BATTLE_DATA: D, BattleEngine: BE, BEAST_TEMPLATES: T } = vm.runInContext('({ BATTLE_DATA, BattleEngine, BEAST_TEMPLATES })', ctx);
 
 const args = process.argv.slice(2);
@@ -26,17 +27,31 @@ const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : nul
 const RANK = ['COMMON', 'RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
 /** The collection a player is expected to have by a level (battle_data.js expect). */
 export const progress = (world, n) => D.expect(world, n);
+/** The game's data, for other tools (scratch checks of difficulty). */
+export const DATA = D;
+/** The battle engine, for tools that play their own way (scratch checks with specials). */
+export const ENGINE = BE;
 
 /** Six different beasts of the world's system, around tier `tier`, no rarer than `rarity`. */
-export function refDeck(world, n, tierShift = 0) {
-  const pr = progress(world, n);
+export function refDeck(world, n, tierShift = 0, opts = {}) {
+  // (opts.noComet: the best six without comet beasts, as a player without them would bring.)
+  const pr = opts.noComet ? { ...progress(world, n), comet: null } : progress(world, n);
   const sys = D.WORLDS[world - 1].system;
   const rule = D.level(world, n).rule;
   const top = Math.max(1, Math.round(pr.tier) + tierShift);
   const maxRank = RANK.indexOf(pr.rarity);
   // Only what the level's rule allows (quick cards, long reach, swift, plain stock, three only).
-  const all = Object.keys(T).filter((id) => D.canBattle(id) && D.systemOf(id) === sys && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
-  const power = (id) => { const s = D.beastStats(id, pr.prestige); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
+  // (World 7: beasts of every system.)
+  // (Comet beasts only from World 8, where three of the six are theirs: pr.comet.)
+  const all = Object.keys(T).filter((id) => D.canBattle(id) && !T[id].comet && (sys === 'any' || D.systemOf(id) === sys) && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
+  const power = (id, p = pr.prestige) => { const s = D.beastStats(id, p); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
+  if (pr.comet) {
+    // (opts.allComet: six comet beasts and no old ones, a player who has grown a full comet six.)
+    const cr = pr.comet;
+    const comets = Object.keys(T).filter((id) => T[id].comet && T[id].tier === cr.tier && RANK.indexOf(T[id].rarity) >= 0 && RANK.indexOf(T[id].rarity) <= RANK.indexOf(cr.rarity)).sort((a, b) => power(b, cr.prestige) - power(a, cr.prestige)).slice(0, opts.allComet ? 6 : 3);
+    const old = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a)).slice(0, 6 - comets.length);
+    return [...comets.map((id) => ({ id, prestige: cr.prestige })), ...old.map((id) => ({ id, prestige: pr.prestige }))];
+  }
   const deck = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a) || T[b].tier - T[a].tier);
   return deck.slice(0, rule && rule.kind === 'three' ? 3 : 6).map((id) => ({ id, prestige: pr.prestige }));
 }
@@ -119,6 +134,32 @@ if (isMain && calibrate) {
   const only = Number(process.argv[process.argv.indexOf('--calibrate') + 1]) || 0;
   for (const w of D.WORLDS) {
     if (only && w.id !== only) continue;
+    if (w.id >= 7) {
+      // World 7 (1.5): twenty boss fights, each made by hand, so no smoothing along the world. Each
+      // is set at or beyond the most the reference six (the best of both systems at prestige 15)
+      // beats: the bot never uses a special or plays to a boss's weakness, so a player who does has
+      // an edge, and needs it.
+      for (let n = 1; n <= w.levels; n++) {
+        const lv = D.level(w.id, n), deck = refDeck(w.id, n);
+        // The most it beats three games in five (in small steps: boss fights vary a lot).
+        const wins = (p) => [0, 1, 2, 3, 4].filter((variant) => { const r = play({ ...lv, points: p }, deck, { variant }); return r.result === 'won' && r.pileLeft >= 1; }).length;
+        // Up in big steps until it fails twice running, then in small steps from the last win.
+        let most = 3, q = 3, misses = 0;
+        while (q < 200 && misses < 2) { q *= 1.2; if (wins(q) >= 3) { most = q; misses = 0; } else misses++; }
+        for (let f = most * 1.05, top = most * 1.44; f < top; f *= 1.05) { if (wins(f) >= 3) most = f; else break; }
+        // (Sam, 23 Nov: really hard. From 95% of the most the bot beats to 110% by the last level;
+        // the bot must still win one game in five.)
+        // (World 8, Sam 24 Nov: a struggle even with comet beasts: from the most the bot beats to 115%.)
+        const lo = w.id >= 8 ? 1.0 : 0.95;
+        let p = most * (lo + (0.15 * (n - 1)) / (w.levels - 1)), eased = 0;
+        while (!beats(lv, deck, p, 1, 5) && p > 2) { p *= 0.95; eased++; }
+        const times = [0, 1, 2, 3, 4].map((variant) => play({ ...lv, points: p }, deck, { variant })).filter((r) => r.result === 'won').map((r) => r.time).sort((x, y) => x - y);
+        points[lv.id] = +p.toFixed(2);
+        stars[lv.id] = Math.min(240, Math.max(60, Math.ceil(((times[0] || 180) * 0.95) / 5) * 5));
+        console.log(`${lv.id.padEnd(5)} ${lv.name.padEnd(34)} most ${most.toFixed(1).padStart(6)} set ${p.toFixed(1).padStart(6)}${eased ? ' eased ' + eased : ''}  wins ${times.length}/5  star ${stars[lv.id]}s`);
+      }
+      continue;
+    }
     // The most each level's reference deck beats, then smoothed along the world (a median of five,
     // then never falling more than a little), so the climb is steady.
     const lvls = [], most = [];

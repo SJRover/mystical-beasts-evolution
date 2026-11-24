@@ -142,14 +142,18 @@ const BATTLE_DATA = (() => {
     const t = BEAST_TEMPLATES[id];
     if (!t) return null;
     const s = share(Math.max(0, t.tier - 1), order(id), { atk: 1, hp: 1, spd: 1, rng: 1 });
-    const bonus = RARITY_BONUS[t.rarity] || 0;
+    // (1.5: a comet beast has four points more than any other of its tier, a Cosmic one seven more.)
+    const bonus = (RARITY_BONUS[t.rarity] || (t.rarity === 'COSMIC' ? 7 : 0)) + (t.comet ? 4 : 0) + (t.limited ? 8 : 0);
     if (bonus) {
       const top = Math.max(...STATS.map((k) => s[k]));
       const tied = STATS.filter((k) => s[k] === top);
       const pick = tied.length === STATS.length ? tied[Math.floor(seeded(hash(id + '|rarity'))() * tied.length)] : order(id).find((k) => tied.includes(k));
       s[pick] += bonus;
     }
-    for (let k = 1; k <= prestige; k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
+    // (1.5: a comet beast is only found by a player at prestige 15 in both solar systems, so it always
+    // has those fifteen points, and one more for each of the comet's own prestiges, up to ten.)
+    const pts = t.comet ? 15 + Math.min(prestige, 10) : Math.min(prestige, 15);
+    for (let k = 1; k <= pts; k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
     return s;
   }
 
@@ -170,9 +174,12 @@ const BATTLE_DATA = (() => {
     return !!t && !['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'].includes(id);
   }
   /** A beast's solar system ('any' for a legend, which battles in every world). */
-  const systemOf = (id) => (LEGENDS[id] || (BEAST_TEMPLATES[id] || {}).relic ? 'any' : (BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : 'prime');
+  // (1.5: comet beasts are the comet's, and battle only in World 7.)
+  const systemOf = (id) => (LEGENDS[id] || (BEAST_TEMPLATES[id] || {}).relic ? 'any' : (BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : (BEAST_TEMPLATES[id] || {}).system === 'comet' ? 'comet' : 'prime');
   /** A beast's card rests this long after it is played: its tier in seconds. */
-  const cooldownOf = (id) => (T(id) || { tier: 1 }).tier;
+  // (1.5: a comet beast's card rests a quarter longer, to balance its strength, Sam 24 Nov.)
+  const COMET_REST = 1.25;
+  const cooldownOf = (id) => { const t = T(id) || { tier: 1 }; return t.comet ? Math.round(t.tier * COMET_REST) : t.tier; };
 
   /**
    * Mana (Sam, 18 Nov, like Clash Royale's elixir and Battle Cats' wallet, so the strongest cards
@@ -185,7 +192,10 @@ const BATTLE_DATA = (() => {
    */
   const MANA = { max: 50, start: 25, regen: 2 };
   const costOfTier = (tier) => Math.round(2 + 0.75 * tier);
-  const costOf = (id) => costOfTier((T(id) || { tier: 1 }).tier);
+  // (1.5: a comet beast costs a fifth more mana, as well as resting longer, Sam 24 Nov.)
+  const COMET_MANA = 1.2;
+  const cometCost = (tier) => Math.round(costOfTier(tier) * COMET_MANA);
+  const costOf = (id) => { const t = T(id) || { tier: 1 }; return t.comet ? cometCost(t.tier) : costOfTier(t.tier); };
   /** A beast's stats synced down to a tier and rarity (Sync down), at prestige 0. */
   function syncStats(id, cap) {
     const t = BEAST_TEMPLATES[id];
@@ -205,11 +215,19 @@ const BATTLE_DATA = (() => {
    * target at half strength (never with a long reach or extra attack); the rest hit one target up
    * close.
    */
-  const AREA_LOOK = /titan|colossus|giant|glaciator|pyroclasm|magmadon|kraken|hydra|slime|leviathan|gaia|bark|amethyst|volcanis|ent_|supergiant|chitin|arachno/;
+  // (1.5, Sam 24 Nov: a few more: the fiery and starry ones whose blasts would spread.)
+  const AREA_LOOK = /titan|colossus|giant|glaciator|pyroclasm|magmadon|kraken|hydra|slime|leviathan|gaia|bark|amethyst|volcanis|ent_|supergiant|chitin|arachno|supernova|^phoenix$|ifrit|ragnarok|apocalypse|cosmic_phoenix|nova_jellyfish|nova_ray|plasma_jellyfish/;
+  // 1.5 (Sam, 24 Nov: too few area attackers; Low Gravity had one, the comet none, and late on every
+  // beast shot single targets): Low Gravity's sharks and gargoyles, and five comet kinds, hit an area
+  // too. An area beast keeps it even when it reaches far enough to shoot (its shots burst).
+  const AREA_BODY = new Set(['shark', 'gargoyle']);
+  const AREA_COMET = new Set(['onyx_wyrm', 'quasar_phoenix', 'mind_leviathan', 'singularity_dragon', 'ouroboros']);
+  const areaBeast = (id) => { const t = T(id) || {}; return AREA_LOOK.test(id) || (t.system === 'low_gravity' && AREA_BODY.has((t.svgParams || {}).body)) || !!(t.comet && AREA_COMET.has(t.comet.species)); };
   function attackKind(id, prestige = 0) {
+    if (areaBeast(id)) return 'area';
     const s = beastStats(id, prestige);
     if (34 + 20 * Math.max(0, s.rng - 1) >= 74) return 'ranged';
-    return AREA_LOOK.test(id) ? 'area' : 'single';
+    return 'single';
   }
   /**
    * Enemy abilities, by who they are: leapers jump over your front line once; cloakers turn
@@ -229,7 +247,33 @@ const BATTLE_DATA = (() => {
     charge: { icon: '🐂', name: 'Charges', text: 'Rushes its first target and hits it hard.' },
     slow: { icon: '❄', name: 'Slows', text: 'What it hits moves and strikes slower.' },
     knock: { icon: '💢', name: 'Knocks back', text: 'Its heavy blows push beasts back.' },
+    // 1.5 (Sam, 24 Nov: Worlds 1 to 6 felt the same level after level): eight more, for the enemies
+    // of those worlds that had none (newTrait below).
+    snipe: { icon: '🎯', name: 'Snipes', text: 'Stays back by its own coins and picks off beasts from far away. A red line shows who it is aiming at.' },
+    mortar: { icon: '💣', name: 'Lobs bombs', text: 'Hangs back and lobs bombs that burst where they land. A ring on the ground shows where.' },
+    bomb: { icon: '🧨', name: 'Explodes', text: 'Runs at your beasts and blows up, hurting every one nearby.' },
+    split: { icon: '➗', name: 'Splits', text: 'Splits into two smaller ones when it is beaten.' },
+    enrage: { icon: '😡', name: 'Enrages', text: 'Once badly hurt, it grows, hits harder and moves faster.' },
+    regen: { icon: '🌿', name: 'Regrows', text: 'Mends itself whenever nothing has hit it for a moment.' },
+    thorns: { icon: '🌵', name: 'Spiked', text: 'Beasts that hit it up close are hurt back.' },
+    blink: { icon: '✨', name: 'Blinks', text: 'Vanishes and appears further on every few seconds.' },
   };
+  /** 1.5: a trait for a World 1 to 6 enemy that had none, from its part in a fight and its weapon. */
+  const LONG_SHOTS = ['crossbow', 'rifle', 'long_rifle', 'longbow'];
+  const LOBS = ['cannon', 'sling', 'potion'];
+  function newTrait(e) {
+    const h = hash(e.id + ':trait');
+    switch (e.role) {
+      case 'ranged': return LONG_SHOTS.includes(e.look.weapon) ? 'snipe' : LOBS.includes(e.look.weapon) ? 'mortar' : ['snipe', 'mortar', 'blink'][h % 3];
+      case 'caster': return ['mortar', 'blink', 'regen'][h % 3];
+      case 'swarm': return ['bomb', 'blink'][h % 2]; // (not Splits: on a horde of swarms it doubled the horde)
+      case 'tank': return e.look.armor || e.look.shield ? 'thorns' : 'regen';
+      case 'brute': return 'enrage';
+      case 'runner': return 'blink';
+      case 'grunt': return /twin/.test(e.id) ? 'split' : ['enrage', 'regen', 'thorns', 'blink'][h % 4];
+      default: return null;
+    }
+  }
   const TRAIT_WORDS = [
     ['leap', /goblin|imp|satyr|ninja|jester|hopper|harpy|jet_|dust_devil|powder|comet_imps/],
     ['cloak', /cloaker|thief|phase|void_hunter|night_blade|smuggl|wraith|mirror/],
@@ -245,9 +289,11 @@ const BATTLE_DATA = (() => {
     if (id in traitCache) return traitCache[id];
     const e = ENEMIES[id];
     let t = null;
-    if (e && e.role !== 'boss') {
+    if (e && e.look && 'trait' in e.look) t = e.look.trait;
+    else if (e && e.role !== 'boss' && e.role !== 'mutant') {
       for (const [k, re] of TRAIT_WORDS) if (re.test(id)) { t = k; break; }
       if (!t && enemyAttackKind(id) === 'area') t = 'knock';
+      if (!t && e.world <= 6) t = newTrait(e);
     }
     traitCache[id] = t;
     return t;
@@ -284,10 +330,21 @@ const BATTLE_DATA = (() => {
     gravity: { name: 'Gravity well', icon: '🌀', text: 'Pulls nearby enemies in, hurting and holding them.' },
     starfall: { name: 'Starfall', icon: '☄', text: 'Drops stars on the four nearest enemies.' },
     rally: { name: 'War cry', icon: '📯', text: 'Nearby beasts hit half as hard again for five seconds.' },
+    // 1.5: a limited beast's (limited.js).
+    blizzard: { name: 'Blizzard', icon: '🌨', text: 'A storm of snow round it: the enemies near it are hurt and frozen for three seconds.' },
+    // 1.5: the comet beasts' specials, from Tier 10 (comet.js says which has which).
+    stagger: { name: 'Stagger', icon: '💫', text: 'A huge blow that knocks even a giant back up the field and stops the move it was winding up.' },
+    anchor: { name: 'Anchor', icon: '⚓', text: 'Holds a boss for six seconds, slowed, so that it cannot start a big attack.' },
+    dispel: { name: 'Dispel', icon: '✨', text: 'Cancels an attack a boss is winding up, and strips the shields and war cries from enemies near it.' },
+    ward: { name: 'Ward', icon: '🔰', text: 'Shields the beasts around it: the next big blow on each, within ten seconds, does a tenth of its damage.' },
+    sunder: { name: 'Sunder', icon: '🗡', text: 'For ten seconds its blows go straight through armour, shields and resistances, and the first is heavy.' },
   };
   function abilityOf(id) {
     const t = T(id);
     if (!t) return null;
+    if (t.limited) return t.ability || null;
+    // (1.5: a comet beast has its own special from Tier 10, and none before.)
+    if (t.comet) return t.tier >= 10 && typeof COMET !== 'undefined' ? COMET.BY_ID[t.comet.species].special : null;
     const s = beastStats(id, 0);
     const top = ['atk', 'hp', 'spd', 'rng'].sort((a, c) => s[c] - s[a])[0];
     // Hunters built to pounce (foxes, cats, wolves, lions, dinosaurs) leap.
@@ -302,7 +359,8 @@ const BATTLE_DATA = (() => {
    * nothing stands inside anything else (collisions in battle_engine.js). A Tier 1 is 26 across
    * the middle, a Tier 20 about 60 (a Tier 1 was 20 and hard to see: Sam, 17 Nov).
    */
-  const beastRadius = (id) => Math.min(60, 26 + 1.8 * (((T(id) || { tier: 1 }).tier) - 1));
+  // (1.5: comet beasts are half as big again as any other beast of their tier, Sam 24 Nov.)
+  const beastRadius = (id) => { const t = T(id) || { tier: 1 }, r = Math.min(60, 26 + 1.8 * (t.tier - 1)); return t.comet ? Math.round(r * 1.5) : r; };
 
   // ------------------------------------------------------------------ enemies
   /**
@@ -318,6 +376,8 @@ const BATTLE_DATA = (() => {
     brute: { order: ['atk', 'hp', 'spd', 'rng'], split: [0.52, 0.33, 0.1, 0.05], points: 1.1, floor: { atk: 3 } },
     swarm: { order: ['spd', 'atk', 'hp', 'rng'], split: [0.4, 0.3, 0.2, 0.1], points: 0.5, floor: { spd: 2 } },
     boss: { order: ['hp', 'atk', 'rng', 'spd'], split: [0.42, 0.36, 0.14, 0.08], points: 1.7, hp: 4, multi: 3 },
+    // 1.5: World 7's giants (mutants.js sets their speed and reach; these are their health and blows).
+    mutant: { order: ['hp', 'atk', 'rng', 'spd'], split: [0.55, 0.37, 0.05, 0.03], points: 1.5, hp: 7.5, multi: 2 },
   };
 
   // Looks: plan (body plan), size, colours, head, hat, weapon and extras: enemies.js draws them.
@@ -558,7 +618,8 @@ const BATTLE_DATA = (() => {
     return s;
   }
   /** How big an enemy stands (radius, arena units). */
-  const enemyRadius = (id) => Math.min(84, 24 * Math.max(0.85, ((ENEMIES[id] || {}).look || { size: 1 }).size));
+  // (World 7's giants stand as wide as they are drawn: 28 a size, up to 135.)
+  const enemyRadius = (id) => { const l = (ENEMIES[id] || {}).look || { size: 1 }; return l.plan === 'mutant' && l.boss ? Math.min(135, 28 * l.size) : Math.min(84, 24 * Math.max(0.85, l.size)); };
   /** An enemy's size as drawn: never under 0.85, so swarms are big enough to see. */
   const enemySize = (id) => Math.max(0.85, ((ENEMIES[id] || {}).look || { size: 1 }).size);
 
@@ -570,6 +631,10 @@ const BATTLE_DATA = (() => {
     { id: 4, system: 'low_gravity', name: 'Moon Hollows', theme: 'moon', levels: 40, base: 3.2, gain: 0.62, chest: { rarity: 'LEGENDARY', tier: 10 } },
     { id: 5, system: 'low_gravity', name: 'Ring Pirates', theme: 'rings', levels: 40, base: 25, gain: 0.7, chest: { rarity: 'GODLY', tier: 12 } },
     { id: 6, system: 'low_gravity', name: 'Eclipse Court', theme: 'eclipse', levels: 40, base: 48, gain: 0.75, chest: { rarity: 'GODLY', tier: 15 } },
+    // 1.5: World 7, the Universal Mutants (mutants.js): beasts of every system, twenty boss fights.
+    { id: 7, system: 'any', name: 'Universal Mutants', theme: 'mutants', levels: 20, base: 70, gain: 1.3, chest: { rarity: 'DARK_MATTER', tier: 20, comet: 'singularity_dragon_20' } },
+    // 1.5 (Sam, 24 Nov): World 8, opened by beating World 7; a struggle even for comet beasts.
+    { id: 8, system: 'any', name: 'Apex Mutants', theme: 'abyss', levels: 20, base: 90, gain: 1.6, chest: { rarity: 'DARK_MATTER', tier: 20, comet: 'ouroboros_20' } },
   ];
   const BOSS_EVERY = 10;
 
@@ -582,6 +647,11 @@ const BATTLE_DATA = (() => {
    * beasts.
    */
   function expect(world, n) {
+    // World 7 is for the end of the game: the best of both systems at prestige 15.
+    if (world === 7) return { tier: 20, rarity: 'DARK_MATTER', prestige: 15 };
+    // World 8: three comet beasts with the best of both systems, Tier 12 at the start and ascended
+    // (Tier 16 and up) from level 12, Tier 20 by the end.
+    if (world === 8) return { tier: 20, rarity: 'DARK_MATTER', prestige: 15, comet: { tier: Math.min(20, Math.round(12 + (8 * (n - 1)) / 19)), rarity: n < 8 ? 'LEGENDARY' : n < 15 ? 'GODLY' : 'DARK_MATTER', prestige: Math.min(10, Math.floor(n / 2)) } };
     const i = (stage(world) - 1) * 40 + n;
     const rarity = i < 8 ? 'RARE' : i < 20 ? 'SUPER_RARE' : i < 35 ? 'ULTRA_RARE' : i < 55 ? 'LEGENDARY' : i < 90 ? 'GODLY' : 'DARK_MATTER';
     return { tier: Math.min(20, i <= 10 ? i : 10 + (i - 10) * 0.2), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
@@ -677,6 +747,7 @@ const BATTLE_DATA = (() => {
    * randomness, so a level is always the same.
    */
   function level(world, n) {
+    if (world >= 7 && typeof MUTANTS !== 'undefined') return MUTANTS.level(n, world);
     const w = WORLDS[world - 1];
     const r = seeded(hash(`level|${world}|${n}`));
     const boss = n % BOSS_EVERY === 0;
@@ -969,10 +1040,15 @@ const BATTLE_DATA = (() => {
     { id: 'perk_fortify', name: 'Iron Vault', desc: 'Beat a boss with your coin pile full.', test: (b) => !!b.perkWon.fortify, reward: { perk: 'fortify' } },
     { id: 'perk_wellspring', name: 'Never Idle', desc: 'Win a level from level 10 on without your mana ever filling up.', test: (b) => !!b.perkWon.wellspring, reward: { perk: 'wellspring' } },
     { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing twelve beasts or fewer.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
+    // (1.5, Sam: late rewards that matter; comet eggs join these once the comet is built.)
+    { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { income: 360, boost: { mult: 1.5, minutes: 180 }, shards: 600 } },
+    { id: 'world_8', name: 'Apex Predator', desc: 'Clear the Apex Mutants.', test: (b) => (b.w8 || 0) >= 1, reward: { income: 720, boost: { mult: 2, minutes: 180 }, shards: 1500 } },
+    { id: 'apex_bosses', name: 'Giant Slayer', desc: "Beat all eleven of World 8's giants.", test: (b) => (b.apexBosses || 0) >= 11, reward: { income: 480, boost: { mult: 1.5, minutes: 240 }, shards: 900 } },
+    { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { income: 240, boost: { mult: 1.5, minutes: 120 }, shards: 360 } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */
-  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20 };
+  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20, 7: 20, 8: 20 };
 
   /** Perks: one before a battle. */
   const PERKS = [
@@ -986,8 +1062,8 @@ const BATTLE_DATA = (() => {
   return {
     PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, DECK_RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
     STATS, STAT_NAMES, RARITY_BONUS, ROLES, ENEMIES, ENEMY_LIST: E, WORLDS, BOSS_EVERY, ACHIEVEMENTS, STAR_TIMES, LEVEL_POINTS,
-    hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, beastRadius,
-    MANA, costOf, costOfTier, syncStats, attackKind, enemyAttackKind, ABILITIES, abilityOf, TRAITS, traitOf,
+    hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, COMET_REST, beastRadius,
+    MANA, costOf, costOfTier, cometCost, syncStats, attackKind, enemyAttackKind, ABILITIES, abilityOf, TRAITS, traitOf,
     enemyStats, enemyRadius, level, levelPoints, difficulty, clearMinutes,
   };
 })();

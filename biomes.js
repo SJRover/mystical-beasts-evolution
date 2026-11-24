@@ -1,7 +1,7 @@
 /**
  * Merge Beasts: the biome backgrounds (version 1.3).
  *
- * Each of the 24 biomes (12 in each solar system) and the Beast Hub is painted once, when it is
+ * Each of the 32 biomes (16 in each solar system, 1.5) and the Beast Hub is painted once, when it is
  * entered, onto a canvas the size of the world (world.js): a sky and skyline along the top, then
  * textured ground with a winding feature (a path, a river, a lava flow, a chasm), low details
  * scattered over the open ground (flowers, stones, crystals, pools, bones, ...) and taller things
@@ -25,6 +25,12 @@ const BIOMES = (() => {
     { name: 'Singularity Void', sky: ['#000000', '#1a0a2a'], horizon: 'blackhole', hz: ['#ff8a3d', '#b46bff'], ground: ['#120a1e', '#06030c', '#1e1030'], tex: 'stars', feat: 'river', featC: '#ff8a3d', low: { shard: 4, starCluster: 2, rune: 1 }, edge: 'obelisk', edgeC: ['#1a1028', '#ff8a3d'] },
     { name: 'Glittery Lava Plains', sky: ['#2a0a1e', '#ff6a3d'], horizon: 'volcanoes', hz: ['#5a1e2a', '#3a1018'], ground: ['#6e2a3a', '#4a1626', '#8e3a4e'], tex: 'glitter', feat: 'lava', featC: '#ffb21a', low: { crystal: 3, lavaVent: 2, ember: 3 }, edge: 'basalt', edgeC: ['#3a1222', '#ffcf3d'] },
     { name: 'Dark Matter Core', sky: ['#000000', '#2a002e'], horizon: 'blackhole', hz: ['#ff2fe9', '#7b00ad'], ground: ['#14001a', '#06000a', '#240030'], tex: 'veins', feat: 'chasm', featC: '#ff2fe9', low: { shard: 3, eyeOrb: 1, rune: 2 }, edge: 'crystalSpire', edgeC: ['#ff2fe9', '#7b00ad'] },
+    // 1.5: prestige 12 to 15, the last four. Time's river, a throne under an aurora, the sky broken
+    // into floating islands, and the bright edge where things begin.
+    { name: 'Chrono Rift', sky: ['#04121a', '#1e5a6a'], horizon: 'clockwork', hz: ['#123440', '#ffd36b'], ground: ['#1e4650', '#122e36', '#2a5c68'], tex: 'circuit', feat: 'river', featC: '#ffd36b', low: { gear: 3, hourglass: 2, rune: 2, shard: 1 }, edge: 'obelisk', edgeC: ['#16303a', '#ffd36b'] },
+    { name: 'Astral Throne', sky: ['#0a0620', '#4a2a8a'], horizon: 'aurora', hz: ['#7cf7c8', '#b46bff'], ground: ['#3a2a6a', '#24184a', '#4e3a86'], tex: 'glitter', feat: 'path', featC: '#ffe9a8', low: { starCluster: 2, rune: 2, crystal: 2, brazier: 1.5 }, edge: 'pillar', edgeC: ['#e8dcff', '#ffd36b'] },
+    { name: 'Shattered Heavens', sky: ['#1a0a2e', '#ff7a9a'], horizon: 'islands', hz: ['#5a4a7a', '#9ad8ff'], ground: ['#5a4a72', '#3a2e52', '#72608e'], tex: 'stars', feat: 'chasm', featC: '#ff8fd1', low: { floatRock: 3, shard: 2, crystal: 2, feather: 1 }, edge: 'crystalSpire', edgeC: ['#ff8fd1', '#ffd6f0'] },
+    { name: 'Edge of Creation', sky: ['#000000', '#ffe9b0'], horizon: 'genesis', hz: ['#fff3c6', '#ff8fd1'], ground: ['#d8b860', '#a8862e', '#ecd48e'], tex: 'glitter', feat: 'river', featC: '#ffffff', low: { flower: 3, crystal: 2, starCluster: 2, floatRock: 1 }, edge: 'crystalTree', edgeC: ['#fff3c6', '#8a6a2e'] },
   ];
   const LOW = [
     { name: 'Methane River', sky: ['#0a2a2a', '#3e8a7a'], horizon: 'mountains', hz: ['#1e4a46', '#123432'], ground: ['#2e6a5e', '#1e4a42', '#3e8272'], tex: 'grass', feat: 'river', featC: '#9dffcf', low: { geyser: 2, rock: 2, mushroomGlow: 2, flower: 2 }, edge: 'alienTree', edgeC: ['#4ec9a0', '#1e4a42'] },
@@ -39,6 +45,28 @@ const BIOMES = (() => {
     { name: 'Gravitational Core', sky: ['#0a0414', '#3a1a6a'], horizon: 'blackhole', hz: ['#ffd36b', '#8a5cff'], ground: ['#241a40', '#140e28', '#342658'], tex: 'circuit', feat: 'path', featC: '#ffd36b', low: { gear: 1, rune: 3, shard: 2 }, edge: 'obelisk', edgeC: ['#241a40', '#ffd36b'] },
     { name: 'Hypernova Plain', sky: ['#2a0a00', '#ffb03a'], horizon: 'sunburst', hz: ['#ffe066', '#ff7a1a'], ground: ['#a8501e', '#7a3612', '#c8682a'], tex: 'glitter', feat: 'lava', featC: '#ffe066', low: { crystal: 2, ember: 4, rock: 2 }, edge: 'basalt', edgeC: ['#5a2410', '#ffe066'] },
     { name: 'Quantum Singularity', sky: ['#000000', '#002a2e'], horizon: 'blackhole', hz: ['#3ff6ff', '#ff2fe9'], ground: ['#001a1e', '#000a0e', '#002a30'], tex: 'circuit', feat: 'river', featC: '#3ff6ff', low: { shard: 3, rune: 2, eyeOrb: 1 }, edge: 'crystalSpire', edgeC: ['#3ff6ff', '#ff2fe9'] },
+    // 1.5: prestige 12 to 15: a pulsar's beams, a magnetic storm, a reef round a wormhole, and the
+    // rim of a quasar.
+    { name: 'Pulsar Fields', sky: ['#020814', '#16306a'], horizon: 'pulsar', hz: ['#bdf3ff', '#6aa9ff'], ground: ['#16285a', '#0c1838', '#203a78'], tex: 'stars', feat: 'river', featC: '#7cf7ff', low: { crystal: 2, starCluster: 2, geyser: 1, shard: 2 }, edge: 'pylonTall', edgeC: ['#142a4a', '#7cf7ff'] },
+    { name: 'Magnetar Storm', sky: ['#12001e', '#4a1a7a'], horizon: 'aurora', hz: ['#c86aff', '#3ff6ff'], ground: ['#2e1450', '#1c0a34', '#40206a'], tex: 'veins', feat: 'chasm', featC: '#c86aff', low: { shard: 3, rune: 2, eyeOrb: 1, floatRock: 1 }, edge: 'thorn', edgeC: ['#2a0e44', '#c86aff'] },
+    { name: 'Wormhole Reef', sky: ['#001418', '#0a5a5a'], horizon: 'rings', hz: ['#3ff6c6', '#ff7ab6'], ground: ['#0e4a4a', '#063232', '#166262'], tex: 'water', feat: 'river', featC: '#3ff6c6', low: { coral: 3, bubbleCluster: 2, shell: 1, mushroomGlow: 1.5 }, edge: 'coralTall', edgeC: ['#3ff6c6', '#ff7ab6'] },
+    { name: 'Event Horizon', sky: ['#000000', '#2a0e00'], horizon: 'quasar', hz: ['#ffcf3d', '#ff6a1a'], ground: ['#1a1008', '#0a0604', '#2a1a0c'], tex: 'glitter', feat: 'lava', featC: '#ffcf3d', low: { shard: 3, crystal: 2, ember: 2, floatRock: 1 }, edge: 'obelisk', edgeC: ['#1a1008', '#ffcf3d'] },
+  ];
+  // 1.5: the Interstellar Comet, prestige 0 to 10: crust and ice, its tail of light, crystal
+  // hollows, dust storms, aurora, time-worn craters, a nebula in its wake, a sea of stardust, its
+  // burning heart, and the bright place where everything began.
+  const COMET = [
+    { name: 'Comet Crust', sky: ['#04060e', '#1a2a4a'], horizon: 'void', hz: ['#7ad8ff', '#c8a8ff'], ground: ['#3a4458', '#262c3c', '#4a566e'], tex: 'ice', feat: 'chasm', featC: '#7ad8ff', low: { rock: 3, iceSpike: 2, crystal: 1, shard: 1 }, edge: 'iceSpire', edgeC: ['#e6f6ff', '#7ad8ff'] },
+    { name: 'Ice Geyser Fields', sky: ['#020814', '#1a3a6a'], horizon: 'mountains', hz: ['#a8c8e8', '#6a8ab8'], ground: ['#5a6e8a', '#3a4a64', '#7a8ea8'], tex: 'ice', feat: 'river', featC: '#9ae8ff', low: { geyser: 3, iceSpike: 2, rock: 2 }, edge: 'iceSpire', edgeC: ['#e6f6ff', '#9ae8ff'] },
+    { name: 'Tail of Light', sky: ['#000000', '#2a1a4a'], horizon: 'pulsar', hz: ['#fff2c8', '#ffb4ff'], ground: ['#2a2440', '#1a1628', '#3a3458'], tex: 'stars', feat: 'path', featC: '#fff2c8', low: { starCluster: 4, shard: 2, rune: 1 }, edge: 'obelisk', edgeC: ['#1a1628', '#fff2c8'] },
+    { name: 'Crystal Hollows', sky: ['#0a0420', '#3a1a6a'], horizon: 'stalactites', hz: ['#3a2a6a', '#1a1240'], ground: ['#2a1e50', '#1a1236', '#3a2c6a'], tex: 'crystal', feat: 'river', featC: '#c8a8ff', low: { crystal: 5, mushroomGlow: 2 }, edge: 'crystalSpire', edgeC: ['#c8a8ff', '#7ad8ff'] },
+    { name: 'Dust Storm Plains', sky: ['#1a0e08', '#6a4a2a'], horizon: 'mountains', hz: ['#5a3a2a', '#3a2418'], ground: ['#7a5a44', '#5a402e', '#8a6a52'], tex: 'ash', feat: 'chasm', featC: '#ffb46a', low: { rock: 4, bones: 1, floatRock: 2 }, edge: 'basalt', edgeC: ['#3a2418', '#ffb46a'] },
+    { name: 'Aurora Glacier', sky: ['#020a18', '#1a3a5a'], horizon: 'aurora', hz: ['#7affc8', '#c87aff'], ground: ['#c8e0f0', '#9ac0dc', '#e0f0fc'], tex: 'ice', feat: 'river', featC: '#7affc8', low: { iceSpike: 3, crystal: 2, rock: 1 }, edge: 'iceSpire', edgeC: ['#e6f6ff', '#7affc8'] },
+    { name: 'Chrono Craters', sky: ['#0a0a14', '#2a2a4a'], horizon: 'clockwork', hz: ['#2a2a40', '#ffd36b'], ground: ['#4a4a5a', '#2e2e3e', '#5a5a6c'], tex: 'circuit', feat: 'chasm', featC: '#ffd36b', low: { hourglass: 2, gear: 2, rock: 2, rune: 1 }, edge: 'obelisk', edgeC: ['#2a2a40', '#ffd36b'] },
+    { name: 'Nebula Wake', sky: ['#14062a', '#6a2a8a'], horizon: 'nebula', hz: ['#ff7ad8', '#7ad8ff'], ground: ['#3a1e5a', '#24123e', '#4e2a72'], tex: 'stars', feat: 'river', featC: '#ff9ad8', low: { starCluster: 3, mushroomGlow: 2, crystal: 2 }, edge: 'alienTree', edgeC: ['#ff7ad8', '#3a1e5a'] },
+    { name: 'Stardust Sea', sky: ['#000814', '#0a2a5a'], horizon: 'waves', hz: ['#7ad8ff', '#c8a8ff'], ground: ['#1a2a5a', '#0e1a3e', '#2a3a72'], tex: 'glitter', feat: 'river', featC: '#c8e8ff', low: { starCluster: 3, bubbleCluster: 2, shell: 1, coral: 1 }, edge: 'coralTall', edgeC: ['#c8a8ff', '#7ad8ff'] },
+    { name: 'Heart of the Comet', sky: ['#000000', '#3a0a2a'], horizon: 'rings', hz: ['#ff7a3a', '#c8a8ff'], ground: ['#3a1424', '#220a16', '#4e1a32'], tex: 'veins', feat: 'lava', featC: '#ff9a5a', low: { crystal: 2, ember: 3, shard: 2 }, edge: 'crystalSpire', edgeC: ['#ff9a5a', '#c8a8ff'] },
+    { name: 'The Origin', sky: ['#000000', '#e8d8ff'], horizon: 'genesis', hz: ['#ffffff', '#c8a8ff'], ground: ['#d8d0f0', '#a8a0d0', '#ece6fc'], tex: 'glitter', feat: 'river', featC: '#ffffff', low: { crystal: 3, starCluster: 2, floatRock: 1 }, edge: 'crystalTree', edgeC: ['#ffffff', '#8a7ac8'] },
   ];
   const HUB = { name: 'Beast Hub', sky: ['#0a1030', '#3a2a7a'], horizon: 'planets', hz: ['#ffd36b', '#ff8fd1'], ground: ['#2a2a5a', '#1a1a3e', '#3a3a78'], tex: 'circuit', feat: 'path', featC: '#ffd36b', low: { rune: 3, starCluster: 2, gear: 1 }, edge: 'pylonTall', edgeC: ['#2a2a5a', '#ffd36b'] };
 
@@ -102,6 +130,26 @@ const BIOMES = (() => {
     coral(c, x, y, s, R) { const col = ['#ff7ab6', '#ffb03a', '#b46bff'][(R() * 3) | 0]; c.strokeStyle = col; c.lineWidth = s * 0.12; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - s * 0.6); c.moveTo(x, y - s * 0.3); c.lineTo(x - s * 0.25, y - s * 0.6); c.moveTo(x, y - s * 0.4); c.lineTo(x + s * 0.28, y - s * 0.7); c.stroke(); },
     bubbleCluster(c, x, y, s, R) { for (let k = 0; k < 5; k++) { c.strokeStyle = rgba('#dff8ff', 0.7); c.lineWidth = s * 0.03; c.beginPath(); c.arc(x + (R() - 0.5) * s, y - R() * s, s * (0.05 + R() * 0.1), 0, Math.PI * 2); c.stroke(); } },
     shell(c, x, y, s) { c.beginPath(); c.moveTo(x - s * 0.3, y); c.quadraticCurveTo(x, y - s * 0.6, x + s * 0.3, y); c.closePath(); c.fillStyle = '#ffd6e6'; c.fill(); outline(c, s * 0.035, '#a0607a'); },
+    // 1.5: an hourglass of the biome's light (Chrono Rift) and a rock floating over its shadow.
+    hourglass(c, x, y, s, R, B) {
+      const col = B.featC, wood = shade(B.ground[1], -0.35);
+      glowAt(c, x, y - s * 0.45, s * 0.7, col, 0.25);
+      c.fillStyle = wood; c.fillRect(x - s * 0.26, y - s * 0.06, s * 0.52, s * 0.06); c.fillRect(x - s * 0.26, y - s * 0.9, s * 0.52, s * 0.06);
+      c.beginPath(); c.moveTo(x - s * 0.2, y - s * 0.84); c.lineTo(x + s * 0.2, y - s * 0.84); c.lineTo(x + s * 0.03, y - s * 0.47); c.lineTo(x + s * 0.2, y - s * 0.06); c.lineTo(x - s * 0.2, y - s * 0.06); c.lineTo(x - s * 0.03, y - s * 0.47); c.closePath();
+      c.fillStyle = rgba('#ffffff', 0.22); c.fill(); outline(c, s * 0.035, shade(col, -0.5));
+      c.beginPath(); c.moveTo(x - s * 0.13, y - s * 0.06); c.lineTo(x, y - s * 0.26); c.lineTo(x + s * 0.13, y - s * 0.06); c.closePath(); c.fillStyle = col; c.fill();
+      c.beginPath(); c.moveTo(x - s * 0.1, y - s * 0.7); c.lineTo(x + s * 0.1, y - s * 0.7); c.lineTo(x, y - s * 0.52); c.closePath(); c.fill();
+      c.strokeStyle = col; c.lineWidth = s * 0.025; c.beginPath(); c.moveTo(x, y - s * 0.5); c.lineTo(x, y - s * 0.26); c.stroke();
+    },
+    floatRock(c, x, y, s, R, B) {
+      const col = shade(B.ground[1], 0.2), lift = s * (0.45 + R() * 0.25);
+      c.fillStyle = rgba('#000000', 0.25); c.beginPath(); c.ellipse(x, y, s * 0.42, s * 0.1, 0, 0, Math.PI * 2); c.fill();
+      const cy = y - lift - s * 0.25;
+      c.beginPath(); c.moveTo(x - s * 0.46, cy); c.quadraticCurveTo(x - s * 0.3, cy - s * 0.2, x, cy - s * 0.16); c.quadraticCurveTo(x + s * 0.32, cy - s * 0.22, x + s * 0.46, cy); c.lineTo(x + s * 0.1, cy + s * 0.42); c.lineTo(x - s * 0.08, cy + s * 0.3); c.closePath();
+      const g = c.createLinearGradient(x, cy - s * 0.2, x, cy + s * 0.4); g.addColorStop(0, shade(col, 0.25)); g.addColorStop(1, shade(col, -0.45)); c.fillStyle = g; c.fill(); outline(c, s * 0.04, shade(col, -0.65));
+      c.fillStyle = shade(B.ground[2], 0.1); c.beginPath(); c.ellipse(x, cy - s * 0.08, s * 0.38, s * 0.09, 0, 0, Math.PI * 2); c.fill();
+      glowAt(c, x, cy + s * 0.35, s * 0.3, B.featC, 0.35);
+    },
   };
 
   // Taller things that frame the edges of the world.
@@ -117,6 +165,16 @@ const BIOMES = (() => {
     tentacleTall(c, x, y, s, R, B) { PROPS.tentacle(c, x, y, s * 1.4, R, { ground: [null, null, B.edgeC[0]], featC: B.edgeC[1] }); },
     iceSpire(c, x, y, s) { PROPS.iceSpike(c, x, y, s * 1.5); },
     coralTall(c, x, y, s, R) { PROPS.coral(c, x, y, s * 1.6, R); },
+    // 1.5 (Edge of Creation): a pale tree whose leaves are crystals of light.
+    crystalTree(c, x, y, s, R, B) {
+      const [leaf, trunk] = B.edgeC;
+      c.strokeStyle = trunk; c.lineCap = 'round'; c.lineWidth = s * 0.12;
+      c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x - s * 0.1, y - s * 0.5, x, y - s * 0.9); c.stroke();
+      c.lineWidth = s * 0.06;
+      const tips = [[-0.38, -1.05], [0.36, -1.1], [0, -1.32], [-0.2, -0.75], [0.24, -0.8]];
+      for (const [dx, dy] of tips) { c.beginPath(); c.moveTo(x, y - s * 0.7); c.lineTo(x + dx * s, y + dy * s); c.stroke(); }
+      for (const [dx, dy] of tips) { glowAt(c, x + dx * s, y + dy * s, s * 0.32, leaf, 0.4); PROPS.crystal(c, x + dx * s, y + dy * s + s * 0.12, s * 0.42, R, { featC: leaf }); }
+    },
   };
 
   // ---------------------------------------------------------------- the skyline
@@ -140,6 +198,14 @@ const BIOMES = (() => {
       case 'blackhole': stars(110); { const x = W * (0.3 + R() * 0.4), y = top * 0.5, r = top * 0.28; glowAt(c, x, y, r * 2.6, h1, 0.55); c.strokeStyle = rgba(h2, 0.9); c.lineWidth = 5; c.beginPath(); c.ellipse(x, y, r * 2, r * 0.45, -0.25, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#000'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); } break;
       case 'void': stars(70); for (let i = 0; i < 3; i++) glowAt(c, R() * W, R() * top, 50 + R() * 50, i % 2 ? h1 : h2, 0.3); break;
       case 'waves': for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(0, top); const y0 = top * (0.4 + k * 0.17); for (let x = 0; x <= W; x += 20) c.lineTo(x, y0 + Math.sin(x / 40 + k) * 6); c.lineTo(W, top); c.closePath(); c.fillStyle = k % 2 ? h1 : h2; c.globalAlpha = 0.7; c.fill(); c.globalAlpha = 1; } break;
+      // 1.5 skylines.
+      case 'clockwork': stars(40); for (let i = 0; i < 5; i++) { const x = (i + 0.5) * W / 5 + (R() - 0.5) * 30, r = top * (0.35 + R() * 0.35), cy = top * (0.85 + R() * 0.2); c.save(); c.translate(x, cy); c.rotate(R()); c.fillStyle = h1; c.beginPath(); for (let k = 0; k < 24; k++) { const a = (k / 24) * Math.PI * 2, rr = k % 2 ? r : r * 0.86; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.closePath(); c.fill(); c.strokeStyle = rgba(h2, 0.7); c.lineWidth = 2; c.stroke(); c.beginPath(); c.arc(0, 0, r * 0.35, 0, Math.PI * 2); c.strokeStyle = rgba(h2, 0.9); c.lineWidth = 3; c.stroke(); c.restore(); } ridge(top * 0.96, top * 0.12, shade(h1, -0.3), true); break;
+      case 'aurora': stars(90); for (let k = 0; k < 3; k++) { const y0 = top * (0.25 + k * 0.17); for (let x = 0; x < W; x += 3) { const y = y0 + Math.sin(x / (60 + k * 25) + k * 2) * top * 0.1, h = top * (0.12 + 0.08 * Math.sin(x / 35 + k)); const g = c.createLinearGradient(0, y - h, 0, y + h * 0.4); g.addColorStop(0, rgba(k % 2 ? h2 : h1, 0)); g.addColorStop(0.7, rgba(k % 2 ? h2 : h1, 0.4)); g.addColorStop(1, rgba(k % 2 ? h2 : h1, 0)); c.fillStyle = g; c.fillRect(x, y - h, 3, h * 1.4); } } ridge(top * 0.95, top * 0.16, shade(B.ground[0], -0.3), true); break;
+      case 'islands': stars(30); for (let i = 0; i < 6; i++) { const x = R() * W, y = top * (0.25 + R() * 0.5), w = 26 + R() * 46; c.fillStyle = shade(h1, -0.2); c.beginPath(); c.moveTo(x - w, y); c.lineTo(x + w, y); c.lineTo(x + w * 0.2, y + w * 0.9); c.lineTo(x - w * 0.3, y + w * 0.6); c.closePath(); c.fill(); c.fillStyle = h1; c.fillRect(x - w, y - 5, w * 2, 6); c.strokeStyle = rgba(h2, 0.7); c.lineWidth = 3; c.beginPath(); c.moveTo(x + w * 0.5, y); c.lineTo(x + w * 0.5, Math.min(top, y + w * 1.6)); c.stroke(); glowAt(c, x, y, w * 0.8, h2, 0.15); } break;
+      case 'genesis': { const x = W * 0.5, y = top * 0.55; glowAt(c, x, y, top * 1.6, h1, 0.8); for (let i = 0; i < 24; i++) { const a = (i / 24) * Math.PI * 2; c.fillStyle = rgba('#ffffff', 0.18); c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * W, y + Math.sin(a) * W); c.lineTo(x + Math.cos(a + 0.06) * W, y + Math.sin(a + 0.06) * W); c.closePath(); c.fill(); } for (let k = 1; k <= 3; k++) { c.strokeStyle = rgba(h2, 0.55 - k * 0.12); c.lineWidth = 3; c.beginPath(); c.ellipse(x, y, top * 0.35 * k, top * 0.1 * k, -0.15, 0, Math.PI * 2); c.stroke(); } glowAt(c, x, y, top * 0.25, '#ffffff', 1); ridge(top * 0.95, top * 0.18, shade(B.ground[0], -0.15), false); } break;
+      case 'pulsar': stars(120); { const x = W * (0.3 + R() * 0.4), y = top * 0.45; for (const a of [-1.1, 2.04]) { const g = c.createLinearGradient(x, y, x + Math.cos(a) * W * 0.6, y + Math.sin(a) * W * 0.6); g.addColorStop(0, rgba(h1, 0.85)); g.addColorStop(1, rgba(h2, 0)); c.fillStyle = g; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a - 0.06) * W * 0.6, y + Math.sin(a - 0.06) * W * 0.6); c.lineTo(x + Math.cos(a + 0.06) * W * 0.6, y + Math.sin(a + 0.06) * W * 0.6); c.closePath(); c.fill(); } glowAt(c, x, y, top * 0.5, h2, 0.6); glowAt(c, x, y, top * 0.12, '#ffffff', 1); } ridge(top * 0.95, top * 0.15, shade(B.ground[0], -0.25), true); break;
+      case 'rings': stars(80); { const x = W * (0.35 + R() * 0.3), y = top * 0.5; for (let k = 7; k >= 1; k--) { c.strokeStyle = rgba(k % 2 ? h1 : h2, 0.25 + 0.08 * (7 - k)); c.lineWidth = 3 + k * 0.6; c.beginPath(); c.ellipse(x, y, top * 0.1 * k, top * 0.06 * k, 0.3, 0, Math.PI * 2); c.stroke(); } c.fillStyle = '#000'; c.beginPath(); c.ellipse(x, y, top * 0.08, top * 0.05, 0.3, 0, Math.PI * 2); c.fill(); } ridge(top * 0.95, top * 0.18, shade(B.ground[0], -0.2), false); break;
+      case 'quasar': stars(110); { const x = W * (0.3 + R() * 0.4), y = top * 0.55, r = top * 0.2; glowAt(c, x, y, r * 3, h2, 0.5); for (const d of [-1, 1]) { const g = c.createLinearGradient(x, y, x, y + d * top); g.addColorStop(0, rgba(h1, 0.95)); g.addColorStop(1, rgba(h1, 0)); c.fillStyle = g; c.beginPath(); c.moveTo(x - r * 0.25, y); c.lineTo(x - r * 0.08, y + d * top * 1.2); c.lineTo(x + r * 0.08, y + d * top * 1.2); c.lineTo(x + r * 0.25, y); c.closePath(); c.fill(); } c.strokeStyle = rgba(h1, 0.9); c.lineWidth = 5; c.beginPath(); c.ellipse(x, y, r * 2.2, r * 0.4, 0.15, 0, Math.PI * 2); c.stroke(); c.fillStyle = '#000'; c.beginPath(); c.arc(x, y, r * 0.8, 0, Math.PI * 2); c.fill(); } break;
       case 'sunburst': { const x = W / 2, y = top * 0.7; for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; c.fillStyle = rgba(h1, 0.25); c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(a) * W, y + Math.sin(a) * W); c.lineTo(x + Math.cos(a + 0.12) * W, y + Math.sin(a + 0.12) * W); c.closePath(); c.fill(); } glowAt(c, x, y, top * 0.6, h1, 0.9); ridge(top * 0.95, top * 0.2, shade(h2, -0.3), true); } break;
     }
     // A soft edge where the sky meets the ground.
@@ -231,7 +297,7 @@ const BIOMES = (() => {
     // (Props are one size everywhere: the world is seen from above, and when zoomed out a size that
     // grew towards the bottom read as strange, Sam 15 Nov.)
     const persp = () => 1;
-    const FOOT = { flower: 0.95, bush: 0.85, rock: 0.62, mushroom: 0.55, mushroomGlow: 0.55, pond: 1.55, lavaVent: 0.8, ember: 0.9, crystal: 0.7, cloudPuff: 0.85, feather: 0.4, starCluster: 0.9, rune: 0.65, bones: 0.8, brazier: 0.45, gear: 0.6, pylon: 0.4, tentacle: 0.45, eyeOrb: 0.45, shard: 0.35, geyser: 0.6, balloon: 0.4, iceSpike: 0.55, coral: 0.5, bubbleCluster: 0.6, shell: 0.4 };
+    const FOOT = { hourglass: 0.4, floatRock: 0.55, flower: 0.95, bush: 0.85, rock: 0.62, mushroom: 0.55, mushroomGlow: 0.55, pond: 1.55, lavaVent: 0.8, ember: 0.9, crystal: 0.7, cloudPuff: 0.85, feather: 0.4, starCluster: 0.9, rune: 0.65, bones: 0.8, brazier: 0.45, gear: 0.6, pylon: 0.4, tentacle: 0.45, eyeOrb: 0.45, shard: 0.35, geyser: 0.6, balloon: 0.4, iceSpike: 0.55, coral: 0.5, bubbleCluster: 0.6, shell: 0.4 };
     const taken = [];
     const plan = [];
     const path = feat ? feat.samples : [];
@@ -326,7 +392,7 @@ const BIOMES = (() => {
     let B;
     if (state.inBeastHub) B = HUB;
     else {
-      const list = state.currentSolarSystem === 'low_gravity' ? LOW : PRIME;
+      const list = state.currentSolarSystem === 'comet' ? COMET : state.currentSolarSystem === 'low_gravity' ? LOW : PRIME;
       B = list[Math.min(state.prestigeLevel || 0, list.length - 1)];
     }
     const { w, h } = WORLD.worldSize();
@@ -348,7 +414,7 @@ const BIOMES = (() => {
     zoomChanged(WORLD.zoom());
   }
 
-  return { show, paint, zoomChanged, PRIME, LOW, HUB };
+  return { show, paint, zoomChanged, PRIME, LOW, COMET, HUB };
 })();
 
 // Every time the game sets the biome's backdrop, paint the new one over it.

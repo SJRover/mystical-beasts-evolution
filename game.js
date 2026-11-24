@@ -66,8 +66,16 @@ const PRESTIGE_TARGETS = [
   125000000000000000000000, // lvl 8 -> 9 (125Sx)
   5000000000000000000000000, // lvl 9 -> 10 (5Sp)
   250000000000000000000000000, // lvl 10 -> 11 (250Sp)
-  10000000000000000000000000000 // lvl 11 -> 12 (10Oc)
+  10000000000000000000000000000, // lvl 11 -> 12 (10Oc)
+  // 1.5: the last three ascents, the same climb (x50, x50, x40).
+  5e29,                    // lvl 12 -> 13 (500Oc)
+  2.5e31,                  // lvl 13 -> 14 (25No)
+  1e33                     // lvl 14 -> 15 (1Dc)
 ];
+// 1.5: prestige 15 is the highest in each solar system (16 biomes, prestige 0 to 15).
+const PRESTIGE_MAX = 15;
+const prestigeMaxHere = () => (state.currentSolarSystem === 'comet' && typeof COMET !== 'undefined' ? COMET.PRESTIGE_MAX : PRESTIGE_MAX);
+const atPrestigeMax = () => (state.prestigeLevel || 0) >= prestigeMaxHere();
 
 // Upgrade details
 const UPGRADE_CONFIGS = {
@@ -142,8 +150,30 @@ const UPGRADE_CONFIGS = {
     costMultiplier: 13.5,
     maxLevel: 5,
     getValue: (lvl) => lvl * 0.05 // chance 0% to 25%
+  },
+  // 1.5: the comet's own: cocoons hatch sooner.
+  fusionSpeed: {
+    name: 'Fusion Speed',
+    desc: 'Cocoons hatch 15% sooner per level.',
+    baseCost: 1000000,
+    costMultiplier: 14,
+    maxLevel: 5,
+    getValue: (lvl) => lvl
+  },
+  // 1.5: prestige 15 in Prime or Low Gravity only, slow on purpose.
+  shardFeeder: {
+    name: 'Shard Feeder',
+    desc: 'Feeds the Shard Incubator by itself with your lowest Common, Rare or Super Rare beast: up to Tier 6, two tiers more each level, one every 25 minutes, five minutes sooner each level.',
+    baseCost: 2e33,
+    costMultiplier: 12,
+    maxLevel: 5,
+    getValue: (lvl) => lvl
   }
 };
+/** 1.5: which upgrades a world's shop offers (the comet drops the ones only the early worlds needed). */
+const COMET_DROPPED_UPGRADES = ['luckCharms', 'activeClicks', 'crateAutoOpener', 'doubleMergeChance'];
+const upgradeOffered = (id) => (state.currentSolarSystem === 'comet' ? !COMET_DROPPED_UPGRADES.includes(id) && id !== 'shardFeeder' : id !== 'fusionSpeed' && (id !== 'shardFeeder' || state.prestigeLevel >= PRESTIGE_MAX));
+const COMET_UPGRADE_WORDS = { crateSpeed: ['Egg Speed', 'Comet eggs fall sooner.'], crateQuality: ['Egg Quality', 'Eggs can hatch a tier higher (each level).'] };
 
 // Biome settings
 const BIOME_CONFIGS = [
@@ -158,7 +188,12 @@ const BIOME_CONFIGS = [
   { name: 'Eldritch Spire', theme: 'biome-8' },
   { name: 'Singularity Void', theme: 'biome-9' },
   { name: 'Glittery Lava Plains', theme: 'biome-10' },
-  { name: 'Dark Matter Core', theme: 'biome-11' }
+  { name: 'Dark Matter Core', theme: 'biome-11' },
+  // 1.5: prestige 12 to 15.
+  { name: 'Chrono Rift', theme: 'biome-12' },
+  { name: 'Astral Throne', theme: 'biome-13' },
+  { name: 'Shattered Heavens', theme: 'biome-14' },
+  { name: 'Edge of Creation', theme: 'biome-15' }
 ];
 
 const LOW_GRAVITY_BIOME_CONFIGS = [
@@ -173,12 +208,31 @@ const LOW_GRAVITY_BIOME_CONFIGS = [
   { name: 'Antimatter Abyss', theme: 'biome-8' },
   { name: 'Gravitational Core', theme: 'biome-9' },
   { name: 'Hypernova Plain', theme: 'biome-10' },
-  { name: 'Quantum Singularity', theme: 'biome-11' }
+  { name: 'Quantum Singularity', theme: 'biome-11' },
+  // 1.5: prestige 12 to 15.
+  { name: 'Pulsar Fields', theme: 'biome-12' },
+  { name: 'Magnetar Storm', theme: 'biome-13' },
+  { name: 'Wormhole Reef', theme: 'biome-14' },
+  { name: 'Event Horizon', theme: 'biome-15' }
 ];
 
 function getActiveBiomes() {
+  if (state.currentSolarSystem === 'comet' && typeof COMET !== 'undefined') return COMET.BIOMES.map((name, i) => ({ name, theme: `biome-${i}` }));
   return state.currentSolarSystem === 'low_gravity' ? LOW_GRAVITY_BIOME_CONFIGS : BIOME_CONFIGS;
 }
+
+// 1.5: three worlds of beasts (Prime, Low Gravity and the Interstellar Comet), each its own saved branch.
+const SYSTEM_BRANCH = { prime: 'primeSystem', low_gravity: 'lowGravitySystem', comet: 'cometSystem' };
+const SYSTEM_NAME = { prime: 'Solar System Prime', low_gravity: 'Low Gravity Solar System', comet: 'the Interstellar Comet' };
+const branchOf = (sys) => state[SYSTEM_BRANCH[sys] || 'primeSystem'];
+/** The beast a fresh field starts with: a Sparky, a Floaty Ray, or a hatchling Nebula Jelly on the comet. */
+const startBeastFor = (sys) => (sys === 'low_gravity' ? 'floaty_ray' : sys === 'comet' ? 'nebula_jelly_1' : 'sparky');
+const freshBranch = (sys) => ({
+  essence: 0, prestigeLevel: 0, shopPurchases: {}, unlockedIncubators: [false, false, false],
+  upgrades: { meadowCapacity: 0, crateSpeed: 0, crateQuality: 0, luckCharms: 0, autoCollector: 0, activeClicks: 0, crateAutoOpener: 0, essenceMagnet: 0, doubleMergeChance: 0, fusionSpeed: 0 },
+  incubators: [0, 1, 2].map(() => ({ active: false, beastType: null, timer: 0, maxTime: 15, complete: false, isInfected: false, evolvedState: false })),
+  beastsOnField: [{ type: startBeastFor(sys), x: 40, y: 50, evolved: false, infected: false, deathTimer: 45.0 }],
+});
 
 // Game engines
 let audio = null;
@@ -242,6 +296,8 @@ window.addEventListener('DOMContentLoaded', () => {
   audio = new AudioEngine();
   particles = new ParticleSystem(document.getElementById('particles-canvas'));
   particles.loop();
+  // 1.5: while a limited beast's event is live, a banner a moment after opening (limited.js).
+  setTimeout(() => { if (typeof LIMITED !== 'undefined') try { LIMITED.banner(); } catch (e) { console.error(e); } }, 3500);
 
   // Load save data
   loadGame();
@@ -317,6 +373,8 @@ function startStoreKitWhenReady() {
 
 // Get dynamic target
 function getPrestigeTarget() {
+  if (atPrestigeMax()) return Infinity;
+  if (state.currentSolarSystem === 'comet' && typeof COMET !== 'undefined') return COMET.PRESTIGE_TARGETS[state.prestigeLevel || 0];
   const idx = Math.min(state.prestigeLevel, PRESTIGE_TARGETS.length - 1);
   return PRESTIGE_TARGETS[idx];
 }
@@ -341,7 +399,7 @@ function saveGame() {
   // field (as 1.2.2 did, on entering the hub and every 10 seconds there) replaced the player's
   // field with the hub's beasts when they left. In the hub, the field's own beasts are kept as
   // they were and the hub's are saved as the hub's.
-  const keptBranch = state.currentSolarSystem === 'prime' ? state.primeSystem : state.lowGravitySystem;
+  const keptBranch = branchOf(state.currentSolarSystem);
   if (state.inBeastHub) {
     state.beastHubBeasts = savedBeasts.map(b => ({ type: b.type, x: b.x, y: b.y, evolved: b.evolved, infected: b.infected }));
   }
@@ -355,17 +413,15 @@ function saveGame() {
     beastsOnField: state.inBeastHub ? ((keptBranch && keptBranch.beastsOnField) || []) : savedBeasts
   };
 
-  if (state.currentSolarSystem === 'prime') {
-    state.primeSystem = activeBranch;
-  } else {
-    state.lowGravitySystem = activeBranch;
-  }
+  state[SYSTEM_BRANCH[state.currentSolarSystem] || 'primeSystem'] = activeBranch;
 
   const saveData = {
     currentSolarSystem: state.currentSolarSystem,
     autoOpenCrates: state.autoOpenCrates,
     autoCrateDrops: state.autoCrateDrops,
     doubleEssenceEndTime: state.doubleEssenceEndTime,
+    rewardBoostUntil: state.rewardBoostUntil || 0,
+    rewardBoostMult: state.rewardBoostMult || 1.5,
     premiumCratesCount: state.premiumCratesCount,
     unlockedBeasts: state.unlockedBeasts,
     unlockedEvolved: state.unlockedEvolved || [],
@@ -379,6 +435,17 @@ function saveGame() {
     lastSaved: state.lastSaved,
     primeSystem: state.primeSystem,
     lowGravitySystem: state.lowGravitySystem,
+    // 1.5: the comet's branch, its cocoons, comet shards, whether it has been announced.
+    cometSystem: state.cometSystem || null,
+    cometCocoons: state.cometCocoons || [],
+    cometShards: state.cometShards || 0,
+    cometStats: state.cometStats || {},
+    limited: state.limited || {},
+    cometIntroSeen: !!state.cometIntroSeen,
+    cometEggBank: state.cometEggBank || 0,
+    cometUnlocked: !!state.cometUnlocked,
+    shardIncubator: state.shardIncubator || null,
+    shardFeedAt: state.shardFeedAt || 0,
     inBeastHub: state.inBeastHub,
     beastHubBeasts: state.beastHubBeasts,
     lastDailySpinDate: state.lastDailySpinDate,
@@ -456,9 +523,21 @@ function loadGame() {
   try {
     const saveData = JSON.parse(data);
     state.currentSolarSystem = saveData.currentSolarSystem || 'prime';
+    state.cometSystem = saveData.cometSystem || null;
+    state.cometCocoons = saveData.cometCocoons || [];
+    state.cometShards = saveData.cometShards || 0;
+    state.cometStats = saveData.cometStats || {};
+    state.limited = saveData.limited || {};
+    state.cometIntroSeen = !!saveData.cometIntroSeen;
+    state.cometEggBank = saveData.cometEggBank || 0;
+    state.cometUnlocked = !!saveData.cometUnlocked;
+    state.shardIncubator = saveData.shardIncubator && typeof saveData.shardIncubator === 'object' ? saveData.shardIncubator : null;
+    state.shardFeedAt = saveData.shardFeedAt || 0;
     state.autoOpenCrates = typeof saveData.autoOpenCrates !== 'undefined' ? saveData.autoOpenCrates : true;
     state.autoCrateDrops = typeof saveData.autoCrateDrops !== 'undefined' ? saveData.autoCrateDrops : true;
     state.doubleEssenceEndTime = saveData.doubleEssenceEndTime || 0;
+    state.rewardBoostUntil = saveData.rewardBoostUntil || 0;
+    state.rewardBoostMult = saveData.rewardBoostMult || 1.5;
     state.premiumCratesCount = saveData.premiumCratesCount || 0;
     state.unlockedBeasts = saveData.unlockedBeasts || ['sparky', 'floaty_ray'];
     state.unlockedEvolved = saveData.unlockedEvolved || [];
@@ -513,8 +592,19 @@ function loadGame() {
       };
     }
 
+    // 1.5: prestige stops at 15 in each solar system. A save past it comes down to 15 (nothing else
+    // is lost), and the player is told once.
+    let cappedPrestige = false;
+    for (const sys of [state.primeSystem, state.lowGravitySystem]) {
+      if (sys && (sys.prestigeLevel || 0) > PRESTIGE_MAX) { sys.prestigeLevel = PRESTIGE_MAX; cappedPrestige = true; }
+    }
+    // (The comet's own prestige stops at 10.)
+    if (state.cometSystem && typeof COMET !== 'undefined' && (state.cometSystem.prestigeLevel || 0) > COMET.PRESTIGE_MAX) state.cometSystem.prestigeLevel = COMET.PRESTIGE_MAX;
+    if (cappedPrestige) setTimeout(() => showWarning('Prestige 15', 'Prestige now stops at 15 in each solar system, the sixteenth biome. Your prestige above 15 has come down to 15, and nothing else has changed.'), 2500);
+
     // Load active variables
-    const activeSys = state.currentSolarSystem === 'prime' ? state.primeSystem : state.lowGravitySystem;
+    if (state.currentSolarSystem === 'comet' && !state.cometSystem) state.cometSystem = freshBranch('comet');
+    const activeSys = branchOf(state.currentSolarSystem);
     state.essence = activeSys.essence;
     state.prestigeLevel = activeSys.prestigeLevel;
     state.shopPurchases = activeSys.shopPurchases;
@@ -531,7 +621,7 @@ function loadGame() {
           spawnBeastOnField(b.type, b.x, b.y, b.evolved || false, b.infected || false);
         });
       } else {
-        spawnBeastOnField(state.currentSolarSystem === 'prime' ? 'sparky' : 'floaty_ray', 50, 50, false, false);
+        spawnBeastOnField(startBeastFor(state.currentSolarSystem), 50, 50, false, false);
       }
       document.getElementById('game-container').className = 'game-container biome-hub';
       const hubControls = document.getElementById('hub-controls');
@@ -544,13 +634,10 @@ function loadGame() {
           spawnBeastOnField(b.type, b.x, b.y, b.evolved, b.infected, b.deathTimer);
         });
       } else {
-        if (state.currentSolarSystem === 'prime') {
-          spawnBeastOnField('sparky', 30, 50, false, false);
-        } else {
-          spawnBeastOnField('floaty_ray', 30, 50, false, false);
-        }
+        spawnBeastOnField(startBeastFor(state.currentSolarSystem), 30, 50, false, false);
       }
     }
+    if (state.currentSolarSystem === 'comet') setTimeout(drawCocoons, 300);
 
     // Refresh UI checkboxes
     const autoOpenToggle = document.getElementById('toggle-auto-open');
@@ -647,7 +734,7 @@ function loadGame() {
     }
   } catch (e) {
     console.error("Failed to load save:", e);
-    spawnBeastOnField(state.currentSolarSystem === 'prime' ? 'sparky' : 'floaty_ray', 30, 50, false, false);
+    spawnBeastOnField(startBeastFor(state.currentSolarSystem), 30, 50, false, false);
   }
 }
 
@@ -657,7 +744,9 @@ function updateIncubatorsVisibility() {
   const ped2 = document.getElementById('incubator-pedestal-2');
   const ped3 = document.getElementById('incubator-pedestal-3');
 
-  if (state.inBeastHub) {
+  if (typeof COMET !== 'undefined') drawShardIncubator();
+  // (1.5: comet beasts grow by fusion and never go in an incubator, so the comet has none.)
+  if (state.inBeastHub || state.currentSolarSystem === 'comet') {
     if (ped1) ped1.style.display = 'none';
     if (ped2) ped2.style.display = 'none';
     if (ped3) ped3.style.display = 'none';
@@ -770,6 +859,7 @@ function applyBiomeBg(prestigeLevel) {
   if (state.currentSolarSystem === 'low_gravity') {
     bg.classList.add('low-gravity');
   }
+  if (state.currentSolarSystem === 'comet') bg.classList.add('low-gravity', 'comet');
 
   // Update generative music dynamically to match the theme of the new biome
   if (audio) {
@@ -790,7 +880,7 @@ function renderSpaceBackground(biomeIndex) {
   if (!container) return;
   container.innerHTML = '';
 
-  if (state.currentSolarSystem !== 'low_gravity') {
+  if (state.currentSolarSystem !== 'low_gravity' && state.currentSolarSystem !== 'comet') {
     return; // Only space biomes get this night sky
   }
 
@@ -945,7 +1035,8 @@ function getClickMultiplier() {
 
 // Calculate crate drop speed cooldown
 function getCrateCooldown() {
-  const baseVal = UPGRADE_CONFIGS.crateSpeed.getValue(state.upgrades.crateSpeed);
+  // (1.5: comet eggs fall two and a half times as slowly.)
+  const baseVal = UPGRADE_CONFIGS.crateSpeed.getValue(state.upgrades.crateSpeed) * (state.currentSolarSystem === 'comet' && !state.inBeastHub ? 2.5 : 1);
   let speedMultiplier = 1.0;
   state.sanctuaryBeasts.forEach(beastId => {
     const template = BEAST_TEMPLATES[beastId];
@@ -991,7 +1082,8 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
     tierScale = 1.0 + (template.tier - 15) * 0.08; // T16: 1.08x, T17: 1.16x, T18: 1.24x, T19: 1.32x, T20: 1.40x
   }
   const oldSize = Math.round((baseSize + tierBonus) * rarityScale * evolvedScale * tierScale);
-  const finalSize = Math.round(tierCurve * rarityNudge * (evolved ? 1.1 : 1)) || oldSize;
+  // (1.5, Sam 24 Nov: low comet beasts were tiny; a comet beast's box is never under 96.)
+  const finalSize = Math.max(template.comet ? 96 : 0, Math.round(tierCurve * rarityNudge * (evolved ? 1.1 : 1)) || oldSize);
 
   container.style.width = `${finalSize}px`;
   container.style.height = `${finalSize}px`;
@@ -1120,7 +1212,9 @@ function spawnCrateOnField() {
   container.setAttribute('data-land-x', landX);
   container.setAttribute('data-land-y', landY);
 
-  container.innerHTML = ART.crate(false); // 1.3
+  const cometEgg = typeof COMET !== 'undefined' && COMET.inComet();
+  if (cometEgg) container.classList.add('comet-egg');
+  container.innerHTML = cometEgg ? COMET.eggSvg() : ART.crate(false); // 1.3; 1.5 an egg on the comet
 
   playground.appendChild(container);
 
@@ -1209,6 +1303,9 @@ function openCrate(crateId, x, y) {
   if (!dom) return;
 
   dom.remove();
+
+  // 1.5: on the comet, an egg hatches a comet beast (no shadow breeds, no plague).
+  if (typeof COMET !== 'undefined' && COMET.inComet()) { hatchCometEgg(x, y); return; }
 
   // Shadow enemy spawn check (Biome 6+)
   if (state.prestigeLevel >= 5) {
@@ -1743,6 +1840,7 @@ function collectCrystal(crystalId) {
   if (isBoostActive()) {
     value *= 2;
   }
+  value *= rewardBoostMult();
   const pctX = parseFloat(crystal.getAttribute('data-pct-x'));
   const pctY = parseFloat(crystal.getAttribute('data-pct-y'));
 
@@ -1782,6 +1880,7 @@ function autoCollectCrystal(crystalId) {
   if (!crystal) return;
   let value = parseFloat(crystal.getAttribute('data-value'));
   if (isBoostActive()) value *= 2;
+  value *= rewardBoostMult();
   const abs = getAbsolutePosition(parseFloat(crystal.getAttribute('data-pct-x')), parseFloat(crystal.getAttribute('data-pct-y')));
   crystal.remove();
   const hudPos = document.querySelector('.essence-icon').getBoundingClientRect();
@@ -1861,10 +1960,23 @@ window.addEventListener('touchmove', (e) => {
 // 1-second clock loop
 function tickGameSeconds() {
   state.maxTimeSeen = Math.max(state.maxTimeSeen || 0, Date.now());
+  if (typeof COMET !== 'undefined') {
+    tickCocoons(); tickShardIncubators();
+    // Comet eggs won elsewhere fall on the comet's meadow, as room allows.
+    // (Sam, 24 Nov: with automatic drops off they still fell; now they wait in the delivery queue
+    // instead, to be dropped with the crate button like any other.)
+    if (state.cometEggBank > 0 && COMET.inComet() && !state.inBeastHub) {
+      if (state.autoCrateDrops) { if (cratesOnField() < MAX_FIELD_CRATES && fieldHasRoom()) { state.cometEggBank--; spawnCrateOnField(); } }
+      else if (crateQueue < 5) { state.cometEggBank--; crateQueue++; updateCrateQueueBadge(); }
+    }
+    // The comet's achievements, every few seconds.
+    if (typeof BATTLE !== 'undefined' && BATTLE.checkCometAch && !((state._cometAchAt || 0) > Date.now())) { state._cometAchAt = Date.now() + 4000; BATTLE.checkCometAch(); }
+  }
   let cps = state.inBeastHub ? 0 : calculateTotalCps();
   if (isBoostActive() && !state.inBeastHub) {
     cps *= 2;
   }
+  cps *= rewardBoostMult();
   state.essence += cps;
 
   if (Math.floor(Date.now() / 1000) % 10 === 0) {
@@ -1968,10 +2080,20 @@ function updateHUD() {
   capDisplay.innerText = maxCap;
 
   const target = getPrestigeTarget();
-  const progressPercent = Math.min((state.essence / target) * 100, 100);
-  
+  const progressPercent = atPrestigeMax() ? 100 : Math.min((state.essence / target) * 100, 100);
+
   const pctEl = document.getElementById('prestige-progress-pct');
-  if (progressPercent >= 100) {
+  const maxed = atPrestigeMax();
+  const ascentLabel = document.querySelector('.prestige-progress-label span');
+  if (ascentLabel && ascentLabel.textContent !== (maxed ? 'Final Biome' : 'Next Biome Ascent')) ascentLabel.textContent = maxed ? 'Final Biome' : 'Next Biome Ascent';
+  const pBtn = document.getElementById('prestige-btn');
+  const pBtnText = maxed ? `Prestige ${prestigeMaxHere()}, the highest` : 'Ascend to Next Tier';
+  if (pBtn && pBtn.textContent.trim() !== pBtnText) pBtn.textContent = pBtnText;
+  if (maxed) {
+    pctEl.innerText = `Prestige ${prestigeMaxHere()}`;
+    pctEl.classList.remove('ready-pulse');
+    pctEl.style.cursor = '';
+  } else if (progressPercent >= 100) {
     pctEl.innerText = 'Ready to Ascend!';
     pctEl.classList.add('ready-pulse');
     pctEl.style.cursor = 'pointer';
@@ -2008,7 +2130,13 @@ function updateHUD() {
         timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
       }
       
-      doubleEssenceEl.innerText = `x2 Active: ${timeStr}`;
+      doubleEssenceEl.innerText = `x${2 * rewardBoostMult()} Active: ${timeStr}`;
+      doubleEssenceEl.style.display = 'block';
+    } else if (rewardBoostMult() > 1) {
+      // An achievement's boost, with its own time left.
+      const s = Math.max(0, Math.floor((state.rewardBoostUntil - Date.now()) / 1000));
+      const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+      doubleEssenceEl.innerText = `x${rewardBoostMult()} Boost: ${hh ? `${hh}:${String(mm).padStart(2, '0')}` : mm}:${String(ss).padStart(2, '0')}`;
       doubleEssenceEl.style.display = 'block';
     } else {
       doubleEssenceEl.style.display = 'none';
@@ -2040,12 +2168,23 @@ function updateHUD() {
     hubBtn.style.display = 'block';
   }
 
-  if (hasUnlockedPortal) {
+  // 1.5: the comet opens once both solar systems are at prestige 15 (said once).
+  if (typeof COMET !== 'undefined' && !state.cometUnlocked && COMET.unlocked()) {
+    state.cometUnlocked = true;
+    showWarning('☄ The Interstellar Comet', 'Both solar systems are at prestige 15, and a comet has come into view. Warp to it from Settings: its beasts are the rarest in the universe, and they hatch from eggs.');
+  }
+  if (hasUnlockedPortal || state.currentSolarSystem === 'comet') {
     if (warpLocked) warpLocked.style.display = 'none';
     if (warpUnlocked) warpUnlocked.style.display = 'flex';
-    if (warpBtn) {
-      warpBtn.innerText = state.currentSolarSystem === 'prime' ? '🌀 Warp to Low Gravity Solar System' : '🌀 Warp to Solar System Prime';
-    }
+    // A button for each other world you can reach.
+    const targets = ['prime', 'low_gravity', 'comet'].filter((sys) => sys !== state.currentSolarSystem && (sys !== 'comet' || (typeof COMET !== 'undefined' && COMET.unlocked())));
+    const label = { prime: '🌀 Warp to Solar System Prime', low_gravity: '🌀 Warp to Low Gravity Solar System', comet: '☄ Warp to the Interstellar Comet' };
+    [warpBtn, document.getElementById('warp-btn-2')].forEach((btn, i) => {
+      if (!btn) return;
+      const to = targets[i];
+      btn.style.display = to ? '' : 'none';
+      if (to && btn.dataset.to !== to) { btn.dataset.to = to; btn.innerText = label[to]; }
+    });
   } else {
     if (warpLocked) warpLocked.style.display = 'block';
     if (warpUnlocked) warpUnlocked.style.display = 'none';
@@ -2070,7 +2209,8 @@ function updateCrateSpawnerDisplay() {
 // Format numbers
 function formatNumber(num) {
   if (num < 1000) return Math.floor(num).toString();
-  const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc'];
+  // 1.5: names up to 1e45 (prestige 15 costs 1Dc, 1e33).
+  const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'UDc', 'DDc', 'TDc'];
   const i = Math.floor(Math.log10(num) / 3);
   const formatted = (num / Math.pow(10, i * 3)).toFixed(2);
   return `${formatted}${suffixes[i] || ''}`;
@@ -2184,6 +2324,12 @@ function dragMove(e) {
     if (!isBossBeast(draggedBeast.type)) {
       state.beastsOnField.forEach(b => {
         const bTemplate = BEAST_TEMPLATES[b.type];
+        // 1.5 (Sam, 24 Nov: a Tier 1 and a Tier 2 comet beast were shown as a match): comet beasts
+        // light up only where the comet's own rule says they fuse.
+        if ((beastTemplate && beastTemplate.comet) || (bTemplate && bTemplate.comet)) {
+          if (b.id !== draggedBeast.id && typeof COMET !== 'undefined' && COMET.fusionOf(draggedBeast.type, b.type).to) b.dom.classList.add('hovering-compatible');
+          return;
+        }
         const isSameTier = (beastTemplate && bTemplate && beastTemplate.tier === bTemplate.tier);
         const isBothLegendary = (beastTemplate && bTemplate && beastTemplate.rarity === 'LEGENDARY' && bTemplate.rarity === 'LEGENDARY');
         if (b.id !== draggedBeast.id && 
@@ -2211,6 +2357,11 @@ function dragMove(e) {
           document.getElementById('incubator-pedestal-2').classList.add('hovering-compatible');
         }
       }
+    }
+
+    // 1.5: the Shard Incubator, when it is free.
+    if (typeof COMET !== 'undefined' && shardIncubatorHere() && !shardJobs()[state.currentSolarSystem] && shardable(draggedBeast.type)) {
+      const sp = document.getElementById('shard-pedestal'); if (sp) sp.classList.add('hovering-compatible');
     }
 
     // Highlight Trash Bin
@@ -2244,13 +2395,25 @@ function dragEnd(e) {
   document.getElementById('incubator-pedestal-2').classList.remove('hovering-compatible');
   const ped3 = document.getElementById('incubator-pedestal-3');
   if (ped3) ped3.classList.remove('hovering-compatible');
-  
+  const shardPed = document.getElementById('shard-pedestal');
+  if (shardPed) shardPed.classList.remove('hovering-compatible');
+
   const trashBin = document.getElementById('trash-bin');
   if (trashBin) {
     trashBin.classList.remove('hovering-compatible');
   }
 
   const bRect = dragElement.getBoundingClientRect();
+
+  // 1.5: dropped on the Shard Incubator (if it takes the beast, nothing else happens).
+  if (shardPed && typeof COMET !== 'undefined' && shardIncubatorHere()) {
+    const sr = shardPed.getBoundingClientRect();
+    if (Math.hypot(sr.left + sr.width / 2 - (bRect.left + bRect.width / 2), sr.top + sr.height / 2 - (bRect.top + bRect.height / 2)) < 75 && startShardJob(draggedBeast)) {
+      draggedBeast = null;
+      dragElement = null;
+      return;
+    }
+  }
 
   // Check drop collisions with Trash Bin
   if (trashBin) {
@@ -2268,7 +2431,7 @@ function dragEnd(e) {
     }
   }
 
-  if (!state.inBeastHub) {
+  if (!state.inBeastHub && state.currentSolarSystem !== 'comet') {
     // Check drop Y collisions with Incubator 1 (Alpha)
     const ped1 = document.getElementById('incubator-pedestal');
     const pRect1 = ped1.getBoundingClientRect();
@@ -2400,6 +2563,7 @@ function checkMergeAchievements() {
 
 // Executes merger mutation
 function executeMerge(beastA, beastB) {
+  if (typeof COMET !== 'undefined' && (COMET.isComet(beastA.type) || COMET.isComet(beastB.type))) { startCometFusion(beastA, beastB); return; }
   executeMergeInner(beastA, beastB);
   checkMergeAchievements();
 }
@@ -2456,6 +2620,7 @@ function executeMergeInner(beastA, beastB) {
   const ms = mergeStats();
   ms.merges++;
   ms.mergesOf[beastA.type] = (ms.mergesOf[beastA.type] || 0) + 1;
+  if (typeof LIMITED !== 'undefined' && (BEAST_TEMPLATES[beastA.type] || { tier: 0 }).tier > 5) LIMITED.note('merge6');
 
   const abs = getAbsolutePosition(mergeX, mergeY);
   const elementColor = ELEMENTS[template.element].color;
@@ -2823,7 +2988,7 @@ function triggerDiscoveryModal(beastId) {
   if (document.body.classList.contains('bt-in-battle') || document.getElementById('battle-screen')) { setTimeout(() => triggerDiscoveryModal(beastId), 1500); return; }
 
   const rarityLabel = document.getElementById('discovery-beast-rarity');
-  rarityLabel.innerText = RARITIES[template.rarity].name;
+  rarityLabel.innerHTML = rarityHtml(template.rarity);
   rarityLabel.className = `unlock-beast-rarity ${template.rarity.toLowerCase()}`;
 
   document.getElementById('discovery-beast-name').innerText = `${template.name} (Tier ${template.tier})`;
@@ -2837,7 +3002,7 @@ function triggerDiscoveryModal(beastId) {
   const modal = document.getElementById('discovery-modal');
   // 1.4: a Relic says so.
   const title = modal.querySelector('.modal-title');
-  if (title) title.textContent = template.relic ? 'A Relic joins you!' : 'New Mutation Discovered!';
+  if (title) title.textContent = template.limited ? 'A limited beast joins you!' : template.relic ? 'A Relic joins you!' : template.comet ? 'New Comet Beast!' : 'New Mutation Discovered!';
   modal.classList.add('active');
 }
 
@@ -3103,6 +3268,7 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
       if (p[inc.beastType] >= EVOLVE_NEEDED) {
         p[inc.beastType] = 0;
         mergeStats().evolved++;
+        if (typeof LIMITED !== 'undefined' && (BEAST_TEMPLATES[inc.beastType] || { tier: 0 }).tier > 5) LIMITED.note('evolve6');
         spawnBeastOnField(inc.beastType, spot.x, spot.y, true, false);
         if (!state.unlockedEvolved.includes(inc.beastType)) state.unlockedEvolved.push(inc.beastType);
         spawnToastNotification('🧬 EVOLVED!', `${EVOLVE_NEEDED} incubations: an evolved <b>${name}</b>!`, getBeastSVG(inc.beastType, true, false));
@@ -3202,6 +3368,20 @@ function renderShop() {
 
   const maxAllowedTier = getMaxAllowedTier();
   const currentSys = state.currentSolarSystem || 'prime';
+
+  // 1.5: the comet sells no beasts, only eggs, and only for shards (Sam, 24 Nov: eggs for essence
+  // came too easily and made shards pointless; essence buys the comet's upgrades and prestige).
+  if (currentSys === 'comet' && typeof COMET !== 'undefined') {
+    for (const [label, price, can, buy] of [
+      [`${COMET.SHARDS_PER_EGG} shards (you have ${formatNumber(state.cometShards || 0)})`, COMET.SHARDS_PER_EGG, (state.cometShards || 0) >= COMET.SHARDS_PER_EGG, () => { state.cometShards -= COMET.SHARDS_PER_EGG; }],
+    ]) {
+      const card = document.createElement('div');
+      card.className = 'shop-card comet-egg-card';
+      card.innerHTML = `<div class="shop-card-icon" style="width:54px;height:54px">${COMET.eggSvg()}</div><div class="shop-card-info"><div class="shop-card-name">Comet Egg</div><div class="shop-card-desc">Hatches a comet beast: Super Rare to, very rarely, Cosmic.</div></div><button class="shop-buy-btn" ${can ? '' : 'disabled'}>${label}</button>`;
+      card.querySelector('button').addEventListener('click', () => { if (!can) return; buy(); spawnCrateOnField(); if (audio) audio.playClick(); saveGame(); renderShop(); updateHUD(); });
+      beastList.appendChild(card);
+    }
+  }
 
   const purchaseableTemplates = Object.values(BEAST_TEMPLATES).filter(b => {
     const bSys = b.system || 'prime';
@@ -3312,8 +3492,9 @@ function renderUpgrades() {
   const upgradesList = document.getElementById('shop-upgrades-list');
   upgradesList.innerHTML = '';
 
+  const noIncubators = state.currentSolarSystem === 'comet';
   // 1. Add Incubator 1 buy card (if locked)
-  if (!state.unlockedIncubators[0]) {
+  if (!state.unlockedIncubators[0] && !noIncubators) {
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
@@ -3333,7 +3514,7 @@ function renderUpgrades() {
   }
 
   // 2. Add Incubator 2 buy card (Prestige 3+ and Alpha unlocked and Beta locked)
-  if (state.prestigeLevel >= 3 && state.unlockedIncubators[0] && !state.unlockedIncubators[1]) {
+  if (state.prestigeLevel >= 3 && state.unlockedIncubators[0] && !state.unlockedIncubators[1] && !noIncubators) {
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
@@ -3353,7 +3534,7 @@ function renderUpgrades() {
   }
 
   // 3. Add Incubator 3 buy card (Prestige 5+ and Beta unlocked and Gamma locked)
-  if (state.prestigeLevel >= 5 && state.unlockedIncubators[1] && !state.unlockedIncubators[2]) {
+  if (state.prestigeLevel >= 5 && state.unlockedIncubators[1] && !state.unlockedIncubators[2] && !noIncubators) {
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
@@ -3373,7 +3554,9 @@ function renderUpgrades() {
   }
 
   // Add normal upgrades
-  Object.entries(UPGRADE_CONFIGS).forEach(([upgradeId, config]) => {
+  Object.entries(UPGRADE_CONFIGS).filter(([id]) => upgradeOffered(id)).forEach(([upgradeId, config0]) => {
+    const words = state.currentSolarSystem === 'comet' && COMET_UPGRADE_WORDS[upgradeId];
+    const config = words ? { ...config0, name: words[0], desc: words[1] } : config0;
     const currentLvl = state.upgrades[upgradeId] || 0;
     const isMax = currentLvl >= config.maxLevel;
     const cost = Math.round(config.baseCost * Math.pow(config.costMultiplier, currentLvl));
@@ -3553,8 +3736,47 @@ function renderBeastopedia() {
   createSection('Prime Solar System', primeTemplates, primeUnlocked);
   createSection('Low Gravity Solar System', lgTemplates, lgUnlocked);
   // 1.4: the Relics, won by merge achievements (Battle tab, Achievements, Merge).
-  const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic);
+  const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic && !b.limited);
   if (relicTemplates.length) createSection('Relics', relicTemplates, relicTemplates.filter((b) => state.unlockedBeasts.includes(b.id)).length);
+  // 1.5: limited-time beasts, in silver (limited.js).
+  if (typeof LIMITED !== 'undefined') LIMITED.beastopedia(grid);
+  // 1.5: the comet's fifteen species, always shown, at the very bottom (battle.js moves them below the
+  // Folded Legends), so everyone can see the extreme beasts waiting later on (Sam, 24 Nov). Each at
+  // the highest tier you have had; one not found yet is a shadow with only its rarity.
+  if (typeof COMET !== 'undefined') {
+    const best = (sp) => { for (let t = 20; t >= 1; t--) if (state.unlockedBeasts.includes(COMET.idOf(sp, t))) return t; return 0; };
+    const found = COMET.SPECIES.filter((s) => best(s.id)).length;
+    {
+      const head = document.createElement('div');
+      head.className = 'beastopedia-section-head comet-section-head';
+      head.dataset.comet = '1';
+      head.innerHTML = `<div><span class="comet-dot"></span><span>The Interstellar Comet</span></div><span class="comet-count">${found} / ${COMET.SPECIES.length}</span>`;
+      grid.appendChild(head);
+      if (!COMET.unlocked()) {
+        const note = document.createElement('div');
+        note.className = 'comet-section-note';
+        note.dataset.comet = '1';
+        note.textContent = 'The rarest beasts in the universe live on a comet that comes into view once both solar systems reach prestige 15. They hatch from eggs and battle in the Mutant Worlds.';
+        grid.appendChild(note);
+      }
+      const sub = document.createElement('div');
+      sub.dataset.comet = '1';
+      sub.className = 'beastopedia-grid';
+      COMET.SPECIES.forEach((s, i) => {
+        const tier = best(s.id), id = COMET.idOf(s.id, Math.max(1, tier)), t = BEAST_TEMPLATES[id], r = RARITIES[s.rarity];
+        const card = document.createElement('div');
+        card.className = `beastopedia-card comet-card ${tier ? '' : 'locked'}`;
+        card.setAttribute('data-id', id);
+        card.innerHTML = `
+          <div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-${s.rarity.toLowerCase()}" style="color:${r.color}; font-weight:bold; font-size:8px; text-transform:uppercase;">${rarityHtml(s.rarity)}</span></div>
+          <div class="beastopedia-card-icon ${tier ? '' : 'comet-shadow'}">${getBeastSVG(id, false, false)}</div>
+          <div class="beastopedia-card-name" style="font-size:9px; margin-top:4px; text-align:center;">${tier ? s.name : 'Unknown'}</div>
+          ${tier ? `<div class="comet-card-tier">T${tier} · ${COMET.STAGE_WORD[t.comet.stage]}</div>` : ''}`;
+        sub.appendChild(card);
+      });
+      grid.appendChild(sub);
+    }
+  }
 
   grid.querySelectorAll('.beastopedia-card:not(.locked)').forEach(card => {
     card.addEventListener('click', () => {
@@ -3593,6 +3815,9 @@ function updateDetailsModalContent() {
   const isEvoUnlocked = state.unlockedEvolved.includes(detailsBeastId);
 
   const evoBtn = document.getElementById('details-toggle-evolved');
+  // (1.5: comet beasts grow by stages rather than evolving, so they have no evolved form.)
+  evoBtn.style.display = template.comet || template.limited ? 'none' : '';
+  document.getElementById('details-toggle-base').style.display = template.comet || template.limited ? 'none' : '';
   if (isEvoUnlocked) {
     evoBtn.innerText = 'Evolved Form';
     evoBtn.disabled = false;
@@ -3609,10 +3834,12 @@ function updateDetailsModalContent() {
   }
 
   const rarityLabel = document.getElementById('details-beast-rarity');
-  rarityLabel.innerText = `${RARITIES[template.rarity].name} ${detailsStateEvolved ? '(Evolved)' : ''}`;
+  rarityLabel.innerHTML = `${rarityHtml(template.rarity)} ${detailsStateEvolved ? '(Evolved)' : ''}`;
   rarityLabel.className = `unlock-beast-rarity ${template.rarity.toLowerCase()}`;
 
   document.getElementById('details-beast-name').innerText = `${template.name}${detailsStateEvolved ? ' (Evolved)' : ''}`;
+  // (Sam, 24 Nov: the rarity shines, not the name.)
+  document.getElementById('details-beast-name').classList.remove('cosmic-name', 'limited-name');
   
   const elementLabel = ELEMENTS[template.element].name;
   const mult = detailsStateEvolved ? 3.0 : 1.0;
@@ -3633,6 +3860,14 @@ function updateDetailsModalContent() {
     const got = (state.unlockedEvolved || []).includes(detailsBeastId);
     evoLine.style.display = isBossBeast(detailsBeastId) || isRelic(detailsBeastId) ? 'none' : '';
     evoLine.textContent = `${got ? 'Evolved form found. ' : ''}Incubations towards the next evolved one: ${n} of ${EVOLVE_NEEDED}.`;
+    // 1.5: a comet beast's stage, and what it does in World 7.
+    if (template.comet && typeof COMET !== 'undefined') {
+      const sp = COMET.BY_ID[template.comet.species], pa = COMET.PASSIVES[sp.passive], spc = COMET.SPECIALS[sp.special];
+      evoLine.innerHTML = `<b>${COMET.STAGE_WORD[template.comet.stage]}</b>, stage ${template.comet.stage} of 4. Comet beasts battle in World 7 and beyond. `
+        + `<b>${pa[0]}</b> (always): ${pa[1]} `
+        + `<b>${spc[0]}</b> (${template.tier >= 10 ? 'its special' : 'its special from Tier 10'}): ${spc[1]} `
+        + (template.tier < 20 ? `Two comet beasts of one tier fuse in a cocoon into the next tier.` : '');
+    }
   }
   document.getElementById('details-beast-svg-container').innerHTML = getBeastSVG(detailsBeastId, detailsStateEvolved, false);
 
@@ -3787,7 +4022,7 @@ function renderSanctuary() {
   const rarityFilter = document.getElementById('filter-rarity')?.value || 'all';
   const tierFilter = document.getElementById('filter-tier')?.value || 'all';
 
-  const rareTemplates = Object.values(BEAST_TEMPLATES).filter(b => b.rarity !== 'COMMON' && !b.relic);
+  const rareTemplates = Object.values(BEAST_TEMPLATES).filter(b => b.rarity !== 'COMMON' && !b.relic && !b.comet);
   
   // Sort by Tier ascending (Tier 1 at top down to Tier 20)
   rareTemplates.sort((a, b) => a.tier - b.tier);
@@ -3813,7 +4048,7 @@ function renderSanctuary() {
         ${getBeastSVG(template.id, false, false)}
       </div>
       <div class="trophy-name">${template.name}</div>
-      <div class="trophy-rarity ${template.rarity.toLowerCase()}">${RARITIES[template.rarity].name}</div>
+      <div class="trophy-rarity ${template.rarity.toLowerCase()}">${rarityHtml(template.rarity)}</div>
       <div class="trophy-stats">Collected: ${merges}</div>
     `;
 
@@ -3842,7 +4077,7 @@ function showTrophyPerkModal(beastId) {
 
   const merges = state.trophyCounts[beastId] || 0;
   const perkDesc = getBeastPerkDescription(template);
-  const systemName = template.system === 'low_gravity' ? 'Low Gravity Solar System' : 'Original Prime Solar System';
+  const systemName = template.system === 'comet' ? 'The Interstellar Comet' : template.system === 'low_gravity' ? 'Low Gravity Solar System' : 'Original Prime Solar System';
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay active';
@@ -3868,7 +4103,7 @@ function showTrophyPerkModal(beastId) {
 
       <div style="display:flex; justify-content:center; gap: 8px; margin-bottom: 20px; font-family:'Outfit', sans-serif;">
         <span style="background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);">Tier ${template.tier}</span>
-        <span class="trophy-rarity ${template.rarity.toLowerCase()}" style="padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">${RARITIES[template.rarity].name}</span>
+        <span class="trophy-rarity ${template.rarity.toLowerCase()}" style="padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">${rarityHtml(template.rarity)}</span>
         <span style="background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); color: ${elementColor};">${template.element}</span>
       </div>
 
@@ -3983,20 +4218,18 @@ function setupSettingsListeners() {
     });
   }
 
-  const warpBtn = document.getElementById('warp-btn');
-  if (warpBtn) {
-    warpBtn.addEventListener('click', () => {
-      const targetSys = state.currentSolarSystem === 'prime' ? 'low_gravity' : 'prime';
-      warpToSolarSystem(targetSys);
-    });
+  // 1.5: two warp buttons, each to the world it names (data-to).
+  for (const wb of [document.getElementById('warp-btn'), document.getElementById('warp-btn-2')]) {
+    if (wb) wb.addEventListener('click', () => warpToSolarSystem(wb.dataset.to || (state.currentSolarSystem === 'prime' ? 'low_gravity' : 'prime')));
   }
 
   document.getElementById('reset-btn').addEventListener('click', () => {
-    if (confirm("WARNING: This will delete ALL progress, save data, unlocked beasts, and upgrades permanently. Are you sure you want to reset?")) {
+    // (1.5: the game's own popup; the browser's confirm box does not show in the Windows app.)
+    askConfirm('Reset everything?', 'This deletes all progress, save data, unlocked beasts and upgrades for good. It cannot be undone.', 'Reset', () => {
       state.isResetting = true;
       localStorage.removeItem('mystic_beasts_evolution_save');
       location.reload();
-    }
+    }, '#ff6a6a');
   });
 }
 
@@ -4022,30 +4255,32 @@ function warpToSolarSystem(systemId) {
     unlockedIncubators: state.unlockedIncubators,
     upgrades: state.upgrades,
     incubators: state.incubators,
-    beastsOnField: savedBeasts
+    beastsOnField: savedBeasts,
+    // (1.5: crates waiting in the queue stay in their own world: Prime's must not come out as comet eggs.)
+    crateQueue
   };
 
-  if (state.currentSolarSystem === 'prime') {
-    state.primeSystem = activeBranch;
-  } else {
-    state.lowGravitySystem = activeBranch;
-  }
+  state[SYSTEM_BRANCH[state.currentSolarSystem] || 'primeSystem'] = activeBranch;
 
   // 2. Set current system
   state.currentSolarSystem = systemId;
+  if (systemId === 'comet' && !state.cometSystem) state.cometSystem = freshBranch('comet');
 
   // 3. Clear active field DOM and arrays
   state.beastsOnField.forEach(b => b.dom.remove());
   state.beastsOnField = [];
   document.querySelectorAll('.essence-crystal').forEach(c => c.remove());
   document.querySelectorAll('.crate-container').forEach(c => c.remove());
+  document.querySelectorAll('.comet-cocoon').forEach(c => c.remove());
   if (particles) particles.clear();
 
   // 4. Load new system branch
-  const newSys = systemId === 'prime' ? state.primeSystem : state.lowGravitySystem;
+  const newSys = branchOf(systemId);
   
   state.essence = newSys.essence;
   state.prestigeLevel = newSys.prestigeLevel;
+  crateQueue = newSys.crateQueue || 0;
+  if (typeof updateCrateQueueBadge === 'function') updateCrateQueueBadge();
   state.shopPurchases = newSys.shopPurchases;
   state.unlockedIncubators = newSys.unlockedIncubators;
   state.upgrades = newSys.upgrades;
@@ -4060,8 +4295,9 @@ function warpToSolarSystem(systemId) {
     });
   } else {
     // Default fallback spawn
-    spawnBeastOnField(systemId === 'prime' ? 'sparky' : 'floaty_ray', 30, 50, false, false);
+    spawnBeastOnField(startBeastFor(systemId), 30, 50, false, false);
   }
+  if (systemId === 'comet') { drawCocoons(); setTimeout(cometIntro, 600); }
 
   // 6. Update UI
   updateIncubatorsVisibility();
@@ -4086,14 +4322,37 @@ function warpToSolarSystem(systemId) {
 
   spawnToastNotification(
     "WARP SUCCESS",
-    `Warped to <b>${systemId === 'prime' ? 'Solar System Prime' : 'Low Gravity Solar System'}</b>!`,
-    getBeastSVG(systemId === 'prime' ? 'sparky' : 'floaty_ray', false, false)
+    `Warped to <b>${SYSTEM_NAME[systemId]}</b>!`,
+    getBeastSVG(startBeastFor(systemId), false, false)
   );
 }
 
 let selectedSanctuaryIds = [];
 
 function openPrestigeSelectorModal() {
+  // The comet's prestige keeps its beasts (they take too long to grow to lose): essence and upgrades start again.
+  if (state.currentSolarSystem === 'comet') {
+    if (atPrestigeMax() || state.essence < getPrestigeTarget()) return;
+    askConfirm(`Comet prestige ${state.prestigeLevel + 1}`, `Ascend the comet? Its essence and upgrades start again, and your comet beasts and cocoons stay.`, 'Ascend', cometAscend);
+    return;
+  }
+  openPrestigeSelectorModal2();
+}
+/** The comet's prestige, once agreed. */
+function cometAscend() {
+  {
+    if (atPrestigeMax() || state.essence < getPrestigeTarget()) return;
+    state.prestigeLevel++;
+    state.essence = 0;
+    for (const k of Object.keys(state.upgrades)) state.upgrades[k] = 0;
+    if (audio) audio.playPrestige();
+    applyBiomeBg(state.prestigeLevel);
+    saveGame(); renderShop(); updateHUD();
+    spawnToastNotification('☄ The comet ascends', `Comet prestige ${state.prestigeLevel}: ${COMET.BIOMES[Math.min(state.prestigeLevel, COMET.BIOMES.length - 1)]}. Production x${state.prestigeLevel + 1}, eggs hatch higher.`, getBeastSVG('nebula_jelly_5'));
+    return;
+  }
+}
+function openPrestigeSelectorModal2() {
   const grid = document.getElementById('prestige-selector-grid');
   grid.innerHTML = '';
   selectedSanctuaryIds = [];
@@ -4211,6 +4470,7 @@ function executePrestigeAscent() {
   // it was before, which came back on leaving the hub: the whole field went on into the next
   // prestige (Sam, 17 Nov).
   if (state.inBeastHub) toggleBeastHub(false);
+  if (atPrestigeMax()) return;
   const target = getPrestigeTarget();
   if (state.essence < target) return;
 
@@ -4296,6 +4556,15 @@ function executePrestigeAscent() {
 function isBossBeast(type) {
   return ['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'].includes(type);
 }
+
+/**
+ * 1.5: an essence boost won from an achievement (x1.5 for a while; Sam, 23 Nov: rewards that matter
+ * late in the game). It stacks with the bought x2.
+ */
+function rewardBoostMult() {
+  return (state.rewardBoostUntil || 0) > Date.now() ? (state.rewardBoostMult || 1.5) : 1;
+}
+window.rewardBoostMult = rewardBoostMult;
 
 function isBoostActive() {
   return Date.now() < state.doubleEssenceEndTime;
@@ -4389,6 +4658,7 @@ function updateIapPrices() {
  * guideline 3.1.1 asks for the odds of each kind of item before a loot box is bought.
  */
 function premiumCrateOdds(system) {
+  if (system === 'comet' && typeof COMET !== 'undefined') return COMET.premiumOdds();
   const targetRarities = ['RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
   const pool = Object.values(BEAST_TEMPLATES).filter((b) => (b.system || 'prime') === system && b.tier >= 5 && b.tier <= 20 && targetRarities.includes(b.rarity) && !isBossBeast(b.id));
   return targetRarities
@@ -4400,7 +4670,7 @@ function fillPremiumOdds() {
   if (!el) return;
   const sys = state.currentSolarSystem || 'prime';
   const odds = premiumCrateOdds(sys);
-  el.innerHTML = `<b>Drop rates per crate (${sys === 'prime' ? 'Prime' : 'Low Gravity'} system):</b> ` +
+  el.innerHTML = (sys === 'comet' ? `<b>On the comet a premium crate is a premium egg. Drop rates per egg:</b> ` : `<b>Drop rates per crate (${sys === 'prime' ? 'Prime' : 'Low Gravity'} system):</b> `) +
     odds.map((o) => `${o.rarity} ${o.pct < 10 ? o.pct.toFixed(1) : Math.round(o.pct)}%`).join(' · ');
 }
 
@@ -4571,7 +4841,9 @@ function spawnPremiumCrateOnField(maxTier = 20) {
   container.setAttribute('data-land-y', landY);
   container.setAttribute('data-max-tier', maxTier);
 
-  container.innerHTML = ART.crate(true).replace('class="crate-sprite crate-v2"', 'class="crate-sprite crate-v2" style="transform: scale(1.25);"'); // 1.3
+  // (1.5: on the comet it falls as a golden premium egg.)
+  if ((state.currentSolarSystem || 'prime') === 'comet' && !state.inBeastHub && typeof COMET !== 'undefined') { container.classList.add('comet-egg', 'premium-egg'); container.innerHTML = COMET.eggSvg(true); }
+  else container.innerHTML = ART.crate(true).replace('class="crate-sprite crate-v2"', 'class="crate-sprite crate-v2" style="transform: scale(1.25);"'); // 1.3
 
   playground.appendChild(container);
 
@@ -4618,6 +4890,19 @@ function openPremiumCrate(crateId, x, y) {
   dom.remove();
 
   const currentSys = state.currentSolarSystem || 'prime';
+  // 1.5: on the comet a premium crate hatches as a premium egg (Ultra Rare or better).
+  if (currentSys === 'comet' && !state.inBeastHub && typeof COMET !== 'undefined') {
+    const id = COMET.hatch(true);
+    noteCometGrown(id);
+    const land = () => {
+      spawnBeastOnField(id, x, y, false, false);
+      checkDiscovery(id);
+      spawnToastNotification(`☄ Premium egg hatched!`, `A <b>${BEAST_TEMPLATES[id].name}</b> (Tier ${BEAST_TEMPLATES[id].tier}, ${RARITIES[BEAST_TEMPLATES[id].rarity].name}).`, getBeastSVG(id));
+      saveGame();
+    };
+    if (typeof FX !== 'undefined' && FX.premiumOpen) FX.premiumOpen(sx, sy, id).then(land, land); else land();
+    return;
+  }
   const targetRarities = ['RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
   const possibilities = Object.values(BEAST_TEMPLATES).filter(b => {
     const bSys = b.system || 'prime';
@@ -4686,18 +4971,22 @@ function setupSpawnerListeners() {
         return;
       }
 
-      if (state.essence >= getPrestigeTarget()) {
-        if (!confirm("WARNING: Biome progress is at 100%! Ascending will reset your meadow and you will lose any beasts currently on the field. Are you sure you want to spawn this Premium Crate now?")) {
-          return;
-        }
-      }
-
       // Battle crates first (they may hold a lower top tier), then bought ones.
-      const won = battleCrates();
-      if (won.length) spawnPremiumCrateOnField(won.shift());
-      else { state.premiumCratesCount--; spawnPremiumCrateOnField(); }
-      updatePremiumCratesDisplay();
-      saveGame();
+      const drop = () => {
+        const won = battleCrates();
+        if (won.length) spawnPremiumCrateOnField(won.shift());
+        else { state.premiumCratesCount--; spawnPremiumCrateOnField(); }
+        updatePremiumCratesDisplay();
+        saveGame();
+      };
+      // Ready to ascend: a word first, in the game's own popup (1.5, Sam 24 Nov: the browser's confirm
+      // box never showed in the Windows app, so no egg fell). Not on the comet, whose prestige keeps
+      // the meadow, nor at the top prestige, where there is no ascending.
+      if (state.essence >= getPrestigeTarget() && (state.currentSolarSystem || 'prime') !== 'comet' && !(typeof atPrestigeMax === 'function' && atPrestigeMax())) {
+        askConfirm('Ready to ascend', 'Your biome is at 100%. Ascending resets your meadow, so a beast from this crate would be lost when you ascend. Open it anyway?', 'Open it', drop);
+        return;
+      }
+      drop();
     });
   }
 
@@ -4824,6 +5113,51 @@ function harvestBeastDirectClick(beast, pageX, pageY) {
 }
 
 // Show a beautiful modal popup summarizing offline earnings
+/**
+ * 1.5: a question in the game's own style (the browser's confirm box looks out of place and stops
+ * everything while it is open). onYes runs if the player agrees.
+ */
+/** 1.5: the first time on the comet, how it works (once). */
+function cometIntro() {
+  if (state.cometIntroSeen || state.currentSolarSystem !== 'comet') return;
+  state.cometIntroSeen = true;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active ask-confirm';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `<div class="modal-content comet-intro" style="max-width: 390px; border-color: #c8a8ff;">
+      <div class="modal-title" style="color: #c8a8ff; font-size: 24px;">☄ The Interstellar Comet</div>
+      <div class="comet-intro-egg">${COMET.eggSvg()}</div>
+      <div class="modal-desc" style="font-size: 14px; line-height: 1.45; text-align: left; margin-bottom: 16px;">
+        <p>The rarest beasts in the universe live here. They hatch from comet eggs, which fall slowly; you can also buy them in the shop, with essence or with comet shards.</p>
+        <p>Two comet beasts of the same tier fuse into one a tier higher, as the rarer of the two. They wrap themselves in a glowing cocoon for a while first, and only a few cocoons can grow at once.</p>
+        <p>The comet has its own essence and prestige. Its prestige keeps your comet beasts and makes eggs hatch higher.</p>
+        <p>At prestige 15, Prime and Low Gravity each have a Shard Incubator that turns spare beasts into shards. Comet beasts battle in Worlds 7 and 8.</p>
+      </div>
+      <button class="modal-btn" style="width: 100%;">Let's go</button>
+    </div>`;
+  overlay.querySelector('button').addEventListener('click', () => { if (audio) audio.playClick(); overlay.remove(); });
+  document.body.appendChild(overlay);
+  saveGame();
+}
+
+function askConfirm(title, text, yesLabel, onYes, colour = '#c8a8ff') {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active ask-confirm';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `<div class="modal-content" style="max-width: 380px; border-color: ${colour};">
+      <div class="modal-title" style="color: ${colour}; font-size: 24px;"></div>
+      <div class="modal-desc" style="font-size: 15px; margin-bottom: 18px;"></div>
+      <div style="display: flex; gap: 10px;"><button class="modal-btn ask-no" style="flex: 1; background: linear-gradient(180deg, #4a5068, #2a2e40); color: #fff;">Not now</button><button class="modal-btn ask-yes" style="flex: 1;"></button></div>
+    </div>`;
+  overlay.querySelector('.modal-title').textContent = title;
+  overlay.querySelector('.modal-desc').textContent = text;
+  overlay.querySelector('.ask-yes').textContent = yesLabel;
+  const close = () => overlay.remove();
+  overlay.querySelector('.ask-no').addEventListener('click', () => { if (audio) audio.playClick(); close(); });
+  overlay.querySelector('.ask-yes').addEventListener('click', () => { close(); onYes(); });
+  document.body.appendChild(overlay);
+}
+
 function showOfflineEarningsPopup(earned, offlineSec) {
   const hours = Math.floor(offlineSec / 3600);
   const minutes = Math.floor((offlineSec % 3600) / 60);
@@ -4863,6 +5197,176 @@ function showOfflineEarningsPopup(earned, offlineSec) {
 }
 
 // Safely removes a beast from the active field array and DOM
+// ---------------------------------------------------------------- 1.5: the comet's eggs and cocoons
+/** An egg cracks open: a comet beast by the egg's odds (comet.js). */
+/** 1.5: a comet beast won elsewhere (World 7's chest): on the comet's meadow now, or waiting there. */
+function deliverCometBeast(id) {
+  if (state.currentSolarSystem === 'comet' && !state.inBeastHub) {
+    const p = typeof WORLD !== 'undefined' && WORLD.viewPct ? WORLD.viewPct(45, 50) : { x: 45, y: 50 };
+    spawnBeastOnField(id, p.x, p.y, false, false);
+  } else {
+    if (!state.cometSystem) state.cometSystem = freshBranch('comet');
+    state.cometSystem.beastsOnField.push({ type: id, x: 30 + Math.random() * 40, y: 35 + Math.random() * 30, evolved: false, infected: false, deathTimer: 45.0 });
+  }
+  checkDiscovery(id);
+  saveGame();
+}
+/** 1.5: the highest tier you have grown a comet beast to yourself (hatched or fused, not won). */
+function noteCometGrown(id) {
+  const cs = state.cometStats || (state.cometStats = {});
+  cs.bestGrown = Math.max(cs.bestGrown || 0, (BEAST_TEMPLATES[id] || { tier: 0 }).tier);
+}
+/** 1.5: a rarity's name for a label; Cosmic and Limited shine (Sam, 24 Nov: the rarity text, not the beast's name). */
+function rarityHtml(rarity) {
+  const n = (RARITIES[rarity] || {}).name || rarity;
+  return rarity === 'COSMIC' ? `<span class="rarity-shine cosmic-shine">${n}</span>` : rarity === 'LIMITED' ? `<span class="rarity-shine limited-shine">${n}</span>` : n;
+}
+function hatchCometEgg(x, y) {
+  const id = COMET.hatch();
+  const t = BEAST_TEMPLATES[id];
+  noteCometGrown(id);
+  spawnBeastOnField(id, x, y, false, false);
+  const abs = getAbsolutePosition(x, y);
+  if (particles) particles.spawnMerge(abs.x, abs.y, (RARITIES[t.rarity] || {}).color || '#c8a8ff');
+  if (t.rarity === 'COSMIC' && typeof FX !== 'undefined' && FX.cosmicBurst) FX.cosmicBurst(abs.x, abs.y);
+  if (audio) audio.playUnlock(t.rarity === 'COSMIC' ? 'DARK_MATTER' : t.rarity);
+  checkDiscovery(id);
+  if (['LEGENDARY', 'GODLY', 'DARK_MATTER', 'COSMIC'].includes(t.rarity)) spawnToastNotification(`☄ ${RARITIES[t.rarity].name} hatchling!`, `A <b>${t.name}</b> (Tier ${t.tier}) hatched from a comet egg.`, getBeastSVG(id));
+  saveGame();
+}
+/** Two comet beasts of one tier go into a cocoon and come out a tier up, as the rarer of the two. */
+function startCometFusion(a, b) {
+  const f = COMET.fusionOf(a.type, b.type);
+  if (!f.to) { showWarning('They will not fuse', f.why); if (audio) audio.playClick(); return; }
+  const cocoons = state.cometCocoons || (state.cometCocoons = []);
+  if (cocoons.length >= COMET.cocoonSlots()) { showWarning('Every cocoon is growing', `Only ${COMET.cocoonSlots()} cocoons can grow at once (more with the comet's prestige). Wait for one to hatch.`); return; }
+  const tier = BEAST_TEMPLATES[f.to].tier;
+  const c = { id: 'cocoon-' + Math.random().toString(36).slice(2, 9), to: f.to, x: b.x, y: b.y, start: Date.now(), until: Date.now() + COMET.fusionTime(tier) * 1000 };
+  removeBeastFromField(a.id); removeBeastFromField(b.id);
+  cocoons.push(c);
+  // (Counted for the comet's achievements; a Cosmic made from two Dark Matter ones too.)
+  const cs = state.cometStats || (state.cometStats = {});
+  cs.fusions = (cs.fusions || 0) + 1;
+  if (BEAST_TEMPLATES[f.to].rarity === 'COSMIC' && BEAST_TEMPLATES[a.type].rarity !== 'COSMIC') cs.cosmicFused = (cs.cosmicFused || 0) + 1;
+  drawCocoons();
+  const abs = getAbsolutePosition(c.x, c.y);
+  if (particles) particles.spawnMerge(abs.x, abs.y, '#c8a8ff');
+  if (audio) audio.playMerge ? audio.playMerge() : audio.playClick();
+  mergeStats().merges++;
+  saveGame();
+}
+// ------------------------------------------------------------------ 1.5: the Shard Incubators
+// At prestige 15, Prime and Low Gravity each have one: a beast dropped in is broken down into comet
+// shards over a minute or more (the bigger, the longer, and the more shards). Shards buy comet eggs.
+const shardJobs = () => (state.shardIncubator && typeof state.shardIncubator === 'object' ? state.shardIncubator : (state.shardIncubator = {}));
+const shardIncubatorHere = () => !state.inBeastHub && state.currentSolarSystem !== 'comet' && (state.prestigeLevel || 0) >= PRESTIGE_MAX;
+const shardable = (id) => { const t = BEAST_TEMPLATES[id]; return !!t && !t.comet && !isBossBeast(id) && !isRelic(id); };
+/** Puts a beast in this world's Shard Incubator; false (and why) if it cannot go in. */
+function startShardJob(beast, auto = false) {
+  const t = BEAST_TEMPLATES[beast.type];
+  if (!t) return false;
+  if (!shardable(beast.type)) { showWarning('Not this one', `${t.name} cannot be broken down into shards.`); return false; }
+  if (beast.infected) { showWarning('Infected', 'Cure it first: an infected beast gives no shards.'); return false; }
+  const jobs = shardJobs(), sys = state.currentSolarSystem;
+  if (jobs[sys]) { showWarning('Shard Incubator busy', 'It is still breaking down the last beast.'); return false; }
+  const shards = COMET.shardsFor(beast.type, beast.evolved);
+  if (!auto && !beast._agreed && (['LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(t.rarity) || beast.evolved)) {
+    askConfirm('Break it down?', `${t.name} (Tier ${t.tier}) will become ${shards} comet shards, and be gone for good.`, 'Break down', () => { beast._agreed = true; if (state.beastsOnField.includes(beast)) startShardJob(beast); });
+    return false;
+  }
+  jobs[sys] = { type: beast.type, evolved: !!beast.evolved, shards, auto, start: Date.now(), until: Date.now() + COMET.shardTime(beast.type) * 1000 };
+  removeBeastFromField(beast.id);
+  if (audio) audio.playClick();
+  drawShardIncubator();
+  saveGame();
+  return true;
+}
+/** The pedestal: shown in this world at prestige 15, the beast inside, its ring and time, and the shards you hold. */
+function drawShardIncubator() {
+  const ped = document.getElementById('shard-pedestal');
+  if (!ped) return;
+  const here = shardIncubatorHere();
+  ped.style.display = here ? 'flex' : 'none';
+  if (!here) return;
+  const cnt = document.getElementById('shard-count');
+  if (cnt) cnt.textContent = `☄ ${formatNumber(state.cometShards || 0)} shards`;
+  const job = shardJobs()[state.currentSolarSystem];
+  const slot = document.getElementById('shard-slot-render'), ov = document.getElementById('shard-progress-overlay');
+  if (!job) { if (slot.dataset.t) { slot.innerHTML = ''; slot.dataset.t = ''; } ov.style.display = 'none'; return; }
+  if (slot.dataset.t !== job.type) { slot.innerHTML = getBeastSVG(job.type, job.evolved, false); slot.dataset.t = job.type; }
+  const left = Math.max(0, (job.until - Date.now()) / 1000), k = 1 - left / Math.max(1, (job.until - job.start) / 1000);
+  ov.style.display = 'flex';
+  document.getElementById('shard-progress-ring').style.strokeDashoffset = String(263.89 * (1 - k));
+  document.getElementById('shard-countdown').textContent = left > 60 ? `${Math.floor(left / 60)}m ${Math.round(left % 60)}s` : `${Math.ceil(left)}s`;
+}
+/** The Shard Feeder upgrade: now and then, the lowest small beast goes in by itself. */
+function autoFeedShards() {
+  const lvl = (state.upgrades && state.upgrades.shardFeeder) || 0;
+  if (!lvl || !shardIncubatorHere() || draggedBeast || shardJobs()[state.currentSolarSystem]) return;
+  if (Date.now() - (state.shardFeedAt || 0) < (30 - 5 * lvl) * 60000) return;
+  const maxTier = 4 + 2 * lvl;
+  const pick = state.beastsOnField
+    .filter((b) => { const t = BEAST_TEMPLATES[b.type]; return t && shardable(b.type) && !b.infected && !b.evolved && ['COMMON', 'RARE', 'SUPER_RARE'].includes(t.rarity) && t.tier <= maxTier; })
+    .sort((a, b) => BEAST_TEMPLATES[a.type].tier - BEAST_TEMPLATES[b.type].tier)[0];
+  if (!pick) return;
+  state.shardFeedAt = Date.now();
+  startShardJob(pick, true);
+}
+/** Every second, in any world: finished jobs pay their shards (also those that finished while you were away). */
+function tickShardIncubators() {
+  const jobs = shardJobs();
+  let paid = 0, told = false;
+  for (const sys of Object.keys(jobs)) {
+    const j = jobs[sys];
+    if (j && j.until <= Date.now()) { paid += j.shards; told = told || !j.auto; state.cometShards = (state.cometShards || 0) + j.shards; jobs[sys] = null; const cs = state.cometStats || (state.cometStats = {}); cs.shardsMade = (cs.shardsMade || 0) + j.shards; }
+  }
+  autoFeedShards();
+  drawShardIncubator();
+  if (!paid) return;
+  if (told) spawnToastNotification('☄ Comet shards', `+${formatNumber(paid)} comet shards (you have ${formatNumber(state.cometShards)}). They buy comet eggs in the comet's shop.`, COMET.eggSvg());
+  saveGame();
+}
+
+/** The cocoons on the comet's meadow, each with a ring filling as it grows and the time left. */
+function drawCocoons() {
+  const playground = document.getElementById('beast-playground');
+  if (!playground || !COMET.inComet()) return;
+  for (const c of state.cometCocoons || []) {
+    let el = document.getElementById(c.id);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'comet-cocoon';
+      el.id = c.id;
+      el.style.left = `${c.x}%`; el.style.top = `${c.y}%`;
+      el.innerHTML = COMET.cocoonSvg(BEAST_TEMPLATES[c.to].rarity) + '<div class="cocoon-ring"></div><span class="cocoon-time"></span>';
+      playground.appendChild(el);
+    }
+    const left = Math.max(0, (c.until - Date.now()) / 1000), k = 1 - left / Math.max(1, (c.until - c.start) / 1000);
+    el.querySelector('.cocoon-ring').style.setProperty('--k', `${Math.round(k * 360)}deg`);
+    el.querySelector('.cocoon-time').textContent = left > 60 ? `${Math.floor(left / 60)}m ${Math.round(left % 60)}s` : `${Math.ceil(left)}s`;
+  }
+}
+/** Every second on the comet: cocoons that are ready hatch (also those that grew while you were away). */
+function tickCocoons() {
+  if (!COMET.inComet() || !(state.cometCocoons || []).length) return;
+  const now = Date.now();
+  const ready = state.cometCocoons.filter((c) => c.until <= now);
+  for (const c of ready) {
+    const el = document.getElementById(c.id); if (el) el.remove();
+    state.cometCocoons = state.cometCocoons.filter((x) => x !== c);
+    spawnBeastOnField(c.to, c.x, c.y, false, false);
+    noteCometGrown(c.to);
+    const t = BEAST_TEMPLATES[c.to], abs = getAbsolutePosition(c.x, c.y);
+    if (particles) particles.spawnMerge(abs.x, abs.y, (RARITIES[t.rarity] || {}).color || '#c8a8ff');
+    if (t.rarity === 'COSMIC' && typeof FX !== 'undefined' && FX.cosmicBurst) FX.cosmicBurst(abs.x, abs.y, 1.3);
+    if (audio) audio.playUnlock(t.rarity === 'COSMIC' ? 'DARK_MATTER' : t.rarity);
+    checkDiscovery(c.to);
+    spawnToastNotification('☄ A cocoon hatched', `<b>${t.name}</b> grew to Tier ${t.tier}${t.comet.stage > BEAST_TEMPLATES[COMET.idOf(t.comet.species, Math.max(1, t.tier - 1))].comet.stage ? `, now ${COMET.STAGE_WORD[t.comet.stage].toLowerCase()}` : ''}.`, getBeastSVG(c.to));
+  }
+  drawCocoons();
+  if (ready.length) saveGame();
+}
+
 function removeBeastFromField(beastId) {
   const idx = state.beastsOnField.findIndex(b => b.id === beastId);
   if (idx !== -1) {
@@ -4930,6 +5434,8 @@ function getBeastPerkDescription(template) {
 function trashBeast(beast) {
   const template = BEAST_TEMPLATES[beast.type];
   if (!template) return;
+  // (1.5: a limited beast can never be won again, so it cannot go in the trash.)
+  if (template.limited) { showWarning('A limited beast', `${template.name} can never be won again, so it cannot go in the trash.`); return; }
 
   state.lastTrashedBeast = {
     type: beast.type,
@@ -4937,6 +5443,8 @@ function trashBeast(beast) {
     infected: beast.infected,
     deathTimer: beast.deathTimer
   };
+  // (Towards a limited beast's challenge; taken back off if it is brought out of the bin.)
+  if (typeof LIMITED !== 'undefined' && template.tier >= 15) state.lastTrashedBeast.lim = LIMITED.note('trash15');
 
   if (audio) audio.playClick();
 
@@ -4981,6 +5489,7 @@ function retrieveBeastFromTrash(e) {
 
   const restored = state.lastTrashedBeast;
   state.lastTrashedBeast = null;
+  if (restored && restored.lim && typeof LIMITED !== 'undefined') LIMITED.unnote('trash15');
   updateTrashBinUI();
 
   // Spawn the beast back on field. We spawn it near the bottom-center of the playground
@@ -5201,7 +5710,7 @@ function toggleBeastHub(enter) {
         spawnBeastOnField(b.type, b.x, b.y, b.evolved || false, b.infected || false);
       });
     } else {
-      spawnBeastOnField(state.currentSolarSystem === 'prime' ? 'sparky' : 'floaty_ray', 50, 50, false, false);
+      spawnBeastOnField(startBeastFor(state.currentSolarSystem), 50, 50, false, false);
     }
     
     // Change background style
@@ -5236,7 +5745,7 @@ function toggleBeastHub(enter) {
     state.beastsOnField = [];
     
     // Reload active solar system branch
-    const activeSys = state.currentSolarSystem === 'prime' ? state.primeSystem : state.lowGravitySystem;
+    const activeSys = branchOf(state.currentSolarSystem);
     state.essence = activeSys.essence;
     state.prestigeLevel = activeSys.prestigeLevel;
     
@@ -5248,7 +5757,7 @@ function toggleBeastHub(enter) {
         spawnBeastOnField(b.type, b.x, b.y, b.evolved, b.infected, b.deathTimer);
       });
     } else {
-      spawnBeastOnField(state.currentSolarSystem === 'prime' ? 'sparky' : 'floaty_ray', 30, 50, false, false);
+      spawnBeastOnField(startBeastFor(state.currentSolarSystem), 30, 50, false, false);
     }
     
     // Hide leave button
@@ -5330,7 +5839,19 @@ function showDailySpinModal() {
   const titleEl = document.getElementById('daily-spin-title');
   const subEl = document.getElementById('daily-spin-subtitle');
   if (titleEl) titleEl.innerText = battleSpin ? 'BATTLE FREE SPIN' : 'DAILY FREE SPIN';
-  if (subEl) subEl.innerText = battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left). Tier 5+, up to Dark Matter!` : 'Spin for a free beast of Tier 5+ (up to Dark Matter!)';
+  if (subEl) subEl.innerText = spinOnComet()
+    ? (battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left), for a comet beast: Super Rare to, very rarely, Cosmic!` : 'Spin for a free comet beast: Super Rare to, very rarely, Cosmic!')
+    : battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left). Tier 5+, up to Dark Matter!` : 'Spin for a free beast of Tier 5+ (up to Dark Matter!)';
+  const wheelModal = document.getElementById('daily-spin-modal');
+  if (wheelModal) wheelModal.classList.toggle('comet-wheel', spinOnComet());
+  // (The odds under the wheel: the comet's own there.)
+  const legend = document.getElementById('wheel-legend');
+  if (legend) {
+    if (!legend.dataset.prime) legend.dataset.prime = legend.innerHTML;
+    legend.innerHTML = spinOnComet()
+      ? cometSpinSegments.map((s) => `<div style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:${(RARITIES[s.rarity] || {}).color || '#ffffff'}; border-radius:3px; border:0.5px solid rgba(255,255,255,0.2);"></span> ${RARITIES[s.rarity] ? RARITIES[s.rarity].name : s.name} (${s.chance}%)</div>`).join('')
+      : legend.dataset.prime;
+  }
   
   const spinBtn = document.getElementById('wheel-spin-btn');
   spinBtn.classList.remove('disabled');
@@ -5356,10 +5877,24 @@ const dailySpinSegments = [
   { name: 'DARK MATTER', rarity: 'DARK_MATTER', startDeg: 629.64, endDeg: 630, color: '#ff00ff', text: '#fff', chance: 0.1 }
 ];
 
+// 1.5 (Sam, 24 Nov): on the comet the wheel is the comet's own, Super Rare to Cosmic, its odds
+// shifted up two rarities and a little meaner at the top (the comet is the slow road). The prize
+// is a comet beast of that rarity at a third of the tier (comet.js spinPrize).
+const cometSpinSegments = [
+  { name: 'SUPER RARE', rarity: 'SUPER_RARE', startDeg: 270, endDeg: 468, chance: 55 },
+  { name: 'ULTRA RARE', rarity: 'ULTRA_RARE', startDeg: 468, endDeg: 568.8, chance: 28 },
+  { name: 'LEGENDARY', rarity: 'LEGENDARY', startDeg: 568.8, endDeg: 612, chance: 12 },
+  { name: 'GODLY', rarity: 'GODLY', startDeg: 612, endDeg: 626.4, chance: 4 },
+  { name: 'DARK MATTER', rarity: 'DARK_MATTER', startDeg: 626.4, endDeg: 629.64, chance: 0.9 },
+  { name: 'COSMIC', rarity: 'COSMIC', startDeg: 629.64, endDeg: 630, chance: 0.1 },
+];
+const spinOnComet = () => (state.currentSolarSystem || 'prime') === 'comet' && !state.inBeastHub && typeof COMET !== 'undefined';
+const spinSegments = () => (spinOnComet() ? cometSpinSegments : dailySpinSegments);
+
 function drawDailySpinWheel() {
   const canvas = document.getElementById('wheel-canvas');
   if (!canvas) return;
-  FX.drawWheel(canvas, dailySpinSegments); // 1.3: a jewelled gold wheel (fx.js)
+  FX.drawWheel(canvas, spinSegments(), spinOnComet() ? 'comet' : null); // 1.3: a jewelled gold wheel (fx.js); 1.5 a starry one on the comet
 }
 
 const TIER_WEIGHTS = {
@@ -5382,6 +5917,11 @@ const TIER_WEIGHTS = {
 };
 
 function rollRarity() {
+  if (spinOnComet()) {
+    let r = Math.random() * 100;
+    for (const s of cometSpinSegments) { if (r < s.chance) return s.rarity; r -= s.chance; }
+    return 'SUPER_RARE';
+  }
   const roll = Math.random() * 100;
   if (roll < 50) return 'COMMON';
   if (roll < 75) return 'RARE';
@@ -5407,6 +5947,8 @@ function rollTier() {
 
 function getRandomBeastForDailySpin(targetTier, targetRarity) {
   const currentSys = state.currentSolarSystem || 'prime';
+  // 1.5: on the comet the prize is a comet beast at a third of the tier (merging them is the long road).
+  if (currentSys === 'comet' && typeof COMET !== 'undefined') return COMET.spinPrize(targetTier, targetRarity);
   const allBeasts = Object.values(BEAST_TEMPLATES).filter(b => {
     const bSys = b.system || 'prime';
     return bSys === currentSys && b.tier >= 5 && b.id !== 'shadow_fiend' && b.id !== 'shadow_fiend_evolved' && b.id !== 'void_parasite' && b.id !== 'void_parasite_evolved';
@@ -5449,7 +5991,7 @@ function triggerDailySpin() {
   dailySpinWinningTier = rollTier();
   dailySpinWinningBeast = getRandomBeastForDailySpin(dailySpinWinningTier, dailySpinWinningRarity);
   
-  const winningSegment = dailySpinSegments.find(s => s.rarity === dailySpinWinningRarity);
+  const winningSegment = spinSegments().find(s => s.rarity === dailySpinWinningRarity) || spinSegments()[0];
   const startDeg = winningSegment.startDeg;
   const endDeg = winningSegment.endDeg;
   const buffer = Math.min(1.5, (endDeg - startDeg) / 3);

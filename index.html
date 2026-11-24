@@ -129,6 +129,24 @@
         <div class="incubator-label" style="color: #ff3333">Incubator Gamma</div>
       </div>
 
+      <!-- 1.5: the Shard Incubator (Prime and Low Gravity at prestige 15): a beast broken down into comet shards. -->
+      <div id="shard-pedestal" class="incubator-pedestal-container" style="display:none" title="Drag a beast here to break it down into comet shards">
+        <div class="incubator-pedestal-base shard-base">
+          <div class="incubator-pedestal-glass shard-glass">
+            <div id="shard-slot-render"></div>
+            <div id="shard-progress-overlay" class="incubator-timer-overlay" style="display:none">
+              <svg viewBox="0 0 100 100" class="incubator-timer-ring">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none" />
+                <circle id="shard-progress-ring" cx="50" cy="50" r="42" stroke="#c8a8ff" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+              </svg>
+              <div id="shard-countdown" class="incubator-countdown-text"></div>
+            </div>
+          </div>
+        </div>
+        <div class="incubator-label shard-label">Shard Incubator</div>
+        <div id="shard-count" class="shard-count"></div>
+      </div>
+
       <!-- TOP HUD (Points, CPS, Multipliers) -->
       <div id="hud-overlay">
         <!-- Essence Count -->
@@ -485,6 +503,7 @@
               <button id="warp-btn" class="settings-btn" style="background: linear-gradient(135deg, #a800ff, #00d2ff); color: white; border: none; font-weight: bold; width: 100%;">
                 🌀 Warp to Low Gravity Solar System
               </button>
+              <button id="warp-btn-2" class="settings-btn" style="display: none; margin-top: 8px; background: linear-gradient(135deg, #1a0a3a, #6a3aff 60%, #ff7ad8); color: white; border: none; font-weight: bold; width: 100%;"></button>
               <div class="sanctuary-intro" style="text-align: center; margin-top: 8px; font-size: 11px;">
                 Warp between solar systems at any time. Each system maintains its own active field, upgrades, and progression!
               </div>
@@ -639,6 +658,8 @@
   <!-- GAME LOGIC AND SCRIPTS -->
   <script src="beasts.js"></script>
   <script src="relics.js"></script>
+  <script src="comet.js"></script>
+  <script src="limited.js"></script>
   <script src="art.js"></script>
   <script src="audio.js"></script>
   <script src="particles.js"></script>
@@ -648,10 +669,16 @@
   <script src="biomes.js"></script>
   <script src="fx.js"></script>
   <script src="battle_data.js"></script>
+  <script src="mutants.js"></script>
+  <script src="mutants8.js"></script>
   <script src="legends_art.js"></script>
   <script src="battle_levels.js"></script>
+  <script src="battle_hard.js"></script>
   <script src="battle_engine.js"></script>
   <script src="enemies.js"></script>
+  <script src="mutants_art.js"></script>
+  <script src="mutants8_art.js"></script>
+  <script src="comet_art.js"></script>
   <script src="battle_audio.js"></script>
   <script src="battle.js"></script>
 </body>

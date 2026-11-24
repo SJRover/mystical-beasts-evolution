@@ -14,20 +14,27 @@
 const FIELD = (() => {
   const DPR = () => Math.min(3, window.devicePixelRatio || 1);
   const SPEEDS = [0.25, 0.6, 1, 1, 1.4, 1.75];
+  // (1.5, Sam 24 Nov: more animations, by how each moves: walkers stretch, shake, look behind and
+  // stomp; hoppers flip and double-hop; fliers swoop, barrel-roll and hover; floaters drift round
+  // and wobble; swimmers leap.)
   const ACTIONS = {
-    walk: ['hop', 'wiggle', 'burst', 'spin', 'hop'],
-    hop: ['bigHop', 'burst', 'spin', 'bigHop'],
-    fly: ['swirl', 'loop', 'burst', 'dive'],
-    float: ['swirl', 'pulse', 'rise'],
-    swim: ['burst', 'swirl', 'roll'],
+    walk: ['hop', 'wiggle', 'burst', 'spin', 'hop', 'stretch', 'shake', 'look', 'stomp'],
+    hop: ['bigHop', 'burst', 'spin', 'bigHop', 'flipHop', 'doubleHop'],
+    fly: ['swirl', 'loop', 'burst', 'dive', 'swoop', 'barrel', 'hover'],
+    float: ['swirl', 'pulse', 'rise', 'drift', 'wobble'],
+    swim: ['burst', 'swirl', 'roll', 'leap', 'leap'],
   };
-  const DURATION = { hop: 0.55, bigHop: 0.75, wiggle: 0.7, burst: 0.6, spin: 0.85, swirl: 0.9, loop: 1.0, dive: 0.8, pulse: 0.8, rise: 1.2, roll: 0.9 };
+  const DURATION = { hop: 0.55, bigHop: 0.75, wiggle: 0.7, burst: 0.6, spin: 0.85, swirl: 0.9, loop: 1.0, dive: 0.8, pulse: 0.8, rise: 1.2, roll: 0.9, stretch: 1.0, shake: 0.6, look: 1.2, stomp: 0.75, flipHop: 0.8, doubleHop: 1.0, swoop: 1.1, barrel: 0.9, hover: 1.3, drift: 2.4, wobble: 1.0, leap: 0.95 };
+  /** Heavy walkers (stone, shells, golems, bulls; or Tier 14 and up) thud as they go. */
+  const HEAVY_BODIES = new Set(['stone', 'spiky_stone', 'shell', 'golem', 'bull']);
+  const heavyOf = (type) => { const t = BEAST_TEMPLATES[type]; return !!t && (HEAVY_BODIES.has((t.svgParams || {}).body) || t.tier >= 14); };
   const TRAIL_RARITIES = new Set(['SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER']);
   const motions = new Map();
   const motionOf = (type) => {
     if (!motions.has(type)) {
       const t = BEAST_TEMPLATES[type];
-      let m = ART.motion(type);
+      // (1.5: a comet beast moves the way its species does: walking, flying, floating or swimming.)
+      let m = t && t.limited ? 'walk' : t && t.comet && typeof COMET !== 'undefined' ? (COMET.BY_ID[t.comet.species] || {}).motion || 'walk' : ART.motion(type);
       if (t && t.system === 'low_gravity' && m === 'walk') m = 'float';
       motions.set(type, m);
     }
@@ -47,22 +54,45 @@ const FIELD = (() => {
     const auraImg = new Image();
     auraImg.alt = '';
     auraImg.draggable = false;
+    // (Hidden until its picture is in: an image with none yet is drawn as an empty box with a thin
+    // frame, the white border Sam saw for a moment round beasts out of cocoons and premium eggs.)
+    auraImg.style.visibility = 'hidden';
+    auraImg.addEventListener('load', () => { auraImg.style.visibility = ''; });
     auraWrap.appendChild(auraImg);
     const r = infected ? 'INFECTED' : t.rarity;
     if (['SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(r) || (evolved && !infected)) auraWrap.classList.add('spin');
     const sprite = document.createElement('div');
     sprite.className = 'beast-sprite';
-    const img = new Image();
-    img.className = 'beast-img';
-    img.alt = '';
-    img.draggable = false;
-    sprite.appendChild(img);
     container.prepend(sprite);
     container.prepend(shadow);
     container.prepend(auraWrap);
 
     // The picture has a quarter's room round the beast for its glow (the sprite is drawn 125% big).
     const px = size * 1.25 * DPR() * 1.35; // room to zoom in before it softens
+    // 1.5: a comet beast is drawn live from its artwork (comet_art.js), so it moves: legs, wings,
+    // tails, its colours shifting, a Cosmic one's stars circling (animate() below redraws it).
+    if (t && ((t.comet && typeof COMET_ART !== 'undefined') || (t.limited && typeof LIMITED !== 'undefined')) && !infected) {
+      const cv = document.createElement('canvas');
+      cv.className = 'beast-img comet-live';
+      // (Sam, 24 Nov: the comet was much laggier than the other worlds. Its canvases are now drawn at
+      // the size shown, no bigger than 300, eight times a second at most, off screen not at all,
+      // and no more than a few in one frame: see animate().)
+      const n = Math.min(300, Math.round(size * 1.25 * DPR()));
+      cv.width = cv.height = n;
+      sprite.appendChild(cv);
+      container._comet = { cv, g: cv.getContext('2d'), px: n, species: t.comet ? t.comet.species : null, stage: t.comet ? t.comet.stage : 0, limited: t.limited ? id : null, glow: t.limited ? 'rgba(220,232,245,0.7)' : (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.5)', next: Math.random() / 10, vis: true };
+      watchComet(cv, container._comet);
+      drawComet(container._comet, Math.random() * 10, 0);
+      const auraNow2 = ART.cached('aura', id, evolved, infected, px * 1.2);
+      if (auraNow2) auraImg.src = auraNow2;
+      else ART.picture('aura', id, evolved, infected, px * 1.2).then((url) => { if (url) auraImg.src = url; else auraWrap.remove(); }, () => auraWrap.remove());
+      return sprite;
+    }
+    const img = new Image();
+    img.className = 'beast-img';
+    img.alt = '';
+    img.draggable = false;
+    sprite.appendChild(img);
     const now = ART.cached('beast', id, evolved, infected, px, true, true);
     if (now) img.src = now;
     else {
@@ -74,6 +104,56 @@ const FIELD = (() => {
     if (auraNow) auraImg.src = auraNow;
     else ART.picture('aura', id, evolved, infected, px * 1.2).then((url) => { if (url) auraImg.src = url; else auraWrap.remove(); });
     return sprite;
+  }
+
+  /** Which comet canvases are on screen (a beast off screen is not redrawn). */
+  let cometSeen = null;
+  const cometWatched = new Set();
+  function watchComet(cv, cm) {
+    // (Canvases of beasts gone from the field are let go, so the watcher holds on to nothing.)
+    for (const old of cometWatched) if (!old.isConnected) { if (cometSeen) cometSeen.unobserve(old); cometWatched.delete(old); old._cm = null; }
+    cv._cm = cm;
+    cometWatched.add(cv);
+    // (A beast just hatched or fused moves at once, if the slots are not all taken.)
+    const now = performance.now();
+    if ([...cometWatched].filter((c) => c._cm && c._cm.liveUntil > now).length < COMET_LIVE + 1) { cm.liveUntil = now + COMET_TURN; cm.lastLive = now; }
+    if (typeof IntersectionObserver === 'undefined') return;
+    if (!cometSeen) cometSeen = new IntersectionObserver((list) => { for (const e of list) if (e.target._cm) e.target._cm.vis = e.isIntersecting; }, { rootMargin: '80px' });
+    cometSeen.observe(cv);
+  }
+  /** How many comet beasts have been redrawn in this frame (a few at most; the rest wait a frame). */
+  let cometFrame = -1, cometDrawn = 0, cometTurnAt = 0;
+  const COMET_PER_FRAME = 3;
+  // Live slots (Sam, 24 Nov, the comet still laggy): drawing every comet beast's artwork ten times a
+  // second kept the main thread 84% busy with twenty on the field (Prime: 22%). Now only a few move
+  // their artwork at once, a few seconds each in turn, those waiting longest first; the rest hold
+  // their last frame and still bob, sway and walk like every other beast.
+  const COMET_LIVE = 3, COMET_TURN = 3500;
+  function cometTurns(now) {
+    if (now < cometTurnAt) return;
+    cometTurnAt = now + 400;
+    const all = [];
+    for (const cv of cometWatched) if (cv.isConnected && cv._cm) all.push(cv._cm);
+    let live = all.filter((c) => c.liveUntil > now).length;
+    const waiting = all.filter((c) => !(c.liveUntil > now) && c.vis).sort((a, b) => (a.lastLive || 0) - (b.lastLive || 0));
+    for (const c of waiting) {
+      if (live >= COMET_LIVE) break;
+      c.liveUntil = now + COMET_TURN; c.lastLive = now; live++;
+    }
+  }
+
+  /** One frame of a comet beast on its canvas: a soft glow of its rarity, then the beast. */
+  function drawComet(c, t, walk) {
+    const g = c.g, px = c.px;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, px, px);
+    // (The glow stays inside the canvas: cut off at its bottom edge, it showed as a line.)
+    const gr = g.createRadialGradient(px / 2, px * 0.6, 0, px / 2, px * 0.6, px * 0.38);
+    gr.addColorStop(0, c.glow); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 0.45; g.fillStyle = gr; g.fillRect(0, 0, px, px); g.globalAlpha = 1;
+    g.translate(px / 2, px * 0.9);
+    if (c.limited) LIMITED.draw(g, c.limited, { t, walk }, px * 0.62);
+    else COMET_ART.draw(g, c.species, c.stage, { t, walk }, px * 0.6 * (COMET_ART.grow ? COMET_ART.grow(c.stage, 1) : 1));
   }
 
   /** This frame's speed multiplier for a beast, easing towards a new target every few seconds. */
@@ -117,6 +197,8 @@ const FIELD = (() => {
     if (kind === 'burst' || kind === 'dive') particles.spawnBurstRing(abs.x, abs.cy, col);
     if (kind === 'swirl' || kind === 'spin' || kind === 'loop' || kind === 'roll') particles.spawnSwirl(abs.x, abs.cy, abs.r, col);
     if (kind === 'pulse') particles.spawnBurstRing(abs.x, abs.cy, col);
+    if (kind === 'leap' && particles.spawnBubbles) particles.spawnBubbles(abs.x, abs.y, 6);
+    if (kind === 'swoop' || kind === 'barrel') particles.spawnSwirl(abs.x, abs.cy, abs.r, col);
     if (t && t.svgParams && t.svgParams.body === 'jellyfish' && kind === 'rise') particles.spawnBubbles(abs.x, abs.y, 5);
   }
 
@@ -147,13 +229,26 @@ const FIELD = (() => {
     const m = motionOf(b.type);
     b.lt = (b.lt === undefined ? Math.random() * 20 : b.lt) + dt;
     const t = b.lt, spd = b.spd || 1;
+    // (A comet beast's next frame, about eight a second, if it has a live slot, is on screen and this
+    // frame has room.)
+    const cm = b.dom._comet;
+    if (cm && (cm.next -= dt) <= 0 && cm.vis) {
+      const now = performance.now();
+      const frame = document.timeline ? document.timeline.currentTime : now;
+      if (frame !== cometFrame) { cometFrame = frame; cometDrawn = 0; cometTurns(now); }
+      if (cm.liveUntil > now && cometDrawn < COMET_PER_FRAME) { cometDrawn++; cm.next = 1 / 8; drawComet(cm, t, (b.step || t * 6) / (Math.PI * 2)); }
+    }
     if (b.actNext === undefined) b.actNext = 2 + Math.random() * 6;
 
-    let y = 0, rot = 0, sx = 1, sy = 1, shadow = 1;
+    let y = 0, rot = 0, sx = 1, sy = 1, shadow = 1, skew = 0;
     if (m === 'walk') {
-      b.step = (b.step || 0) + dt * 8.5 * Math.max(0.2, spd);
-      rot = Math.sin(b.step) * 4.5 * Math.min(1.4, spd);
-      y = -Math.abs(Math.sin(b.step)) * 2.6 * k * Math.min(1.4, spd);
+      const heavy = b._heavy === undefined ? (b._heavy = heavyOf(b.type)) : b._heavy;
+      b.step = (b.step || 0) + dt * (heavy ? 6.4 : 8.5) * Math.max(0.2, spd);
+      rot = Math.sin(b.step) * (heavy ? 3 : 4.5) * Math.min(1.4, spd);
+      y = -Math.abs(Math.sin(b.step)) * (heavy ? 1.8 : 2.6) * k * Math.min(1.4, spd);
+      // (1.5: leaning into where it is going; a heavy one squashes a little on each footfall.)
+      rot += Math.max(-6, Math.min(6, (b.vx || 0) * 8));
+      if (heavy && spd > 0.3) { const fall = Math.max(0, Math.cos(b.step * 2)); sy *= 1 - 0.05 * fall; sx *= 1 + 0.035 * fall; }
     } else if (m === 'hop') {
       b.step = (b.step || 0) + dt * 5.2 * Math.max(0.35, spd);
       const s = Math.abs(Math.sin(b.step));
@@ -165,15 +260,19 @@ const FIELD = (() => {
       y = (Math.sin(t * 2.6) * 5 - 7) * k;
       rot = Math.sin(t * 1.8) * 3 + Math.max(-8, Math.min(8, (b.vx || 0) * 10));
       shadow = 0.75 + Math.sin(t * 2.6) * 0.08;
+      // (1.5: the quick flutter of wing-beats.)
+      sy *= 1 + Math.sin(t * 14) * 0.03; sx *= 1 - Math.sin(t * 14) * 0.02;
     } else if (m === 'float') {
       y = (Math.sin(t * 1.5) * 7 - 5) * k;
       sy = 1 + Math.sin(t * 3) * 0.045;
       sx = 1 - Math.sin(t * 3) * 0.035;
       shadow = 0.7 + Math.sin(t * 1.5) * 0.1;
+      rot = Math.sin(t * 1.1) * 3; // (1.5: a gentle sway)
     } else if (m === 'swim') {
       y = (Math.sin(t * 2.1) * 5 - 4) * k;
       rot = Math.sin(t * 3.2) * 6;
       shadow = 0.8;
+      skew = Math.sin(t * 3.2 + 1.2) * 7; // (1.5: the body ripples as it swims)
     }
     // Breathing.
     sy *= 1 + Math.sin(t * 2.3) * 0.028;
@@ -209,6 +308,24 @@ const FIELD = (() => {
         case 'dive': y += Math.sin(Math.PI * p) * 12 * k; rot += Math.sin(Math.PI * p) * 14; break;
         case 'pulse': { const s = 1 + Math.sin(Math.PI * p * 2) * 0.12; sx *= s; sy *= s; } break;
         case 'rise': y -= Math.sin(Math.PI * p) * 22 * k; sy *= 1 + Math.sin(Math.PI * p * 4) * 0.05; break;
+        // 1.5
+        case 'stretch': { const s = Math.sin(Math.PI * p); sy *= 1 + 0.16 * s; sx *= 1 - 0.08 * s; y -= s * 4 * k; break; }
+        case 'shake': rot += Math.sin(p * Math.PI * 14) * 7 * (1 - p); sx *= 1 + Math.sin(p * Math.PI * 14) * 0.04 * (1 - p); break;
+        case 'look': sx *= Math.cos(Math.PI * 2 * e); y -= Math.sin(Math.PI * p) * 3 * k; break;
+        case 'stomp': {
+          if (p < 0.45) { const q = p / 0.45; y -= Math.sin(q * Math.PI / 2) * 14 * k; sy *= 1 + q * 0.08; sx *= 1 - q * 0.05; }
+          else if (p < 0.62) { sy *= 0.8; sx *= 1.16; }
+          if (p >= 0.45 && !a.landed) { a.landed = true; const f = feet(b); if (f && particles) particles.spawnDust(f.x, f.y, size * 1.3); }
+          break;
+        }
+        case 'flipHop': y -= Math.sin(Math.PI * p) * 30 * k; rot += e * 360; shadow *= 1 - Math.sin(Math.PI * p) * 0.5; break;
+        case 'doubleHop': { const s = Math.abs(Math.sin(Math.PI * 2 * p)); y -= s * 18 * k; if (s < 0.2) { sy *= 0.9; sx *= 1.08; } shadow *= 1 - s * 0.4; break; }
+        case 'swoop': y += Math.sin(Math.PI * p) * 18 * k; rot += Math.sin(Math.PI * 2 * p) * 16; break;
+        case 'barrel': sx *= Math.cos(Math.PI * 2 * e); y -= Math.sin(Math.PI * p) * 10 * k; break;
+        case 'hover': sy *= 1 + Math.sin(p * Math.PI * 22) * 0.05; y -= Math.sin(Math.PI * p) * 9 * k; break;
+        case 'drift': rot += e * 360; { const s = 1 + Math.sin(Math.PI * p * 2) * 0.05; sx *= s; sy *= s; } break;
+        case 'wobble': sx *= 1 + Math.sin(p * Math.PI * 6) * 0.09 * (1 - p); sy *= 1 - Math.sin(p * Math.PI * 6) * 0.09 * (1 - p); break;
+        case 'leap': y -= Math.sin(Math.PI * p) * 30 * k; rot += (0.5 - p) * 70; skew = 0; break;
       }
       if (p >= 1) b.act = null;
     }
@@ -225,7 +342,7 @@ const FIELD = (() => {
       b.trail = 0.09 + Math.random() * 0.08;
     }
 
-    sprite.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0) rotate(${rot.toFixed(1)}deg) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+    sprite.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0) rotate(${rot.toFixed(1)}deg)${skew ? ` skewX(${skew.toFixed(1)}deg)` : ''} scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
     const sh = b._shadow || (b._shadow = b.dom.querySelector('.beast-shadow'));
     if (sh) sh.style.transform = `scale(${shadow.toFixed(3)})`;
   }

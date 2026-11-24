@@ -346,11 +346,77 @@ window.SCENES = (() => {
     caption(`Discover all\n${total} beasts.`, 79);
   };
 
+  // ------------------------------------------------------------ 1.5: the giants and the comet
+  /** Far into the game: both solar systems at prestige 15, the comet reached, Worlds 1 to 6 won (and World 7 for World 8). */
+  function late(w8) {
+    const B = BATTLE.B();
+    for (const w of [1, 2, 3, 4, 5, 6]) for (let k = 1; k <= 40; k++) B.best[`${w}-${k}`] = 60;
+    if (w8) for (let k = 1; k <= 20; k++) B.best[`7-${k}`] = 60;
+    state.cometUnlocked = true; state.cometIntroSeen = true;
+    if (window.LIMITED) state.limitedBannerSeen = true;
+    document.querySelectorAll('.limited-banner-wrap, .limited-banner').forEach((e) => e.remove());
+  }
+  /** The camera a little in from the whole field, on the fight, so a giant shows whole with the fight round it (Sam, 24 Nov: not too zoomed in). */
+  function frameWide(k = 1.3) {
+    const run = BATTLE.run;
+    if (!run) return;
+    frameFight(run.fit * k);
+    // (The giants in the upper part of the view with the fight below them, and the top of the view no
+    // higher than just above their cave, whose dark mouth would otherwise fill a third of the shot.)
+    const halfH = (run.vh - run.top - run.bottom) / 2 / run.cam.zoom;
+    const bosses = run.battle.units.filter((u) => u.boss && u.state !== 'dying');
+    if (bosses.length) run.cam.y = bosses.reduce((a, u) => a + u.y, 0) / bosses.length + halfH * 0.32;
+    run.cam.y = Math.max(halfH + 110, Math.min(BattleEngine.ARENA.h - halfH + 30, run.cam.y));
+  }
+  const COMET_SIX = ['singularity_dragon_20', 'ouroboros_20', 'quasar_phoenix_20', 'dark_matter_leviathan', 'singularity_monarch', 'spectral_jellyfish'];
+  /** A giant fight: the level, until its giant is well into the field, then a few seconds more. */
+  async function giant(world, n, text, k = 1.3, secs = 5500, need = 1, minY = 420) {
+    document.getElementById('sidebar-panel').style.visibility = '';
+    late(world === 8);
+    for (const id of COMET_SIX) { BATTLE.B().bestPrestige[id] = 15; if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
+    await battle(world, n, COMET_SIX);
+    await playFor(60000, 380, (b) => b.units.filter((u) => u.boss && u.state !== 'dying' && u.y > minY).length >= need);
+    const until = Date.now() + secs;
+    while (Date.now() < until) { await playFor(400, 380); specialNear(); }
+    document.querySelectorAll('.limited-banner-wrap, .limited-banner').forEach((e) => e.remove());
+    frameWide(k);
+    await sleep(350);
+    band(text);
+  }
+  S.w7boss = () => giant(7, 20, 'Giant mutant bosses', 1.3, 3000, 1, 760);
+  S.w8duo = () => giant(8, 18, 'Two or three\ngiants at once', 1.1, 3500, 2);
+  S.w8eater = () => giant(8, 20, 'Face the World-Eater', 1.2, 7000);
+  S.cometbattle = () => giant(8, 5, 'Comet beasts\nwith huge specials', 1.35, 4000);
+  // The comet's meadow: its beasts from hatchlings to Cosmic.
+  S.comet = async () => {
+    await endBattle();
+    await base({ level: 15, essence: 4.2e19 });
+    late(false);
+    state.lowGravitySystem = Object.assign(state.lowGravitySystem || freshBranch('low_gravity'), { prestigeLevel: 15 });
+    warpToSolarSystem('comet');
+    await sleep(1600);
+    PT.dismiss();
+    document.querySelectorAll('.modal-overlay.active').forEach((m) => m.classList.remove('active'));
+    document.querySelectorAll('.ask-confirm, .limited-banner-wrap, .limited-banner').forEach((e) => (e.closest('.modal-overlay') || e).remove());
+    PT.clear();
+    document.querySelectorAll('.crate-container').forEach((c) => c.remove());
+    // (Part way to its next prestige, no boost running, the side panel shut.)
+    state.prestigeLevel = 6; state.essence = 4.2e18; state.rewardBoostUntil = 0; state.doubleEssenceEndTime = 0;
+    document.getElementById('sidebar-panel').classList.remove('active');
+    const bd = document.getElementById('sidebar-backdrop'); if (bd) bd.classList.remove('active');
+    scatter([['singularity_dragon_20'], ['nebula_jelly_3'], ['quasar_phoenix_16'], ['emerald_serpent_6'], ['ouroboros_20'], ['prism_stag_10'], ['mind_leviathan_13'], ['grey_envoy_4']], { top: 26, bottom: 60 });
+    if (typeof updateHUD === 'function') updateHUD();
+    await sleep(1800);
+    // (The side panel sits just off the right edge; the band shrinks the page and would bring it into view.)
+    document.getElementById('sidebar-panel').style.visibility = 'hidden';
+    band('A third world:\nthe Interstellar Comet');
+  };
+
   async function run(name) {
     if (S._release) { S._release(); S._release = null; }
     await S[name]();
     return document.querySelectorAll('.beast-container').length;
   }
-  return { run, caption, base, scatter, coins, battle, names: ['field', 'merge', 'premium', 'spin', 'biomes', 'zoom', 'beastopedia', 'battle', 'specials', 'boss', 'worlds', 'legends'] };
+  return { run, caption, base, scatter, coins, battle, names: ['field', 'merge', 'premium', 'spin', 'biomes', 'zoom', 'beastopedia', 'battle', 'specials', 'boss', 'worlds', 'legends', 'w7boss', 'w8duo', 'w8eater', 'comet', 'cometbattle'] };
 })();
 'ok';

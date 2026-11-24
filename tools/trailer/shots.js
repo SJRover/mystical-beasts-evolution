@@ -317,6 +317,92 @@ window.TRAILER = (() => {
     act = () => {};
   };
 
+  // ------------------------------------------------------------ 1.5: the giants and the comet (Sam, 24 Nov)
+  const SIX15 = ['singularity_dragon_20', 'ouroboros_20', 'quasar_phoenix_20', 'dark_matter_leviathan', 'singularity_monarch', 'spectral_jellyfish'];
+  /** Far into the game: Worlds 1 to 6 won (and World 7 for World 8), the comet reached, no banner. */
+  function late15(w8) {
+    const B = BATTLE.B();
+    for (const w of [1, 2, 3, 4, 5, 6]) for (let k = 1; k <= 40; k++) B.best[`${w}-${k}`] = 60;
+    if (w8) for (let k = 1; k <= 20; k++) B.best[`7-${k}`] = 60;
+    state.cometUnlocked = true; state.cometIntroSeen = true;
+    document.querySelectorAll('.limited-banner-wrap').forEach((e) => e.remove());
+  }
+  /**
+   * Wide on the giants (Sam: not too zoomed in): a little in from the whole field, the giants high
+   * in the view with the fight below them, kept inside the field (no dark above their cave).
+   */
+  let snap = false;
+  function followGiants(k = 1.25) {
+    const run = BATTLE.run;
+    if (!run) return;
+    const z = run.fit * k, e = snap ? 1 : 0.08;
+    run.cam.zoom += (z - run.cam.zoom) * e;
+    const halfH = (run.vh - run.top - run.bottom) / 2 / run.cam.zoom;
+    const bosses = run.battle.units.filter((u) => u.boss && u.state !== 'dying');
+    let ty = bosses.length ? bosses.reduce((a, u) => a + u.y, 0) / bosses.length + halfH * 0.08 : 1000;
+    ty = Math.max(halfH - 40, Math.min(BattleEngine.ARENA.h - halfH + 30, ty));
+    const tx = bosses.length ? Math.max(320, Math.min(680, bosses.reduce((a, u) => a + u.x, 0) / bosses.length)) : 500;
+    run.cam.x += (tx - run.cam.x) * (snap ? 1 : 0.05); run.cam.y += (ty - run.cam.y) * (snap ? 1 : 0.05);
+    snap = false;
+  }
+  function giantShot(text, k = 1.25, specials = 2, every = 7) {
+    specialsLeft = specials;
+    snap = true;
+    act = (f) => {
+      playCards(f, every);
+      followGiants(k);
+      if (f >= 8 && f % 4 === 0) specialNear(260);
+      if (f === 0) { snap = true; followGiants(k); caption(text || '', 21); }
+      if (f === 75) caption('');
+    };
+  }
+  async function giantBattle(world, n, w8) {
+    late15(w8);
+    for (const id of SIX15) { BATTLE.B().bestPrestige[id] = 15; if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
+    await battle(world, n, SIX15, 15);
+  }
+  S.g_chimera = async () => { await giantBattle(7, 20, false); giantShot('Giant mutant bosses', 1.15); };
+  S.g_dragon = async () => { await giantBattle(7, 9, false); giantShot('', 1.15); };
+  S.g_titans = async () => { await giantBattle(8, 18, true); giantShot('Two or three at once', 1.08); };
+  S.g_eater = async () => { await giantBattle(8, 20, true); giantShot('Face the World-Eater', 1.08); };
+  S.g_special = async () => { await giantBattle(8, 5, true); giantShot('Comet beasts\' specials', 1.2, 3, 5); };
+  /** The comet's meadow, its beasts from hatchlings to Cosmic, moving. */
+  async function cometMeadow() {
+    await endBattle();
+    clean();
+    await SCENES.base({ level: 15, essence: 4.2e19 });
+    late15(false);
+    state.lowGravitySystem = Object.assign(state.lowGravitySystem || freshBranch('low_gravity'), { prestigeLevel: 15 });
+    warpToSolarSystem('comet');
+    await wait(1600);
+    PT.dismiss();
+    document.querySelectorAll('.modal-overlay.active').forEach((m) => m.classList.remove('active'));
+    document.querySelectorAll('.ask-confirm, .limited-banner-wrap').forEach((e) => (e.closest('.modal-overlay') || e).remove());
+    PT.clear();
+    document.querySelectorAll('.crate-container').forEach((c) => c.remove());
+    state.prestigeLevel = 6; state.essence = 4.2e18; state.rewardBoostUntil = 0; state.doubleEssenceEndTime = 0;
+    document.getElementById('sidebar-panel').classList.remove('active');
+    SCENES.scatter([['singularity_dragon_20'], ['nebula_jelly_3'], ['quasar_phoenix_16'], ['emerald_serpent_6'], ['ouroboros_20'], ['prism_stag_10'], ['mind_leviathan_13'], ['grey_envoy_4']], { top: 26, bottom: 62 });
+    if (typeof updateHUD === 'function') updateHUD();
+    await wait(1200);
+  }
+  S.g_comet = async () => {
+    await cometMeadow();
+    act = (f) => { if (f === 0) caption('The Interstellar Comet', 9); if (f === 80) caption(''); };
+  };
+  // A Cosmic beast out of a premium egg, in black and stars.
+  S.g_cosmic = async () => {
+    clean();
+    if (state.currentSolarSystem !== 'comet') await cometMeadow();
+    act = (f) => { if (f === 0) { caption('Hatch Cosmic beasts', 9); FX.premiumOpen(window.innerWidth / 2, window.innerHeight * 0.52, 'singularity_dragon_20'); } };
+  };
+  // The end card: the icon, the name, the update.
+  S.g_end = async () => {
+    await S.end();
+    const s = document.querySelector('#trailer-end span');
+    if (s) s.textContent = 'Giants and the Comet';
+  };
+
   // ------------------------------------------------------------ the battle showcase (Sam, 23 Nov)
   // Worlds, ways of playing, beasts, enemies and bosses: wide for the whole field, close for the
   // specials, fast; then rare beasts being won.
