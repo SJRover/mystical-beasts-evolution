@@ -37,18 +37,25 @@ const MUTANTS = (() => {
     poison: { name: 'Poison', icon: '☠', text: 'keeps hurting for a while', col: '#9dff4a' },
     crush: { name: 'Crushing', icon: '💥', text: 'knocks beasts back', col: '#e0b070' },
     shock: { name: 'Shock', icon: '⚡', text: 'stuns for a moment', col: '#fff27a' },
+    // 1.5, World 8: four more.
+    acid: { name: 'Acid', icon: '🧪', text: 'eats armour: beasts it hits take a quarter more damage for a while', col: '#c8ff2a' },
+    void: { name: 'Void', icon: '🕳', text: 'saps strength: beasts it hits strike a third softer, and it mends whoever cast it', col: '#b06aff' },
+    sonic: { name: 'Sonic', icon: '🔊', text: 'deafens: beasts it hits cannot use their special for a while', col: '#ff8ad8' },
+    gravity: { name: 'Gravity', icon: '🌀', text: 'drags beasts in and slows them', col: '#8a9aff' },
   };
   /** How much of each type a beast takes by its element; a beast that takes less also escapes its after-effect. */
   const RESIST = {
     fire: { FIRE: 0.5, WATER: 0.7 }, frost: { WATER: 0.5, FIRE: 0.7 }, poison: { EARTH: 0.5, VOID: 0.7 },
     crush: { EARTH: 0.6 }, shock: { COSMIC: 0.5, LIGHT: 0.7 },
+    acid: { EARTH: 0.6, WATER: 0.7 }, void: { VOID: 0.5, DEITY: 0.6 }, sonic: { WIND: 0.5, COSMIC: 0.7 }, gravity: { COSMIC: 0.5, VOID: 0.7 },
   };
   const ELEMENT_WORD = { FIRE: 'Fire', WATER: 'Water', WIND: 'Wind', EARTH: 'Earth', LIGHT: 'Light', COSMIC: 'Cosmic', VOID: 'Void', DEITY: 'Deity' };
   const elementOf = (u) => (D.T(u.kind) || {}).element;
 
   // ------------------------------------------------------------------ the enemies of World 7
   const M = (skin, cloth, trim, eye, x) => Object.assign({ skin, cloth, trim, eye }, x);
-  const add = (debut, id, name, role, look, note) => { const e = { id, name, world: 7, debut, role, look, note }; D.ENEMY_LIST.push(e); D.ENEMIES[id] = e; };
+  const addIn = (world, debut, id, name, role, look, note) => { const e = { id, name, world, debut, role, look, note }; D.ENEMY_LIST.push(e); D.ENEMIES[id] = e; };
+  const add = (debut, id, name, role, look, note) => addIn(7, debut, id, name, role, look, note);
   // The ten bosses (a "mutant" body, drawn by mutants_art.js), each first met alone.
   add(1, 'hulk_goblin', 'Gorrak the Hulk Goblin', 'mutant', M('#6fae3a', '#5a3a22', '#c8ff5a', '#ffd23a', { plan: 'mutant', art: 'hulk', size: 4.1, boss: true }), 'A goblin grown as big as a house, with smaller goblins riding on his shoulders. Every few seconds he throws one over your line at your coin pile, and now and then he leaps and comes down with a slam that clears a whole crowd.');
   add(2, 'walking_hive', 'The Walking Hive', 'mutant', M('#e0a23a', '#5a3a10', '#ffe27a', '#ff4a2a', { plan: 'mutant', art: 'hive', size: 3.9, boss: true }), 'A great wasp nest striding about on six legs. Its back splits open to let out swarms, and it spits stings that poison. Fire makes it burn, and a burning hive lets out far fewer.');
@@ -210,11 +217,12 @@ const MUTANTS = (() => {
     { name: 'The Omega Chimera', tip: 'Three forms: lion, then goat and frost, then wings and fire.', bosses: [['omega_chimera', 4, 0.5]], peons: [[1, 'mutant_medic', 0.5]] },
   ];
   const LEVEL_COUNT = LEVELS.length;
+  const LEVELS_BY = { 7: LEVELS };
   D.PATTERNS.mutant = { name: 'Giant', tip: 'A boss fight: beat the boss to win. Their camp has no coin pile, so guard yours' };
 
-  /** World 7's level n: its bosses and peons, the battle's settings. */
-  function level(n) {
-    const L = LEVELS[n - 1];
+  /** A mutant world's level n (World 7 or 8): its bosses and peons, the battle's settings. */
+  function level(n, world = 7) {
+    const L = LEVELS_BY[world][n - 1];
     const spawns = [];
     const inTurn = L.bosses.some((x) => x[3] && (x[3].after || x[3].with));
     for (const [id, t, x, o = {}] of L.bosses) {
@@ -227,11 +235,11 @@ const MUTANTS = (() => {
     // Bosses in turn keep their order (the queue waits at each); otherwise all by time.
     if (!inTurn) spawns.sort((a, b) => a.t - b.t);
     const bossIds = [...new Set(L.bosses.map((b) => b[0]))];
-    const fresh = bossIds.find((id) => D.ENEMIES[id].debut === n) || null;
-    const id = `7-${n}`;
+    const fresh = bossIds.find((id) => D.ENEMIES[id].debut === n && D.ENEMIES[id].world === world) || null;
+    const id = `${world}-${n}`;
     return {
-      id, world: 7, n, boss: true, points: D.LEVEL_POINTS[id] || D.levelPoints(7, n), spawns, rally: [], garrison: [], rule: null, theme: null,
-      maxEnemies: 16, pattern: 'mutant', pile: 15, starTime: D.STAR_TIMES[id] || 150 + n * 3,
+      id, world, n, boss: true, points: D.LEVEL_POINTS[id] || D.levelPoints(world, n), spawns, rally: [], garrison: [], rule: null, theme: null,
+      maxEnemies: L.max || (world >= 8 ? 24 : 16), pattern: 'mutant', pile: 15, starTime: D.STAR_TIMES[id] || 150 + n * 3,
       fresh, bossFoe: bossIds[0], bossIds, name: L.name, tip: L.tip, win: 'bosses', loop: false,
     };
   }
@@ -242,6 +250,7 @@ const MUTANTS = (() => {
     if (!def) return;
     u.mutant = def;
     u.boss = true;
+    if (def.r) u.r = def.r;
     u.baseSpeed = u.speed = def.speed;
     u.reach = def.reach;
     u.shooter = !!def.ranged;
@@ -322,14 +331,16 @@ const MUTANTS = (() => {
   function think(b, u, dt) {
     const def = u.mutant, now = b.time;
     // Hurled back at a phase change: sliding up the field, then staggered.
+    const top = def.top || 200;
     if (u.slide && u.slide.until > now) {
-      u.x = clampX(u.x + u.slide.vx * dt, u.r + 10); u.y = Math.max(200, u.y + u.slide.vy * dt);
+      u.x = clampX(u.x + u.slide.vx * dt, u.r + 10); u.y = Math.max(top, u.y + u.slide.vy * dt);
       return true;
     }
+    if (u.y < top) u.y = Math.min(top, u.y + 320 * dt);
     if (u.stunUntil > now) {
       // A giant shakes a stun off quickly, but a stun in a wind-up stops the move.
       if (u.stunUntil > now + 1.2) u.stunUntil = now + 1.2;
-      if (u.cast && u.cast.stage === 'wind' && !u.cast.noStop) interrupt(b, u);
+      if (u.cast && ((u.cast.stage === 'wind' && !u.cast.noStop) || u.cast.channel)) interrupt(b, u);
       return false;
     }
     if (!u.enraged && now - u.spawnT > (def.enrage || 180)) {
@@ -363,7 +374,7 @@ const MUTANTS = (() => {
   /** 1.5: comet specials. Stagger hurls a giant back up the field (stopping a wind-up); Dispel cancels one. */
   function stagger(b, o, dist) {
     const dx = o.x - YOUR_PILE.x, dy = o.y - YOUR_PILE.y, d = Math.hypot(dx, dy) || 1;
-    dist = Math.min(dist, Math.max(0, o.y - 240));
+    dist = Math.min(dist, Math.max(0, o.y - ((o.mutant && o.mutant.top) || 200) - 40));
     o.slide = { vx: ((dx / d) * dist) / 0.45, vy: ((dy / d) * dist) / 0.45, until: b.time + 0.45 };
     if (o.cast && o.cast.stage === 'wind' && !o.cast.noStop) interrupt(b, o);
     b.events.push({ type: 'mutant', kind: 'text', unit: o, text: 'Staggered!', col: '#c8a8ff' });
@@ -502,7 +513,11 @@ const MUTANTS = (() => {
         if (!close.length) { u.moveAt[i] = now + 0.5; return false; }
         break;
       }
-      default: return false;
+      default: {
+        // A move of World 8's (mutants8.js): false if it has nothing to do now.
+        const x = EXT[m.kind];
+        if (!x || !x.begin(K, b, u, m, i, c, cnt, all)) return false;
+      }
     }
     u.cast = c;
     u.moveAt[i] = now + m.every * u.haste * (u.enraged ? 0.75 : 1);
@@ -530,8 +545,10 @@ const MUTANTS = (() => {
       if (c.thrown >= c.count && now >= c.at + c.count * 0.35 + 0.3) u.cast = null;
       return;
     }
+    const x = EXT[m.kind];
     if (c.stage === 'wind') {
       if (c.zone && c.zone.follow) { c.zone.x = u.x; c.zone.y = u.y; }
+      if (x && x.wind) x.wind(K, b, u, dt, c);
       if (now < c.at) return;
       c.stage = 'act';
       land(b, u, c, L);
@@ -559,6 +576,7 @@ const MUTANTS = (() => {
       if (c.done >= c.len || u.y >= AH - 220) u.cast = null;
       return;
     }
+    if (x && x.tick) { x.tick(K, b, u, dt, c); return; }
     if (now >= c.at + (c.hold || 0.25)) u.cast = null;
   }
 
@@ -641,6 +659,7 @@ const MUTANTS = (() => {
         break;
       }
       case 'mirror': mirror(b, u, c, L); done(c.zone); break;
+      default: if (EXT[m.kind] && EXT[m.kind].land) EXT[m.kind].land(K, b, u, c, L); break;
       case 'blink': {
         const from = { x: u.x, y: u.y };
         u.x = clampX(u.x + (u.x < 500 ? 1 : -1) * 220, u.r + 10);
@@ -648,7 +667,6 @@ const MUTANTS = (() => {
         b.events.push({ type: 'mutant', kind: 'blink', unit: u, from });
         break;
       }
-      default: break;
     }
     b.events.push({ type: 'mutant', kind: 'land', unit: u, move: m.kind, x: (c.to || u).x, y: (c.to || u).y, r: m.r || 0, mtype: m.type || null });
   }
@@ -740,8 +758,9 @@ const MUTANTS = (() => {
         } else {
           const hit = within(all, z.x, z.y, z.r);
           blast(b, owner, hit, L.dmg, L.type);
-          pileHit(b, z.x, z.y, z.r, L.move === 'sting' ? 1 : 2.5, owner);
-          if (L.linger) { z.linger = true; z.until = now + L.linger; z.kind = 'gas'; z.dps = L.dmg * 0.5; } else z.dead = true;
+          pileHit(b, z.x, z.y, z.r, L.pileSec != null ? L.pileSec : L.move === 'sting' ? 1 : 2.5, owner);
+          if (L.linger) { z.linger = true; z.until = now + L.linger; z.kind = L.lingerKind || 'gas'; z.dps = L.dmg * 0.5; } else z.dead = true;
+          if (L.after) L.after(K, b, z, hit, owner);
         }
         b.events.push({ type: 'mutant', kind: 'zone-land', zone: z, unit: owner });
       }
@@ -752,11 +771,14 @@ const MUTANTS = (() => {
           const all = beasts(b);
           if (z.kind === 'ice') for (const o of all) { if (Math.abs(o.x - z.x) < z.w / 2 && o.y > z.y - 40) o.slowUntil = Math.max(o.slowUntil, now + 0.8); }
           if (z.kind === 'gas') { for (const o of within(all, z.x, z.y, z.r)) poison(b, o, z.dps, z.owner); pileHit(b, z.x, z.y, z.r, 0.2, null); }
+          if (z.kind === 'burn' || z.kind === 'acid' || z.kind === 'voiddust') { const ty = { burn: 'fire', acid: 'acid', voiddust: 'void' }[z.kind]; for (const o of within(all, z.x, z.y, z.r)) b.hurt(o, z.dps * 0.5, null, false, ty); pileHit(b, z.x, z.y, z.r, 0.15, null); }
+          if (z.kind === 'web') for (const o of within(all, z.x, z.y, z.r)) o.slowUntil = Math.max(o.slowUntil, now + 0.8);
         }
       }
       if (z.until && now >= z.until && !z.linger) z.dead = true;
     }
     b.zones = b.zones.filter((z) => !z.dead);
+    for (const f of STEP_HOOKS) f(K, b, dt);
     // Burns and poison: a tick every half second.
     for (const o of b.units) {
       if (o.state === 'dying') continue;
@@ -818,7 +840,12 @@ const MUTANTS = (() => {
         tag = ranged ? 'core' : tag || 'armour';
       }
       if (o.mirrorShield > now && !pierce) dmg *= 0.4;
+      // (World 8: a hardened shell takes three tenths; Wardens close together shield each other.)
+      if (o.hardenUntil > now && !pierce) { dmg *= 0.3; tag = 'armour'; }
+      if (def.link && b.units.some((x) => x !== o && x.mutant && x.mutant.link === def.link && x.state !== 'dying' && Math.hypot(x.x - o.x, x.y - o.y) < 380)) { dmg *= 0.4; tag = 'linked'; }
     }
+    if (o.side === 'you' && o.acidUntil > now) dmg *= 1.25;
+    if (o.side === 'you' && by && by.mutant && type === 'void' && by.state !== 'dying') by.hp = Math.min(by.maxHp, by.hp + dmg * 0.15);
     if (o.side === 'you' && type && RESIST[type]) {
       const el = elementOf(o);
       const k = RESIST[type][el] || 1;
@@ -832,6 +859,10 @@ const MUTANTS = (() => {
         if (type === 'frost' && !(o.passives && o.passives.frostproof)) { o.slowUntil = Math.max(o.slowUntil, now + 2.5); if (heavy) freeze(b, o, 1.2); }
         if (type === 'poison') poison(b, o, dmg * 0.15, by && by.uid);
         if (type === 'shock') o.stunUntil = Math.max(o.stunUntil, now + 0.35);
+        if (type === 'acid') o.acidUntil = now + 4;
+        if (type === 'void') o.sapUntil = now + 4;
+        if (type === 'sonic') { o.silencedUntil = now + 6; const card = b.cards && b.cards[o.card]; if (card) card.silencedUntil = Math.max(card.silencedUntil || 0, now + 6); }
+        if (type === 'gravity') o.slowUntil = Math.max(o.slowUntil, now + 2);
       }
     }
     return { dmg, tag };
@@ -854,7 +885,7 @@ const MUTANTS = (() => {
       // Knocked hard back up the field (Sam, 23 Nov: a giant at your pile could flatten it), its
       // wind-up stopped, staggered for a moment.
       if (o.cast) interrupt(b, o);
-      { const dx = o.x - YOUR_PILE.x, dy = o.y - YOUR_PILE.y, d = Math.hypot(dx, dy) || 1, dist = Math.min(380, Math.max(0, o.y - 240)); o.slide = { vx: ((dx / d) * dist) / 0.45, vy: ((dy / d) * dist) / 0.45, until: b.time + 0.45 }; o.stunUntil = Math.max(o.stunUntil, b.time + 1.6); }
+      { const dx = o.x - YOUR_PILE.x, dy = o.y - YOUR_PILE.y, d = Math.hypot(dx, dy) || 1, dist = Math.min(380, Math.max(0, o.y - (def.top || 200) - 40)); o.slide = { vx: ((dx / d) * dist) / 0.45, vy: ((dy / d) * dist) / 0.45, until: b.time + 0.45 }; o.stunUntil = Math.max(o.stunUntil, b.time + 1.6); }
       b.events.push({ type: 'mutant', kind: 'stagger', unit: o });
       if (ph.burst) { const hit = within(beasts(b), o.x, o.y, ph.burst.r); blast(b, o, hit, o.light * ph.burst.dmg, ph.burst.type); pileHit(b, o.x, o.y, ph.burst.r, 2, o); }
       b.events.push({ type: 'mutant', kind: 'phase', unit: o, phase: o.phase, text: ph.text, burst: ph.burst || null });
@@ -864,6 +895,8 @@ const MUTANTS = (() => {
   }
 
   function onDeath(b, o) {
+    if (o.side === 'you') (b.fallen = b.fallen || []).push({ x: o.x, y: o.y, t: b.time, kind: o.kind, r: o.r });
+    for (const f of DEATH_HOOKS) f(K, b, o);
     if (o.cast) { if (o.cast.zone) o.cast.zone.dead = true; for (const z of o.cast.zones || []) z.dead = true; o.cast = null; }
     o.airborne = false;
     if (o.twin) {
@@ -895,6 +928,8 @@ const MUTANTS = (() => {
       if (c.move.kind === 'throw') out.thrown = c.thrown;
     }
     if (u.heads) out.heads = u.heads.map((h) => ({ dx: h.target ? h.target.x - u.x : 0, dy: h.target ? h.target.y - u.y : 60, k: Math.max(0, 1 - (now - h.last) / 0.45), heavy: !!h.heavy, col: h.col }));
+    out.hardened = u.hardenUntil > now; out.burrowed = !!u.burrowed;
+    for (const f of POSE_HOOKS) f(b, u, out);
     // Goblins on Gorrak's shoulders: fewer after a throw, back one by one.
     if (u.kind === 'hulk_goblin') {
       const i = u.mutant.moves.findIndex((m) => m.kind === 'throw');
@@ -907,7 +942,8 @@ const MUTANTS = (() => {
   /** One to five bleeding stars, against the other foes of World 7 only (Sam, 23 Nov). */
   function bloodStars(id) {
     const e = D.ENEMIES[id];
-    if (!e || e.world !== 7) return 0;
+    if (!e || e.world < 7) return 0;
+    if (e.world >= 8) return e.role === 'mutant' ? 5 : Math.min(5, ({ swarm: 1.5, runner: 2, grunt: 2, caster: 2.5, tank: 3, brute: 3 }[e.role] || 2.5));
     if (e.role === 'mutant') {
       const order = ['hulk_goblin', 'walking_hive', 'frost_giant', 'mirror_witch', 'twin_luna', 'twin_sol', 'rot_behemoth', 'three_headed_serpent', 'colossus', 'dragon', 'omega_chimera'];
       return Math.min(5, 3 + Math.floor((order.indexOf(id) / (order.length - 1)) * 2.01));
@@ -924,10 +960,27 @@ const MUTANTS = (() => {
       weak: list(def.weak), resist: list(def.resist), type: def.type ? TYPES[def.type] : null,
       armour: def.armour ? 'Scales turn blows from the front; it takes more from behind.' : def.core ? 'Only shots reach its core: blows up close barely hurt.' : null,
       twin: def.twin ? 'Beat both twins within six seconds of each other.' : null,
+      extra: def.notes || null,
     };
   }
 
-  return { BOSSES, LEVELS, LEVEL_COUNT, TYPES, RESIST, level, setup, think, step, modify, onHurt, onDeath, won, pose, bloodStars, bossNotes, ELEMENT_WORD, stagger, dispel };
+  // ------------------------------------------------------------------ for World 8 (mutants8.js)
+  const EXT = {}, STEP_HOOKS = [], DEATH_HOOKS = [], POSE_HOOKS = [];
+  const K = { D, TAU, AW, AH, YOUR_PILE, PILE_R, angDiff, clampX, clampY, elementOf, zone, cluster, beasts, foesAlive, within, knockFrom, blast, takePile, pileHit, freeze, poison, spawnAt, interrupt, inLine, SHORT, TYPES };
+  /** World 8 adds its enemies, bosses, levels, moves and rules through this. */
+  function extend(world, { enemies = [], bosses = {}, levels = null, moves = {}, step = null, death = null, pose: poseHook = null, short = {} }) {
+    for (const [debut, id, name, role, look, note] of enemies) addIn(world, debut, id, name, role, look, note);
+    Object.assign(BOSSES, bosses);
+    if (levels) LEVELS_BY[world] = levels;
+    Object.assign(EXT, moves);
+    Object.assign(SHORT, short);
+    if (step) STEP_HOOKS.push(step);
+    if (death) DEATH_HOOKS.push(death);
+    if (poseHook) POSE_HOOKS.push(poseHook);
+  }
+  const levelCount = (world) => (LEVELS_BY[world] || []).length;
+
+  return { BOSSES, LEVELS, LEVEL_COUNT, LEVELS_BY, TYPES, RESIST, level, levelCount, setup, think, step, modify, onHurt, onDeath, won, pose, bloodStars, bossNotes, ELEMENT_WORD, stagger, dispel, extend, EXT, K };
 })();
 
 if (typeof module !== 'undefined') module.exports = MUTANTS;

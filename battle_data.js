@@ -595,6 +595,8 @@ const BATTLE_DATA = (() => {
     { id: 6, system: 'low_gravity', name: 'Eclipse Court', theme: 'eclipse', levels: 40, base: 48, gain: 0.75, chest: { rarity: 'GODLY', tier: 15 } },
     // 1.5: World 7, the Universal Mutants (mutants.js): beasts of every system, twenty boss fights.
     { id: 7, system: 'any', name: 'Universal Mutants', theme: 'mutants', levels: 20, base: 70, gain: 1.3, chest: { rarity: 'DARK_MATTER', tier: 20, comet: 'singularity_dragon_20' } },
+    // 1.5 (Sam, 24 Nov): World 8, opened by beating World 7; a struggle even for comet beasts.
+    { id: 8, system: 'any', name: 'Apex Mutants', theme: 'abyss', levels: 20, base: 90, gain: 1.6, chest: { rarity: 'DARK_MATTER', tier: 20, comet: 'ouroboros_20' } },
   ];
   const BOSS_EVERY = 10;
 
@@ -609,6 +611,9 @@ const BATTLE_DATA = (() => {
   function expect(world, n) {
     // World 7 is for the end of the game: the best of both systems at prestige 15.
     if (world === 7) return { tier: 20, rarity: 'DARK_MATTER', prestige: 15 };
+    // World 8: three comet beasts with the best of both systems, Tier 12 at the start and ascended
+    // (Tier 16 and up) from level 12, Tier 20 by the end.
+    if (world === 8) return { tier: 20, rarity: 'DARK_MATTER', prestige: 15, comet: { tier: Math.min(20, Math.round(12 + (8 * (n - 1)) / 19)), rarity: n < 8 ? 'LEGENDARY' : n < 15 ? 'GODLY' : 'DARK_MATTER', prestige: Math.min(10, Math.floor(n / 2)) } };
     const i = (stage(world) - 1) * 40 + n;
     const rarity = i < 8 ? 'RARE' : i < 20 ? 'SUPER_RARE' : i < 35 ? 'ULTRA_RARE' : i < 55 ? 'LEGENDARY' : i < 90 ? 'GODLY' : 'DARK_MATTER';
     return { tier: Math.min(20, i <= 10 ? i : 10 + (i - 10) * 0.2), rarity, prestige: i <= 40 ? 0 : Math.floor((i - 40) / 6) };
@@ -704,7 +709,7 @@ const BATTLE_DATA = (() => {
    * randomness, so a level is always the same.
    */
   function level(world, n) {
-    if (world === 7 && typeof MUTANTS !== 'undefined') return MUTANTS.level(n);
+    if (world >= 7 && typeof MUTANTS !== 'undefined') return MUTANTS.level(n, world);
     const w = WORLDS[world - 1];
     const r = seeded(hash(`level|${world}|${n}`));
     const boss = n % BOSS_EVERY === 0;
@@ -999,11 +1004,13 @@ const BATTLE_DATA = (() => {
     { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing twelve beasts or fewer.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
     // (1.5, Sam: late rewards that matter; comet eggs join these once the comet is built.)
     { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { income: 360, boost: { mult: 1.5, minutes: 180 }, shards: 600 } },
+    { id: 'world_8', name: 'Apex Predator', desc: 'Clear the Apex Mutants.', test: (b) => (b.w8 || 0) >= 1, reward: { income: 720, boost: { mult: 2, minutes: 180 }, shards: 1500 } },
+    { id: 'apex_bosses', name: 'Giant Slayer', desc: "Beat all eleven of World 8's giants.", test: (b) => (b.apexBosses || 0) >= 11, reward: { income: 480, boost: { mult: 1.5, minutes: 240 }, shards: 900 } },
     { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { income: 240, boost: { mult: 1.5, minutes: 120 }, shards: 360 } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */
-  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20, 7: 20 };
+  const BOSS_CRATE_CAP = { 1: 15, 2: 15, 3: 18, 4: 15, 5: 18, 6: 20, 7: 20, 8: 20 };
 
   /** Perks: one before a battle. */
   const PERKS = [

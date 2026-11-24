@@ -15,7 +15,8 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ctx = vm.createContext({ console, Math });
 ctx.window = ctx;
 const calibrate = process.argv.includes('--calibrate');
-for (const f of ['beasts.js', 'battle_data.js', 'mutants.js', 'battle_engine.js', ...(calibrate || !fs.existsSync(path.join(root, 'battle_levels.js')) ? [] : ['battle_levels.js'])]) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
+ctx.state = { prestigeLevel: 0, upgrades: {} };
+for (const f of ['beasts.js', 'battle_data.js', 'mutants.js', 'mutants8.js', 'battle_engine.js', 'comet.js', ...(calibrate || !fs.existsSync(path.join(root, 'battle_levels.js')) ? [] : ['battle_levels.js'])]) vm.runInContext(fs.readFileSync(path.join(root, f), 'utf8'), ctx, { filename: f });
 const { BATTLE_DATA: D, BattleEngine: BE, BEAST_TEMPLATES: T } = vm.runInContext('({ BATTLE_DATA, BattleEngine, BEAST_TEMPLATES })', ctx);
 
 const args = process.argv.slice(2);
@@ -36,8 +37,15 @@ export function refDeck(world, n, tierShift = 0) {
   const maxRank = RANK.indexOf(pr.rarity);
   // Only what the level's rule allows (quick cards, long reach, swift, plain stock, three only).
   // (World 7: beasts of every system.)
-  const all = Object.keys(T).filter((id) => D.canBattle(id) && (sys === 'any' || D.systemOf(id) === sys) && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
-  const power = (id) => { const s = D.beastStats(id, pr.prestige); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
+  // (Comet beasts only from World 8, where three of the six are theirs: pr.comet.)
+  const all = Object.keys(T).filter((id) => D.canBattle(id) && !T[id].comet && (sys === 'any' || D.systemOf(id) === sys) && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
+  const power = (id, p = pr.prestige) => { const s = D.beastStats(id, p); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
+  if (pr.comet) {
+    const cr = pr.comet;
+    const comets = Object.keys(T).filter((id) => T[id].comet && T[id].tier === cr.tier && RANK.indexOf(T[id].rarity) >= 0 && RANK.indexOf(T[id].rarity) <= RANK.indexOf(cr.rarity)).sort((a, b) => power(b, cr.prestige) - power(a, cr.prestige)).slice(0, 3);
+    const old = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a)).slice(0, 6 - comets.length);
+    return [...comets.map((id) => ({ id, prestige: cr.prestige })), ...old.map((id) => ({ id, prestige: pr.prestige }))];
+  }
   const deck = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a) || T[b].tier - T[a].tier);
   return deck.slice(0, rule && rule.kind === 'three' ? 3 : 6).map((id) => ({ id, prestige: pr.prestige }));
 }
@@ -120,13 +128,13 @@ if (isMain && calibrate) {
   const only = Number(process.argv[process.argv.indexOf('--calibrate') + 1]) || 0;
   for (const w of D.WORLDS) {
     if (only && w.id !== only) continue;
-    if (w.id === 7) {
+    if (w.id >= 7) {
       // World 7 (1.5): twenty boss fights, each made by hand, so no smoothing along the world. Each
       // is set at or beyond the most the reference six (the best of both systems at prestige 15)
       // beats: the bot never uses a special or plays to a boss's weakness, so a player who does has
       // an edge, and needs it.
       for (let n = 1; n <= w.levels; n++) {
-        const lv = D.level(7, n), deck = refDeck(7, n);
+        const lv = D.level(w.id, n), deck = refDeck(w.id, n);
         // The most it beats three games in five (in small steps: boss fights vary a lot).
         const wins = (p) => [0, 1, 2, 3, 4].filter((variant) => { const r = play({ ...lv, points: p }, deck, { variant }); return r.result === 'won' && r.pileLeft >= 1; }).length;
         // Up in big steps until it fails twice running, then in small steps from the last win.
@@ -135,7 +143,9 @@ if (isMain && calibrate) {
         for (let f = most * 1.05, top = most * 1.44; f < top; f *= 1.05) { if (wins(f) >= 3) most = f; else break; }
         // (Sam, 23 Nov: really hard. From 95% of the most the bot beats to 110% by the last level;
         // the bot must still win one game in five.)
-        let p = most * (0.95 + (0.15 * (n - 1)) / (w.levels - 1)), eased = 0;
+        // (World 8, Sam 24 Nov: a struggle even with comet beasts: from the most the bot beats to 115%.)
+        const lo = w.id >= 8 ? 1.0 : 0.95;
+        let p = most * (lo + (0.15 * (n - 1)) / (w.levels - 1)), eased = 0;
         while (!beats(lv, deck, p, 1, 5) && p > 2) { p *= 0.95; eased++; }
         const times = [0, 1, 2, 3, 4].map((variant) => play({ ...lv, points: p }, deck, { variant })).filter((r) => r.result === 'won').map((r) => r.time).sort((x, y) => x - y);
         points[lv.id] = +p.toFixed(2);

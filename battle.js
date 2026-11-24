@@ -53,6 +53,8 @@ const BATTLE = (() => {
     if (w.id === 1) return true;
     // 1.5: World 7 opens once Worlds 1, 2, 4 and 5 are won in full (Sam, 23 Nov).
     if (w.id === 7) return [1, 2, 4, 5].every((k) => cleared(`${k}-40`));
+    // (World 8, Sam 24 Nov: opened by beating World 7.)
+    if (w.id === 8) return cleared('7-20');
     if (w.id === 4) return reachedLowGravity() && cleared(`1-${D.WORLDS[0].levels}`);
     return cleared(`${w.id - 1}-${D.WORLDS[w.id - 2].levels}`);
   };
@@ -81,7 +83,10 @@ const BATTLE = (() => {
       kills, killsOf: b.kills, killsByRole, killsByWorld, lowTierWin: !!b.lowTierWin, achDone, achTotal, blitz: !!b.blitz, perkWon: b.perkWon || {},
       // 1.5: World 7 won, and how many of its ten bosses beaten (the twins count as one).
       w7: cleared('7-20') ? 1 : 0,
-      mutantBosses: new Set(Object.keys(b.kills).filter((id) => D.ENEMIES[id] && D.ENEMIES[id].role === 'mutant').map((id) => (id === 'twin_luna' ? 'twin_sol' : id))).size,
+      mutantBosses: new Set(Object.keys(b.kills).filter((id) => D.ENEMIES[id] && D.ENEMIES[id].role === 'mutant' && D.ENEMIES[id].world === 7).map((id) => (id === 'twin_luna' ? 'twin_sol' : id))).size,
+      // (World 8: won, and its eleven giants beaten: the three Wardens count as one, the lesser abominations not at all.)
+      w8: cleared('8-20') ? 1 : 0,
+      apexBosses: new Set(Object.keys(b.kills).filter((id) => D.ENEMIES[id] && D.ENEMIES[id].role === 'mutant' && D.ENEMIES[id].world === 8 && id !== 'lesser_abomination').map((id) => (id.startsWith('warden_') ? 'wardens' : id))).size,
     };
   }
 
@@ -185,12 +190,13 @@ const BATTLE = (() => {
       rings: { sky: ['#06071a', '#2e2458'], ground: ['#6a5644', '#2a2018'] },
       eclipse: { sky: ['#040208', '#30143e'], ground: ['#3c2654', '#160c24'] },
       mutants: { sky: ['#07020f', '#3a1450'], ground: ['#3a2a3a', '#120a14'] },
+      abyss: { sky: ['#020008', '#2a0a3a'], ground: ['#241a2e', '#08040c'] },
     }[w.theme];
     const sky = g.createLinearGradient(0, 0, 0, 120);
     sky.addColorStop(0, LOOK.sky[0]); sky.addColorStop(1, LOOK.sky[1]);
     g.fillStyle = sky; g.fillRect(0, 0, 240, 180);
     // Stars over the dark worlds.
-    if (['shadow', 'moon', 'rings', 'eclipse', 'invasion', 'mutants'].includes(w.theme)) for (let i = 0; i < 40; i++) { g.globalAlpha = 0.3 + r() * 0.6; g.fillStyle = '#fff'; g.fillRect(r() * 240, r() * 100, 1.5, 1.5); }
+    if (['shadow', 'moon', 'rings', 'eclipse', 'invasion', 'mutants', 'abyss'].includes(w.theme)) for (let i = 0; i < 40; i++) { g.globalAlpha = 0.3 + r() * 0.6; g.fillStyle = '#fff'; g.fillRect(r() * 240, r() * 100, 1.5, 1.5); }
     g.globalAlpha = 1;
     const disc = (x, y, rad, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); };
     const glowAt = (x, y, rad, col) => { const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); };
@@ -221,6 +227,12 @@ const BATTLE = (() => {
       g.strokeStyle = 'rgba(240,220,180,0.8)'; g.lineWidth = 4; g.beginPath(); g.ellipse(170, 52, 56, 13, -0.3, 0, Math.PI * 2); g.stroke();
       g.fillStyle = '#3a2a1a'; g.fillRect(28, 68, 6, 52); g.fillStyle = '#e8e0d0'; g.beginPath(); g.moveTo(34, 70); g.lineTo(70, 84); g.lineTo(34, 100); g.fill();
       g.fillStyle = '#1a1a1a'; g.beginPath(); g.arc(46, 84, 5, 0, Math.PI * 2); g.fill();
+    } else if (w.theme === 'abyss') {
+      // World 8: a violet rift torn across the sky, moons drifting by it.
+      glowAt(120, 44, 130, 'rgba(176,106,255,0.35)');
+      g.strokeStyle = '#e0c0ff'; g.lineWidth = 3; g.beginPath(); g.moveTo(40, 20); g.lineTo(84, 44); g.lineTo(112, 30); g.lineTo(150, 58); g.lineTo(204, 40); g.stroke();
+      g.strokeStyle = 'rgba(176,106,255,0.6)'; g.lineWidth = 9; g.stroke();
+      disc(206, 22, 9, '#c8c0d8'); disc(30, 52, 6, '#a8a0c0');
     } else if (w.theme === 'mutants') {
       // A sick green glow, a cracked moon.
       glowAt(120, 50, 120, 'rgba(160,255,90,0.3)');
@@ -249,6 +261,13 @@ const BATTLE = (() => {
       giant('dragon', 120, 128, 96, { phase: 1 });
       giant('hulk_goblin', 54, 178, 86, { riders: 3 });
       giant('three_headed_serpent', 190, 178, 84, {});
+    } else if (w.theme === 'abyss') {
+      // Rifts glowing on the ground, then three of World 8's giants: the World-Eater behind, Vex and Thunderhoof in front.
+      for (let i = 0; i < 4; i++) { g.fillStyle = 'rgba(176,106,255,0.35)'; g.beginPath(); g.ellipse(26 + i * 62, 150 + (i % 2) * 14, 18, 5, 0, 0, Math.PI * 2); g.fill(); }
+      const giant = (id, x, y, h, mut) => { const e = D.ENEMIES[id]; g.save(); g.translate(x, y); ENEMY_ART.draw(g, id, { ...pose, mut: mut || {} }, ((h / 80) * 60) / e.look.size); g.restore(); };
+      giant('world_eater', 120, 124, 92, { phase: 2 });
+      giant('brood_queen', 52, 178, 70, {});
+      giant('storm_bull', 190, 178, 76, {});
     } else {
       if (boss) put(boss.id, 124, 150, 78 / Math.max(1, boss.look.size || 1) * 1.15);
       if (front[1]) put(front[3] ? front[3].id : front[1].id, 62, 170, 62);
@@ -304,7 +323,7 @@ const BATTLE = (() => {
       ${primeWorlds}
       <div class="bt-system">Low Gravity Solar System</div>
       ${lgWorlds}
-      ${mutantWorlds ? `<div class="bt-system mutants">Universal Mutants</div>${mutantWorlds}` : ''}
+      ${mutantWorlds ? `<div class="bt-system mutants">The Mutant Worlds</div>${mutantWorlds}` : ''}
       <div class="bt-row">
         <button class="bt-btn" id="bt-open-legends">Folded Legends <small>${legendsOwned().length}/${D.LEGEND_LIST.length}</small></button>
         <button class="bt-btn" id="bt-open-ach">Achievements <small>${Object.keys(b.ach).length + Object.keys(b.mach || {}).length}/${D.ACHIEVEMENTS.length + MERGE_ACH.length}</small></button>
@@ -315,7 +334,7 @@ const BATTLE = (() => {
       </div>`;
     sec.querySelectorAll('.bt-world[data-world]').forEach((btn) => btn.addEventListener('click', () => {
       const w = D.WORLDS[Number(btn.dataset.world) - 1];
-      if (!worldOpen(w)) { showWarning('World locked', w.id === 7 ? 'Defeat Worlds 1, 2, 4 and 5 in full first. World 7 is the end of the game: bring your strongest beasts from both solar systems and the comet.' : w.id === 4 ? 'Defeat World 1 and reach the Low Gravity system first.' : `Defeat World ${w.id - 1} first.`); return; }
+      if (!worldOpen(w)) { showWarning('World locked', w.id === 8 ? 'Defeat World 7 in full first. World 8 is harder still: bring comet beasts, and ascended ones (Tier 16 and up) for its last levels.' : w.id === 7 ? 'Defeat Worlds 1, 2, 4 and 5 in full first. World 7 is the end of the game: bring your strongest beasts from both solar systems and the comet.' : w.id === 4 ? 'Defeat World 1 and reach the Low Gravity system first.' : `Defeat World ${w.id - 1} first.`); return; }
       click();
       openWorld(w);
     }));
@@ -350,7 +369,7 @@ const BATTLE = (() => {
   function openWorld(w) {
     const sh = sheet(`World ${w.id}: ${w.name}`);
     if (w.system === 'low_gravity') sh.el.classList.add('lg');
-    if (w.id === 7) sh.el.classList.add('mutants');
+    if (w.id >= 7) sh.el.classList.add('mutants');
     const draw = () => {
       const b = B();
       let stars = 0;
@@ -462,7 +481,7 @@ const BATTLE = (() => {
     const known = !!b.played[level.id] || cleared(level.id);
     const sh = sheet(level.boss ? `${n}. ${known ? level.name : 'Boss level'}` : `${w.name} ${n}`, level.boss ? (known ? 'Boss level' : 'Who is it? Play to find out') : D.PATTERNS[level.pattern].name);
     if (sys === 'low_gravity') sh.el.classList.add('lg');
-    if (w.id === 7) sh.el.classList.add('mutants');
+    if (w.id >= 7) sh.el.classList.add('mutants');
     let io = null;
     const draw = () => {
       const played = !!b.played[level.id] || cleared(level.id);
@@ -509,7 +528,7 @@ const BATTLE = (() => {
         <div class="bt-card">
           <div class="bt-card-row"><div><b>Enemies</b></div><div class="bt-goal"><span class="bt-gold">★</span> win in under ${fmt(level.starTime)}${best ? `<br><span class="bt-dim">best ${fmt(best)}${b.stars[level.id] ? ' ★' : ''}</span>` : ''}</div></div>
           <div class="bt-foes">${foes}</div>
-          ${w.id === 7 ? mutantCard(level, played) : ''}
+          ${w.id >= 7 ? mutantCard(level, played) : ''}
           <div class="bt-tags"><span class="bt-tag" data-tip="${pat.tip}">${pat.name} ⓘ</span>${theme ? `<span class="bt-tag" data-tip="${theme.tip}">${theme.name} ⓘ</span>` : ''}</div>
           ${cleared(level.id) ? '' : `<div class="bt-dim bt-reward">First win: essence${level.boss ? ' and a premium crate' : ''}</div>`}
         </div>
@@ -633,7 +652,7 @@ const BATTLE = (() => {
     // Played once (won, lost or left), a level shows who is in it.
     B().played[level.id] = true;
     const rule = level.rule ? ` · ${D.RULES[level.rule.kind].name}` : '';
-    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : level.world === 7 ? 'mutants' : ''}">
+    const screen = el(`<div id="battle-screen" class="${D.WORLDS[level.world - 1].system === 'low_gravity' ? 'lg' : level.world >= 7 ? `mutants${level.world >= 8 ? ' abyss' : ''}` : ''}">
       <canvas id="bt-canvas"></canvas>
       <div class="bt-hud">
         <button class="bt-hud-btn" id="bt-pause" aria-label="Pause">❚❚</button>
@@ -1026,9 +1045,9 @@ const BATTLE = (() => {
   }
 
   // ------------------------------------------------------------------ World 7 (1.5): the giants on screen
-  const MOVE_WORD = { throw: 'Goblin throw', leap: 'Leap', slam: 'Slam', swarm: 'Swarm', sting: 'Stings', lane: 'Frost lane', boulder: 'Ice boulder', tail: 'Tail swipe', brood: 'Hatchlings', charge: 'Lunge', mirror: 'Mirror', clones: 'Glass doubles', beam: 'Beam', gas: 'Poison clouds', breath: 'Fire breath', gust: 'Wing gust', roar: 'Roar', steps: 'Footsteps', blink: 'Blink' };
-  const MOVE_SFX = { throw: 'm_throw', leap: 'm_roar', slam: 'm_warn', breath: 'm_inhale', tail: 'm_hiss', swarm: 'm_buzz', sting: 'm_buzz', lane: 'm_freeze', boulder: 'm_warn', brood: 'm_hiss', charge: 'm_roar', mirror: 'm_mirror', clones: 'm_mirror', blink: 'm_blink', beam: 'm_charge', gas: 'm_gas', gust: 'm_warn', roar: 'm_roar' };
-  const TYPE_RGB = { fire: '255,122,42', frost: '154,232,255', poison: '157,255,74', crush: '255,176,90', shock: '255,242,122' };
+  const MOVE_WORD = { shockwave: 'Shockwave', meteor: 'Meteors', pull: 'Gravity well', sweep: 'Laser sweep', spikes: 'Spikes', burrow: 'Burrow', drain: 'Drain', grab: 'Grab', scream: 'Scream', harden: 'Harden', eggs: 'Eggs', rift: 'Rift', chain: 'Chain lightning', orbit: 'Orbs', raise: 'Raise the fallen', mark: 'Mark of doom', stampede: 'Stampede', throw: 'Goblin throw', leap: 'Leap', slam: 'Slam', swarm: 'Swarm', sting: 'Stings', lane: 'Frost lane', boulder: 'Ice boulder', tail: 'Tail swipe', brood: 'Hatchlings', charge: 'Lunge', mirror: 'Mirror', clones: 'Glass doubles', beam: 'Beam', gas: 'Poison clouds', breath: 'Fire breath', gust: 'Wing gust', roar: 'Roar', steps: 'Footsteps', blink: 'Blink' };
+  const MOVE_SFX = { shockwave: 'm_warn', meteor: 'm_warn', pull: 'm_charge', sweep: 'm_charge', spikes: 'm_hiss', burrow: 'm_roar', drain: 'm_mirror', grab: 'm_hiss', scream: 'm_roar', harden: 'm_clang', eggs: 'm_hiss', rift: 'm_blink', chain: 'm_charge', orbit: 'm_mirror', raise: 'm_revive', mark: 'm_warn', stampede: 'm_roar', throw: 'm_throw', leap: 'm_roar', slam: 'm_warn', breath: 'm_inhale', tail: 'm_hiss', swarm: 'm_buzz', sting: 'm_buzz', lane: 'm_freeze', boulder: 'm_warn', brood: 'm_hiss', charge: 'm_roar', mirror: 'm_mirror', clones: 'm_mirror', blink: 'm_blink', beam: 'm_charge', gas: 'm_gas', gust: 'm_warn', roar: 'm_roar' };
+  const TYPE_RGB = { fire: '255,122,42', frost: '154,232,255', poison: '157,255,74', crush: '255,176,90', shock: '255,242,122', acid: '200,255,42', void: '176,106,255', sonic: '255,138,216', gravity: '138,154,255' };
   /** A boss's move as it starts and lands, its phases, rage, a stun that stops it. */
   function mutantFx(ev) {
     const u = ev.unit;
@@ -1052,8 +1071,20 @@ const BATTLE = (() => {
         else if (ev.move === 'mirror') { ring(u.x, u.y, 220, '#e0d0ff'); burst(u.x, u.y - u.r, '#ffffff', 20, 260, 'star'); }
         else if (ev.move === 'swarm' || ev.move === 'clones' || ev.move === 'brood') burst(u.x, u.y - u.r * 1.2, ev.move === 'clones' ? '#e8f0ff' : ev.move === 'brood' ? '#c8ff8a' : '#ffe27a', 18, 220, 'spark');
         else if (ev.move === 'charge') run.shake = Math.max(run.shake, 10);
+        else if (ev.move === 'burrow') { burst(u.x, u.y, '#8a6a48', 26, 300, 'smoke'); run.shake = Math.max(run.shake, 8); }
+        else if (ev.move === 'eggs') burst(u.x, u.y + u.r, '#e8dcc0', 14, 200, 'spark');
+        else if (ev.move === 'harden') { ring(u.x, u.y, u.r * 1.8, '#c8c8e8'); burst(u.x, u.y - u.r, '#e0e0ff', 16, 200, 'star'); }
+        else if (ev.move === 'orbit') ring(u.x, u.y, 200, '#b06aff');
+        else if (ev.move === 'rift' || ev.move === 'raise') burst(u.x, u.y - u.r, '#b06aff', 20, 240, 'wisp');
         break;
       }
+      case 'emerge': ring(u.x, u.y, ev.r || 200, (TY[ev.mtype] || {}).col || '#c8ff2a'); ring(u.x, u.y, (ev.r || 200) * 0.6, '#a89880'); burst(u.x, u.y, '#8a6a48', 34, 380, 'smoke'); run.shake = Math.max(run.shake, 18); sfx('m_slam'); bigText(u.x, u.y - u.r * 3, 'It bursts up!', '#ffb8a8', 1.2); break;
+      case 'scream': for (let k = 0; k < 3; k++) ring(u.x + Math.cos(ev.a) * ev.r * (0.3 + k * 0.3), u.y + Math.sin(ev.a) * ev.r * (0.3 + k * 0.3), 80 + k * 50, '#ff8ad8'); run.shake = Math.max(run.shake, 10); sfx('m_roar'); break;
+      case 'pull': ring(ev.x, ev.y, ev.r, '#8a9aff'); ring(ev.x, ev.y, ev.r * 0.5, '#8a9aff'); burst(ev.x, ev.y, '#c8d0ff', 20, 240, 'wisp'); run.shake = Math.max(run.shake, 8); sfx('m_slam'); break;
+      case 'chain': (run.chains = run.chains || []).push({ pts: ev.pts, until: run.battle.time + 0.5 }); for (const p of ev.pts.slice(1)) burst(p.x, p.y, '#fff27a', 6, 160, 'spark'); sfx('m_beam'); run.shake = Math.max(run.shake, 6); break;
+      case 'hatch': burst(u.x, u.y - 20, '#e8dcc0', 18, 220, 'spark'); bigText(u.x, u.y - 60, 'Hatched!', '#ffb8a8', 1.1); sfx('m_splat'); break;
+      case 'rift-spawn': burst(u.x, u.y, '#b06aff', 10, 160, 'wisp'); break;
+      case 'doom': ring(u.x, u.y, u.r * 3, '#b06aff'); burst(u.x, u.y - u.r, '#e0c0ff', 30, 320, 'star'); bigText(u.x, u.y - u.r * 2.6, '☠ Doom!', '#e0c0ff', 1.4); run.shake = Math.max(run.shake, 14); sfx('m_slam'); break;
       case 'zone-land': {
         const z = ev.zone, col = (TY[z.type] || {}).col || '#ffffff';
         if (z.shape === 'lane') { for (let y = z.y; y < BE.ARENA.h; y += 150) burst(z.x, y, '#e8fbff', 5, 160, 'star'); run.shake = Math.max(run.shake, 8); sfx('sp_freeze'); }
@@ -1110,8 +1141,44 @@ const BATTLE = (() => {
         else if (q.shape === 'cone') { const cx = sx(q.x), cy = sy(q.y); ctx.moveTo(cx, cy); ctx.arc(cx, cy, Math.max(1, q.r * z * s), q.a - q.spread, q.a + q.spread); ctx.closePath(); }
         else if (q.shape === 'line') { const L = q.len * s, hw = q.w / 2, ca = Math.cos(q.a), sa = Math.sin(q.a); [[q.x - sa * hw, q.y + ca * hw], [q.x + ca * L - sa * hw, q.y + sa * L + ca * hw], [q.x + ca * L + sa * hw, q.y + sa * L - ca * hw], [q.x + sa * hw, q.y - ca * hw]].forEach(([x, y], i) => (i ? ctx.lineTo(sx(x), sy(y)) : ctx.moveTo(sx(x), sy(y)))); ctx.closePath(); }
         else if (q.shape === 'lane') ctx.rect(sx(q.x - q.w / 2), sy(q.y), q.w * z, (q.y2 - q.y) * z * s);
+        else if (q.shape === 'wave') ctx.arc(sx(q.x), sy(q.y), Math.max(1, q.r * z * s), 0, Math.PI * 2);
       };
       ctx.save();
+      if (q.shape === 'wave') {
+        // A shockwave racing out: a bright front, a fading wake, the edge of where it will stop.
+        const rgbW = TYPE_RGB[q.type] || '255,176,90', f = (q.front || 0) * z;
+        ctx.strokeStyle = `rgba(${rgbW},0.35)`; ctx.lineWidth = Math.max(1, 2 * z); ctx.setLineDash([Math.max(4, 12 * z), Math.max(3, 8 * z)]); ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), q.r * z, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = `rgba(${rgbW},0.25)`; ctx.lineWidth = Math.max(4, 50 * z); ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), Math.max(1, f - 20 * z), 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = `rgba(${rgbW},0.9)`; ctx.lineWidth = Math.max(2, 10 * z); ctx.beginPath(); ctx.arc(sx(q.x), sy(q.y), Math.max(1, f), 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = Math.max(1, 3 * z); ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+      if (q.linger && q.kind !== 'ice' && q.kind !== 'gas') {
+        const left = Math.max(0, Math.min(1, (q.until - now) / 1.2)), cx = sx(q.x), cy = sy(q.y), R = q.r * z;
+        if (q.kind === 'rift') {
+          // A tear in the world: a jagged violet slit, glowing, turning slowly.
+          ctx.translate(cx, cy); ctx.rotate(Math.sin(t * 0.7) * 0.2);
+          const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.6); gr.addColorStop(0, `rgba(176,106,255,${0.6 * left})`); gr.addColorStop(1, 'rgba(176,106,255,0)');
+          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R * 1.6, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(8,2,16,${0.95 * left})`; ctx.strokeStyle = `rgba(224,192,255,${left})`; ctx.lineWidth = Math.max(1.5, 4 * z);
+          ctx.beginPath(); for (let i = 0; i <= 12; i++) { const a = (i / 12) * Math.PI * 2, rr = (i % 2 ? 0.35 : 1) * R * (0.9 + 0.1 * Math.sin(t * 6 + i)); ctx.lineTo(Math.cos(a) * rr * 0.45, Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else {
+          const col = { burn: '255,122,42', acid: '200,255,42', voiddust: '176,106,255', web: '235,235,245' }[q.kind] || '255,255,255';
+          if (q.kind === 'web') {
+            ctx.strokeStyle = `rgba(${col},${0.55 * left})`; ctx.lineWidth = Math.max(1, 1.6 * z);
+            ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.6); } ctx.stroke();
+            for (let k = 1; k <= 3; k++) { ctx.beginPath(); ctx.ellipse(cx, cy, R * k / 3, R * 0.6 * k / 3, 0, 0, Math.PI * 2); ctx.stroke(); }
+          } else {
+            for (let i = 0; i < 5; i++) { const a = i * 1.26 + t * (q.kind === 'burn' ? 1.4 : 0.4), px = cx + Math.cos(a) * R * 0.45, py = cy + Math.sin(a) * R * 0.35, RR = R * 0.7; const g2 = ctx.createRadialGradient(px, py, 0, px, py, RR); g2.addColorStop(0, `rgba(${col},${0.36 * left})`); g2.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(px, py, RR, 0, Math.PI * 2); ctx.fill(); }
+            if (q.kind === 'burn') for (let i = 0; i < 6; i++) { const k2 = (t * 1.5 + i / 6) % 1, px = cx + Math.sin(i * 2.4) * R * 0.6; ctx.globalAlpha = left * (1 - k2); ctx.fillStyle = i % 2 ? '#ffb43a' : '#ff6a1a'; ctx.beginPath(); ctx.ellipse(px, cy + Math.cos(i * 1.7) * R * 0.3 - k2 * 26 * z, 5 * z, 9 * z * (1 - k2 * 0.5), 0, 0, Math.PI * 2); ctx.fill(); }
+            if (q.kind === 'acid') for (let i = 0; i < 5; i++) { const k2 = (t * 0.9 + i / 5) % 1; ctx.globalAlpha = left * (1 - k2); ctx.strokeStyle = '#e8ff8a'; ctx.lineWidth = Math.max(1, 1.5 * z); ctx.beginPath(); ctx.arc(cx + Math.sin(i * 3) * R * 0.5, cy + Math.cos(i * 2) * R * 0.3, (2 + k2 * 6) * z, 0, Math.PI * 2); ctx.stroke(); }
+            ctx.globalAlpha = 1;
+          }
+        }
+        ctx.restore();
+        continue;
+      }
       if (q.linger) {
         if (q.kind === 'ice') {
           path(); ctx.fillStyle = `rgba(200,240,255,${0.22 + 0.05 * Math.sin(t * 3)})`; ctx.fill(); ctx.strokeStyle = 'rgba(230,250,255,0.6)'; ctx.lineWidth = Math.max(1, 2 * z); ctx.stroke();
@@ -1129,6 +1196,9 @@ const BATTLE = (() => {
       if (!q.small) ctx.setLineDash([Math.max(4, 14 * z), Math.max(3, 8 * z)]);
       ctx.stroke(); ctx.setLineDash([]);
       path(k); ctx.fillStyle = `rgba(${rgb},${0.18 + 0.22 * k})`; ctx.fill();
+      // (World 8: something falling onto the mark, getting bigger as it comes; a skull on a Mark of doom.)
+      if (q.fall && k > 0.1) { const cx = sx(q.x), cy = sy(q.y), h = (1 - k) * 600 * z, R2 = Math.max(2, q.r * z * 0.3 * (0.5 + k * 0.5)); const fc = { fire: '#ff7a1a', burn: '#ff7a1a', acid: '#c8ff2a', frost: '#e8fbff', gravity: '#c8d0ff', crush: '#c8b8a0', void: '#b06aff', voiddust: '#b06aff', web: '#ffffff' }[q.fall] || '#e8e0ff'; ctx.globalAlpha = 0.9; ctx.fillStyle = fc; ctx.beginPath(); ctx.arc(cx, cy - h, R2, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.moveTo(cx - R2, cy - h); ctx.lineTo(cx, cy - h - R2 * 5); ctx.lineTo(cx + R2, cy - h); ctx.fill(); ctx.globalAlpha = 1; }
+      if (q.mark) { ctx.font = `${Math.max(14, 34 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.globalAlpha = 0.6 + 0.4 * blink; ctx.fillText('☠', sx(q.x), sy(q.y) - q.r * z * 1.6); ctx.globalAlpha = 1; }
       if (q.small) { const cx = sx(q.x), cy = sy(q.y), R = q.r * z; ctx.strokeStyle = `rgba(${rgb},0.9)`; ctx.lineWidth = Math.max(1, 2 * z); ctx.beginPath(); ctx.moveTo(cx - R * 0.5, cy); ctx.lineTo(cx + R * 0.5, cy); ctx.moveTo(cx, cy - R * 0.5); ctx.lineTo(cx, cy + R * 0.5); ctx.stroke(); }
       ctx.restore();
     }
@@ -1176,6 +1246,51 @@ const BATTLE = (() => {
         ctx.globalAlpha = 1;
       }
     }
+    // World 8 (1.5): a sweeping laser, draining tethers, orbs circling, the Wardens' link, held beasts, lightning.
+    for (const u of b.units) {
+      if (u.state === 'dying') continue;
+      const c = u.cast;
+      if (c && c.move.kind === 'sweep' && c.stage === 'act' && c.angle != null) {
+        const col = TYPE_RGB[c.move.type] || '255,242,122', x0 = sx(u.x), y0 = sy(u.y - u.r * 1.6), x1 = sx(u.x + Math.cos(c.angle) * c.move.len), y1 = sy(u.y + Math.sin(c.angle) * c.move.len);
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = `rgba(${col},0.45)`; ctx.lineWidth = c.move.w * z; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = c.move.w * z * 0.28; ctx.stroke();
+        if (Math.random() < 0.6) burst(u.x + Math.cos(c.angle) * c.move.len * Math.random(), u.y + Math.sin(c.angle) * c.move.len * Math.random(), `rgb(${col})`, 2, 120, 'spark');
+      }
+      if (c && c.move.kind === 'drain' && c.stage === 'act') for (const o of c.targets || []) {
+        const x0 = sx(u.x), y0 = sy(u.y - u.r * 1.8), x1 = sx(o.x), y1 = sy(o.y - o.r);
+        ctx.strokeStyle = 'rgba(176,106,255,0.75)'; ctx.lineWidth = Math.max(2, 5 * z); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, y0); for (let i = 1; i <= 10; i++) { const k = i / 10; ctx.lineTo(x0 + (x1 - x0) * k + Math.sin(k * 12 + t * 10) * 6 * z * Math.sin(k * Math.PI), y0 + (y1 - y0) * k); } ctx.stroke();
+        const k = (t * 1.5) % 1; ctx.fillStyle = '#e0c0ff'; ctx.beginPath(); ctx.arc(x1 + (x0 - x1) * k, y1 + (y0 - y1) * k, Math.max(2, 5 * z), 0, Math.PI * 2); ctx.fill();
+      }
+      if (u.orbitUntil > now) {
+        const n = u.orbitN || 6, R = u.orbitR, col = TYPE_RGB[u.orbitType] || '176,106,255';
+        for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + (now - (u.orbitStart || 0)) * 2.4, x = sx(u.x + Math.cos(a) * R), y = sy(u.y + Math.sin(a) * R * 0.5) - 30 * z; const gr = ctx.createRadialGradient(x, y, 0, x, y, 26 * z); gr.addColorStop(0, `rgba(${col},0.95)`); gr.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, 26 * z, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, 6 * z, 0, Math.PI * 2); ctx.fill(); }
+      }
+      if (u.side === 'you' && u.heldUntil > now) {
+        // Held: tentacles, pincers or arms wrapped round it.
+        const x = sx(u.x), y = sy(u.y), R = u.r * z, col = u.heldLook === 'pincer' ? '#c89a4a' : u.heldLook === 'arm' ? '#b88a7a' : '#4a2a5a';
+        ctx.strokeStyle = col; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, R * 0.22);
+        for (let i = 0; i < 3; i++) { const a = -Math.PI / 2 + (i - 1) * 0.9; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R * 1.3, y + R * 0.2); ctx.quadraticCurveTo(x + Math.cos(a + 0.8) * R * 1.1, y - R * (0.6 + i * 0.3), x - Math.cos(a) * R * 0.6, y - R * (0.9 + 0.1 * Math.sin(t * 6 + i))); ctx.stroke(); }
+      }
+    }
+    for (const w of b.units.filter((u) => u.mutant && u.mutant.link && u.state !== 'dying')) {
+      for (const o of b.units) if (o !== w && o.uid > w.uid && o.mutant && o.mutant.link === w.mutant.link && o.state !== 'dying' && Math.hypot(o.x - w.x, o.y - w.y) < 380) {
+        const x0 = sx(w.x), y0 = sy(w.y - w.r * 1.8), x1 = sx(o.x), y1 = sy(o.y - o.r * 1.8);
+        ctx.strokeStyle = `rgba(200,208,255,${0.5 + 0.3 * Math.sin(t * 6)})`; ctx.lineWidth = Math.max(2, 5 * z); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      }
+    }
+    if (run.chains) {
+      run.chains = run.chains.filter((ch) => ch.until > now);
+      for (const ch of run.chains) {
+        const k = (ch.until - now) / 0.5;
+        ctx.strokeStyle = `rgba(255,242,122,${k})`; ctx.lineWidth = Math.max(2, 5 * z); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ch.pts.forEach((p, i) => { if (!i) { ctx.moveTo(sx(p.x), sy(p.y)); return; } const q = ch.pts[i - 1]; for (let s = 1; s <= 5; s++) { const f = s / 5; ctx.lineTo(sx(q.x + (p.x - q.x) * f + (s < 5 ? (Math.random() - 0.5) * 40 : 0)), sy(q.y + (p.y - q.y) * f + (s < 5 ? (Math.random() - 0.5) * 30 : 0))); } });
+        ctx.stroke(); ctx.strokeStyle = `rgba(255,255,255,${k})`; ctx.lineWidth = Math.max(1, 2 * z); ctx.stroke();
+      }
+    }
     const sol = b.units.find((u) => u.kind === 'twin_sol' && u.state !== 'dying'), luna = b.units.find((u) => u.kind === 'twin_luna' && u.state !== 'dying');
     if (sol && luna && sol.linked) {
       const x0 = sx(sol.x), y0 = sy(sol.y - sol.r * 1.6), x1 = sx(luna.x), y1 = sy(luna.y - luna.r * 1.6);
@@ -1214,14 +1329,14 @@ const BATTLE = (() => {
     const rows = (level.bossIds || []).map((id) => {
       const e = D.ENEMIES[id], n = MUTANTS.bossNotes(id);
       if (!(played && b.seen[id])) return '<div class="bt-mut-row"><b>???</b><span class="bt-dim">Play the level to learn about this boss.</span></div>';
-      return `<div class="bt-mut-row"><b>${e.name}</b><div class="bt-mut-chips">${n.weak ? `<span class="bt-mchip weak">Weak to ${n.weak}</span>` : ''}${n.resist ? `<span class="bt-mchip resist">Resists ${n.resist}</span>` : ''}${n.type ? `<span class="bt-mchip">${n.type.icon} ${n.type.name}: ${n.type.text}</span>` : ''}</div>${n.armour ? `<span class="bt-dim">${n.armour}</span>` : ''}${n.twin ? `<span class="bt-dim">${n.twin}</span>` : ''}</div>`;
+      return `<div class="bt-mut-row"><b>${e.name}</b><div class="bt-mut-chips">${n.weak ? `<span class="bt-mchip weak">Weak to ${n.weak}</span>` : ''}${n.resist ? `<span class="bt-mchip resist">Resists ${n.resist}</span>` : ''}${n.type ? `<span class="bt-mchip">${n.type.icon} ${n.type.name}: ${n.type.text}</span>` : ''}</div>${n.armour ? `<span class="bt-dim">${n.armour}</span>` : ''}${n.twin ? `<span class="bt-dim">${n.twin}</span>` : ''}${n.extra ? `<span class="bt-dim">${n.extra}</span>` : ''}</div>`;
     }).join('');
     return `<div class="bt-mutcard"><div class="bt-mut-rule">Beat the boss to win. Their camp has no coin pile, so guard yours.</div>${level.tip ? `<div class="bt-mut-tip">💡 ${level.tip}</div>` : ''}${rows}</div>`;
   }
   /** One to five bleeding, dripping red stars: how dangerous a World 7 foe is, against World 7 only (Sam, 23 Nov). */
   const BLOOD_STAR = '<svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.6l-6.4 3.5 1.4-7.1-5.3-5 7.2-.9z" fill="#c8102e" stroke="#4a0008" stroke-width="1.4" stroke-linejoin="round"/><path d="M7.6 18.4c-.2 2.4.4 4 .9 5.6.5-1.4.9-2.8.9-4.6zM15.4 18.8c.1 2.2.6 3.4 1.1 4.6.4-1.2.6-2.3.4-3.7z" fill="#c8102e" stroke="#4a0008" stroke-width=".9"/><circle class="drip" cx="8.5" cy="26" r="1.4" fill="#c8102e"/><circle class="drip d2" cx="16.5" cy="25" r="1.2" fill="#c8102e"/><path d="M8.6 7.4l2.2-1" stroke="#ff8a9a" stroke-width="1.3" stroke-linecap="round"/></svg>';
   const bloodHtml = (d) => { let s = ''; for (let i = 1; i <= 5; i++) s += `<span class="bt-blood ${d >= i ? 'full' : d >= i - 0.5 ? 'half' : ''}">${BLOOD_STAR}</span>`; return s; };
-  const dangerHtml = (id) => (D.ENEMIES[id].world === 7 && typeof MUTANTS !== 'undefined' ? `<span class="bt-bloods">${bloodHtml(MUTANTS.bloodStars(id))}</span>` : heartsHtml(D.difficulty(id)));
+  const dangerHtml = (id) => (D.ENEMIES[id].world >= 7 && typeof MUTANTS !== 'undefined' ? `<span class="bt-bloods">${bloodHtml(MUTANTS.bloodStars(id))}</span>` : heartsHtml(D.difficulty(id)));
 
   function events(list) {
     for (const ev of list) {
@@ -1392,6 +1507,7 @@ const BATTLE = (() => {
       moon: { top: '#3a3e52', mid: '#6a6e82', low: '#8a8e9e', path: 'rgba(220,225,240,0.22)', blob: ['#7a7e90', '#5a5e70', '#9a9eae', '#6a6e80'], edge: '#1a1c28' },
       rings: { top: '#141830', mid: '#2a2a48', low: '#3a3a5a', path: 'rgba(240,210,160,0.2)', blob: ['#4a4060', '#3a3050', '#5a5070', '#2a2a44'], edge: '#0a0a18' },
       mutants: { top: '#1a0e22', mid: '#2a2236', low: '#34304a', path: 'rgba(160,255,90,0.14)', blob: ['#3a2a4a', '#2a3a2a', '#4a3a5a', '#2a4a34'], edge: '#0a0610' },
+      abyss: { top: '#0e0618', mid: '#1c1228', low: '#2a1e3a', path: 'rgba(176,106,255,0.14)', blob: ['#2a1a3a', '#1a1028', '#3a2a4e', '#2a1a2e'], edge: '#050208' },
       eclipse: { top: '#0e0818', mid: '#1e1230', low: '#2e1c44', path: 'rgba(255,200,100,0.14)', blob: ['#2a1a40', '#3a2050', '#1a1030', '#4a2a5a'], edge: '#05030a' },
     }[theme];
     const grd = g.createLinearGradient(0, 0, 0, H);
@@ -1514,12 +1630,13 @@ const BATTLE = (() => {
     if (theme === 'rings') { // the planet's rings sweeping across
       for (let i = 0; i < 5; i++) { g.strokeStyle = `rgba(${210 - i * 15},${180 - i * 10},${140 - i * 10},0.18)`; g.lineWidth = 40 + i * 12; g.beginPath(); g.ellipse(500, 1000, 1400 + i * 90, 360 + i * 30, -0.35, 0, Math.PI * 2); g.stroke(); }
     }
-    if (theme === 'mutants') { // World 7: no coin pile at their end, but the lair the giants come out of
-      const gl = g.createRadialGradient(500, 110, 20, 500, 110, 300); gl.addColorStop(0, 'rgba(150,255,90,0.5)'); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    if (theme === 'mutants' || theme === 'abyss') { // Worlds 7 and 8: no coin pile at their end, but the lair the giants come out of (violet for World 8)
+      const lc = theme === 'abyss' ? '176,106,255' : '150,255,90', lc2 = theme === 'abyss' ? '200,150,255' : '160,255,90';
+      const gl = g.createRadialGradient(500, 110, 20, 500, 110, 300); gl.addColorStop(0, `rgba(${lc},0.5)`); gl.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = gl; g.beginPath(); g.arc(500, 110, 300, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#2a2230'; g.beginPath(); g.moveTo(250, 200); for (let i = 0; i <= 12; i++) { const a = Math.PI + (i / 12) * Math.PI; g.lineTo(500 + Math.cos(a) * 270 + (r() - 0.5) * 30, 200 + Math.sin(a) * 200 + (r() - 0.5) * 24); } g.lineTo(750, 200); g.closePath(); g.fill();
       g.fillStyle = '#07040c'; g.beginPath(); g.moveTo(320, 205); for (let i = 0; i <= 10; i++) { const a = Math.PI + (i / 10) * Math.PI; g.lineTo(500 + Math.cos(a) * 180 + (r() - 0.5) * 20, 205 + Math.sin(a) * 140 + (r() - 0.5) * 16); } g.lineTo(680, 205); g.closePath(); g.fill();
-      const inner = g.createRadialGradient(500, 170, 10, 500, 170, 150); inner.addColorStop(0, 'rgba(160,255,90,0.35)'); inner.addColorStop(1, 'rgba(0,0,0,0)');
+      const inner = g.createRadialGradient(500, 170, 10, 500, 170, 150); inner.addColorStop(0, `rgba(${lc2},0.35)`); inner.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = inner; g.beginPath(); g.arc(500, 170, 150, 0, Math.PI * 2); g.fill();
       for (const [x, y] of [[452, 150], [476, 148], [532, 158], [556, 156]]) { g.fillStyle = '#ff4a3a'; g.beginPath(); g.ellipse(x, y, 5, 3, 0, 0, Math.PI * 2); g.fill(); }
       g.strokeStyle = '#efe6d2'; g.lineWidth = 6; g.lineCap = 'round';
@@ -2165,7 +2282,7 @@ const BATTLE = (() => {
       t: t + u.uid * 0.37, walk: (run.walk.get(u.uid) || 0) % 1, walkRaw: run.walk.get(u.uid) || 0, atk: ph, heavy: heavyNow,
       hurt: u._hurt || 0, dying: u.state === 'dying' ? Math.min(1, u.dyingT / BE.DYING) : 0,
       capture: u.state === 'capture', seed: u.uid, ranged: shoots(u),
-      mut: u.mutant ? MUTANTS.pose(run.battle, u) : null,
+      mut: u.mutant || u.hatchAt ? MUTANTS.pose(run.battle, u) : null,
     };
     ctx.save();
     ctx.translate(sx(u.x), sy(u.y));
@@ -2258,6 +2375,8 @@ const BATTLE = (() => {
       btn.classList.toggle('full', b.yours.length >= b.cap);
       // An evolved card whose beast is out with its special unused: the card names the special.
       btn.classList.toggle('special', b.canSpecial(i) && run.countdown <= 0);
+      // (World 8: deafened by a sonic attack, no special for a while.)
+      btn.classList.toggle('silenced', c.silencedUntil > b.time);
     });
     if (b.mut) bossBars(b);
   }
@@ -2319,9 +2438,9 @@ const BATTLE = (() => {
       if (first) {
         const cps = typeof calculateTotalCps === 'function' ? calculateTotalCps() : 0;
         const ess = Math.max(150 * level.n * level.world * level.world, cps * 60 * D.clearMinutes(level.world, level.n));
-        grant({ essence: ess, premium: level.boss ? 1 : 0, cap: D.BOSS_CRATE_CAP[level.world], shards: level.world === 7 ? 20 + 5 * level.n : 0 }, rewards, '', level);
+        grant({ essence: ess, premium: level.boss ? 1 : 0, cap: D.BOSS_CRATE_CAP[level.world], shards: level.world === 7 ? 20 + 5 * level.n : level.world === 8 ? 40 + 8 * level.n : 0 }, rewards, '', level);
       }
-      if (newStar && level.world === 7) grant({ shards: 60 }, rewards, '', level);
+      if (newStar && level.world >= 7) grant({ shards: level.world === 8 ? 100 : 60 }, rewards, '', level);
       if (newStar) {
         const s = totals().stars;
         while (Math.floor(s / 5) > (b.starGifts || 0)) { b.starGifts = (b.starGifts || 0) + 1; grant({ spins: 1 }, rewards, '5 stars', level); }
@@ -2343,7 +2462,7 @@ const BATTLE = (() => {
     const next = level.n < w.levels ? level.n + 1 : null;
     const m = el(`<div class="bt-modal"><div class="bt-panel ${won ? 'won' : 'lost'}">
       <h2>${won ? 'Victory!' : r.retreated ? 'Retreated' : 'Defeat'}</h2>
-      ${first && level.n === w.levels && (level.world === 3 || level.world === 6 || level.world === 7) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : level.world === 6 ? 'You have beaten every world of the Low Gravity solar system!' : 'You have beaten the Universal Mutants, the hardest battles in either universe!'}</div>` : ''}
+      ${first && level.n === w.levels && (level.world === 3 || level.world === 6 || level.world >= 7) ? `<div class="bt-finale">${level.world === 3 ? 'You have beaten every world of the Prime solar system!' : level.world === 6 ? 'You have beaten every world of the Low Gravity solar system!' : level.world === 8 ? 'You have beaten the World-Eater and the Apex Mutants. Nothing in any universe is stronger than your beasts.' : 'You have beaten the Universal Mutants! World 8, the Apex Mutants, is open.'}</div>` : ''}
       <div class="bt-result-star ${starNow ? 'on' : ''}">★</div>
       <div class="bt-dim">${won ? `Won in ${fmt(time)}` : battle.piles.you <= 0 ? 'They took your coin pile.' : 'You retreated.'} · star under ${fmt(level.starTime)}${starNow ? (newStar ? ': earned!' : '') : ''}</div>
       ${legends.map((id) => `<div class="bt-legend-new"><img data-legend="${id}" alt=""><div><small>New Folded Legend</small><b>${D.LEGENDS[id].name}, ${D.LEGENDS[id].title}</b><span>Tier ${D.LEGENDS[id].tier} ${RARITIES[D.LEGENDS[id].rarity].name}</span></div></div>`).join('')}

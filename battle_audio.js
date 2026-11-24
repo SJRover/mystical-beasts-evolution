@@ -253,7 +253,7 @@ const BATTLE_SFX = (() => {
     let pool = boss && sys.boss.length ? sys.boss : sys.casual;
     let stretch = Math.floor((n - 1) / 10) + ((world - 1) % 3);
     // World 7 (1.5): Sam's World 7 tracks in turn, one a level; the boss tracks until there are any.
-    if (world === 7) { pool = (m.mutants && m.mutants.length) ? m.mutants : [...m.prime.boss, ...m.low_gravity.boss]; stretch = n - 1; }
+    if (world >= 7) { pool = (m.mutants && m.mutants.length) ? m.mutants : [...m.prime.boss, ...m.low_gravity.boss]; stretch = n - 1; }
     if (!pool || !pool.length) return;
     const file = pool[stretch % pool.length];
     audio.init();

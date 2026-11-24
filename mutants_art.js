@@ -1056,7 +1056,7 @@ const MUTANT_ART = (() => {
   function draw(ctx, P, look, pose) {
     const m = pose.mut || {};
     const size = look.size || 4;
-    const small = look.art === 'goblin';
+    const small = look.art === 'goblin' || look.art === 'egg';
     LW = small ? 0.95 : 2.4 / Math.max(1, size); LINE = P.line;
     const A = { t: pose.t, walk: pose.walkRaw != null ? pose.walkRaw : pose.walk, atk: pose.atk, heavy: pose.heavy, m, size, seed: pose.seed || 0 };
     const air = m.air || 0;
@@ -1077,5 +1077,5 @@ const MUTANT_ART = (() => {
 
   // The drawing tools, shared with comet_art.js (the comet's beasts are drawn the same way).
   const H = { shape, ell, stroke, vgrad, rgrad, limb, chain, tube, glow, eye, foot, paw, leg, gait, blow, scales, stitches, bands, fist, steam, shade, rgba, lerp, ease, clamp, HI, LO, setLine: (w, line) => { LW = w; LINE = line; }, get LW() { return LW; } };
-  return { draw, ARTS, H };
+  return { draw, ARTS, H, FIT, SHADOW };
 })();

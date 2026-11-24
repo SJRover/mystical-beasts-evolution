@@ -93,7 +93,7 @@ const BattleEngine = (() => {
       // 1.5, World 7: the bosses' telegraphed moves (mutants.js), their areas on the ground, and a
       // level won by beating its bosses (no coin pile at their end).
       this.zones = [];
-      this.mut = typeof MUTANTS !== 'undefined' && level.world === 7;
+      this.mut = typeof MUTANTS !== 'undefined' && level.world >= 7;
       this.bossFight = level.win === 'bosses';
       this.deployed = 0;
       this.hurry = 0;
@@ -118,7 +118,7 @@ const BattleEngine = (() => {
     /** Whether card `i`'s special can be set off now (an evolved form with one of it on the field). */
     canSpecial(i) {
       const c = this.cards[i];
-      return !this.result && !!c && c.evolved && !c.abilityUsed && this.onField(i).length > 0;
+      return !this.result && !!c && c.evolved && !c.abilityUsed && !(c.silencedUntil > this.time) && this.onField(i).length > 0;
     }
 
     /**
@@ -137,7 +137,7 @@ const BattleEngine = (() => {
       if (reach && !near(foes, reach).length) { this.events.push({ type: 'special-miss', unit: u }); return false; }
       // (Dispel needs a boss winding up a move within 800, or an enemy near it with a shield or a war cry.)
       const winding = foes.filter((f) => f.cast && f.cast.stage === 'wind' && Math.hypot(f.x - u.x, f.y - u.y) - f.r <= 800);
-      if (c.ability === 'dispel' && !winding.length && !near(foes, 300).some((f) => f.buffUntil > this.time || f.shieldUntil > this.time || f.mirrorShield > this.time)) { this.events.push({ type: 'special-miss', unit: u }); return false; }
+      if (c.ability === 'dispel' && !winding.length && !near(foes, 300).some((f) => f.buffUntil > this.time || f.shieldUntil > this.time || f.mirrorShield > this.time || f.hardenUntil > this.time)) { this.events.push({ type: 'special-miss', unit: u }); return false; }
       c.abilityUsed = true;
       // The Mirror Witch copies the last special used (mutants.js).
       this.lastSpecial = { ability: c.ability, t: this.time };
@@ -175,7 +175,7 @@ const BattleEngine = (() => {
         }
         case 'dispel':
           for (const o of winding) { if (typeof MUTANTS !== 'undefined') MUTANTS.dispel(this, o); hit.push(o); }
-          for (const o of near(foes, 300)) { o.buffUntil = -1; o.shieldUntil = -1; o.mirrorShield = -1; if (!hit.includes(o)) hit.push(o); }
+          for (const o of near(foes, 300)) { o.buffUntil = -1; o.shieldUntil = -1; o.mirrorShield = -1; o.hardenUntil = -1; if (!hit.includes(o)) hit.push(o); }
           break;
         case 'ward': for (const o of near(friends, 260)) { o.wardUntil = now + 10; hit.push(o); } break;
         case 'sunder': u.sunderUntil = now + 10; u.forceHeavy = true; break;
@@ -602,7 +602,7 @@ const BattleEngine = (() => {
       u.swings++;
       const heavy = u.forceHeavy || u.swings % this.heavyEvery === 0 || (u.side === 'foe' && u.swings % 5 === 0);
       u.forceHeavy = false;
-      const dmg = u.light * (heavy ? 5 : 1) * (u.buffUntil > this.time ? u.buff : 1);
+      const dmg = u.light * (heavy ? 5 : 1) * (u.buffUntil > this.time ? u.buff : 1) * (u.sapUntil > this.time ? 0.67 : 1);
       u.lastSwing = this.time;
       u.lastHeavy = heavy;
       // The target first, then (bosses) the nearest others in reach.

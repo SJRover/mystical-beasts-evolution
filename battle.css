@@ -416,3 +416,9 @@ body.bt-sheets-open #toast-container .toast-alert:not(.warn) { display: none !im
 .bt-mchip { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
 .bt-mchip.weak { color: #8aff8a; border-color: rgba(138,255,138,0.45); }
 .bt-mchip.resist { color: #ff9a8a; border-color: rgba(255,154,138,0.45); }
+
+/* 1.5, World 8: a card deafened by a sonic attack (no special for a while). */
+.bt-cardbtn.silenced::after { content: "🔇"; position: absolute; top: 4px; left: 4px; font-size: 16px; filter: drop-shadow(0 1px 2px #000); }
+.bt-cardbtn.silenced { box-shadow: 0 0 0 2px #ff8ad8 inset; }
+.bt-world.bt-theme-abyss { border-color: rgba(176,106,255,0.55); box-shadow: 0 0 14px rgba(176,106,255,0.25); }
+#battle-screen.abyss .bt-bossbar .bt-bb-fill { background: linear-gradient(90deg, #6a2aaa, #b06aff); }
