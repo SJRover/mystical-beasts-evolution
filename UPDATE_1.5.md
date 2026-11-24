@@ -288,8 +288,36 @@ My plan for how the comet works (Sam left it to me):
   waits on the comet. (The commit says the old chest was empty; it was not: it always gave the Rose
   Window relic, the only Tier 20 Dark Matter beast of system "any".) Comet shards for first clears
   (20 + 5 x level) and stars (60); Mutation Ended +600 shards, Monster Hunter +360.
-- Still to do: the Beastopedia's comet section; comet beasts animated in the meadow (they use a
-  still picture now); limited-time beasts.
+- Still to do (then): the Beastopedia's comet section; comet beasts animated in the meadow; limited-time beasts.
+
+### Built on 24 Nov, later (8756029 to 8865574)
+- World 7 a tenth harder (battle.js FOE_MUL, applied at battle start, after calibration). Comet
+  beasts cost a fifth more mana and rest a quarter longer, and are half as big again in battle.
+- **World 8, the Apex Mutants** (mutants8.js, mutants8_art.js; 16ca6d5): opened by beating World 7.
+  Eleven giants, four new damage types (acid, void, sonic, gravity), seventeen new moves through
+  extension points in mutants.js (EXT, STEP/DEATH/POSE hooks), twenty levels, up to 24 enemies at
+  once. Calibrated (tools/battle_sim.mjs --calibrate 8) against three comet beasts (Tier 12 rising to
+  20) and three of the best old beasts, from the most the bot beats to 115% of it. Each giant has a
+  `top` line it keeps below so it shows whole. Chest: the Ouroboros. Achievements Apex Predator and
+  Giant Slayer.
+- Comet beasts move on the meadow (field.js draws them live). Comet section always at the bottom
+  of the Beastopedia.
+- Battle: scenery fills the black bars beside the field on phones (the field is unchanged); the
+  first drop spot is centred; Worlds 1 to 6 bosses (+60% health, +30% blows, drawn 40% bigger) and
+  champions (+50%, +25%, 25% bigger), applied at battle start.
+- Achievements, Comet tab (comet.js COMET.ACH): twelve for the comet, eight hardest in the Mutant
+  Worlds (all stars in 7, in 8, in both; the Old Ways: beating five giants with no comet beasts).
+  New rewards: comet eggs (state.cometEggBank) and comet beasts. Crate queues are per world now.
+- Area attackers: Low Gravity's sharks and gargoyles and five comet kinds; an area beast that shoots
+  bursts for 35%.
+- Comet prestige targets made steeper with a model of an active player (scratchpad cometecon.mjs):
+  prestige 1 about an hour, 5 about a day, 8 about 200 hours of play; adult 7.5 h, ascended 29 h,
+  Tier 20 about 225 h.
+- **Limited-time beasts** (limited.js; 8865574): the Abominable Snowman, rarity Limited (silver),
+  Tier 18, Blizzard special, until the end of 6 January 2027: merge 1,000 beasts above Tier 5, earn 100
+  battle stars, trash 100 beasts of Tier 15+, evolve a beast above Tier 5. Banner on opening, a Limited
+  tab in Achievements, a Limited section in the Beastopedia. The £6.99 purchase for a missed one is
+  not built.
 
 ### Limited-time beasts (after World 7 and the comet, Sam said)
 - A shiny silver theme: the name with a metallic shine sweeping left to right, a reflective
