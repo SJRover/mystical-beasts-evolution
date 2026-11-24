@@ -368,16 +368,37 @@ window.SCENES = (() => {
     if (bosses.length) run.cam.y = bosses.reduce((a, u) => a + u.y, 0) / bosses.length + halfH * 0.32;
     run.cam.y = Math.max(halfH + 110, Math.min(BattleEngine.ARENA.h - halfH + 30, run.cam.y));
   }
-  const COMET_SIX = ['singularity_dragon_20', 'ouroboros_20', 'quasar_phoenix_20', 'dark_matter_leviathan', 'singularity_monarch', 'spectral_jellyfish'];
+  const COMET_SIX = ['singularity_dragon_20', 'ouroboros_1', 'mind_leviathan_1', 'ouroboros_3', 'eclipse_seraph_4', 'architect_4'];
+  /** Keep the field full, the tanks first and towards the giant, the snipers after (they stop far back on their own). */
+  function crowd(b) {
+    if (!b || b.result) return;
+    const bosses = b.units.filter((u) => u.boss && u.state !== 'dying');
+    const bx = bosses.length ? bosses.reduce((a, u) => a + u.x, 0) / bosses.length / BattleEngine.ARENA.w : 0.5;
+    for (const i of [1, 2, 3, 4, 5, 0]) {
+      if (!b.canDeploy(i)) continue;
+      const x = Math.max(0.15, Math.min(0.85, bx + (Math.random() - 0.5) * (i <= 2 ? 0.3 : 0.45)));
+      b.deploy(i, x);
+    }
+  }
+  /** Real time: keep the field full for a while (until `until` says so). */
+  async function crowdFor(ms, until = null) {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      const b = BATTLE.run && BATTLE.run.battle;
+      if (!b || b.result || (until && until(b))) break;
+      crowd(b);
+      await sleep(120);
+    }
+  }
   /** A giant fight: the level, until its giant is well into the field, then a few seconds more. */
   async function giant(world, n, text, k = 1.3, secs = 5500, need = 1, minY = 420) {
     document.getElementById('sidebar-panel').style.visibility = '';
     late(world === 8);
     for (const id of COMET_SIX) { BATTLE.B().bestPrestige[id] = 15; if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
     await battle(world, n, COMET_SIX);
-    await playFor(60000, 380, (b) => b.units.filter((u) => u.boss && u.state !== 'dying' && u.y > minY).length >= need);
+    await crowdFor(60000, (b) => b.units.filter((u) => u.boss && u.state !== 'dying' && u.y > minY).length >= need);
     const until = Date.now() + secs;
-    while (Date.now() < until) { await playFor(400, 380); specialNear(); }
+    while (Date.now() < until) { await crowdFor(400); specialNear(); }
     document.querySelectorAll('.limited-banner-wrap, .limited-banner').forEach((e) => e.remove());
     frameWide(k);
     await sleep(350);

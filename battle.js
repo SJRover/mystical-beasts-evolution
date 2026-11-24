@@ -129,7 +129,9 @@ const BATTLE = (() => {
   const isEvo = (x) => String(x).endsWith('*');
   const evolvedOwned = (id) => !D.LEGENDS[id] && ((state.unlockedEvolved || []).includes(id));
   // (1.5: a comet beast has a special from Tier 10 without evolving.)
-  const specialOwned = (id) => evolvedOwned(id) || (!!((BEAST_TEMPLATES[id] || {}).comet || (BEAST_TEMPLATES[id] || {}).limited) && !!D.abilityOf(id));
+  // (A comet or limited beast has a special only where the game gives it one: Tier 10 and up, or the
+  // Snowman's; marked evolved or not. A low comet beast in a special slot broke the deck screen.)
+  const specialOwned = (id) => { const t = BEAST_TEMPLATES[id] || {}; return t.comet || t.limited ? !!D.abilityOf(id) : evolvedOwned(id); };
   /** How a beast or enemy fights, as a little label. */
   const KIND = { single: ['⚔️', 'Single'], area: ['💥', 'Area'], ranged: ['🎯', 'Ranged'] };
   const kindChip = (k) => `<span class="bt-kindchip ${k}">${KIND[k][0]} ${KIND[k][1]}</span>`;
@@ -502,7 +504,7 @@ const BATTLE = (() => {
         if (!id) return `<div class="bt-slot empty${abil}" data-slot="${i}"><span>+</span></div>`;
         const t = D.T(id);
         const sp = hasSpecial(id, i);
-        return `<button class="bt-slot${abil} ${t.legend ? 'legend' : ''} ${sp ? 'evo' : ''}" data-id="${id}" data-slot="${i}" style="--rc:${rarityColour(id)}"><img data-pic="${id}" ${evolvedOwned(id) ? 'data-evo="1"' : ''} alt=""><b>T${synced() && cap.tier ? Math.min(t.tier, cap.tier) : t.tier}</b>${sp ? `<em>${D.ABILITIES[D.abilityOf(id)].icon}</em>` : ''}${prestigeOf(id) && !synced() ? `<i>P${prestigeOf(id)}</i>` : ''}</button>`;
+        return `<button class="bt-slot${abil} ${t.legend ? 'legend' : ''} ${sp ? 'evo' : ''}" data-id="${id}" data-slot="${i}" style="--rc:${rarityColour(id)}"><img data-pic="${id}" ${evolvedOwned(id) ? 'data-evo="1"' : ''} alt=""><b>T${synced() && cap.tier ? Math.min(t.tier, cap.tier) : t.tier}</b>${sp ? `<em>${(D.ABILITIES[D.abilityOf(id)] || {}).icon || '✦'}</em>` : ''}${prestigeOf(id) && !synced() ? `<i>P${prestigeOf(id)}</i>` : ''}</button>`;
       }).join('');
       let pool = mine.filter((id) => (sort.rarity === 'all' || D.T(id).rarity === sort.rarity) && (sort.kind === 'all' || kindOf(id) === sort.kind));
       pool.sort((a, c) => (sortValue(a, sort.key) - sortValue(c, sort.key)) * sort.dir);
