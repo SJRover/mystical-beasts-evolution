@@ -398,6 +398,9 @@ body.bt-sheets-open #toast-container .toast-alert:not(.warn) { display: none !im
 .bt-bb-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a0a1e, #ff5a3c); transition: width 0.15s linear; }
 .bt-bb-track i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255,255,255,0.75); }
 #battle-screen.mutants .bt-tip { top: calc(118px + env(safe-area-inset-top)); }
+/* (1.5: a low toast in Worlds 7 and 8 keeps to its line at the bottom: with the top above as well it
+   stretched into a dark panel over the whole field each time a giant hit your coins.) */
+#battle-screen.mutants .bt-tip.low { top: auto; }
 .bt-bloods { display: inline-flex; gap: 2px; }
 .bt-blood { display: inline-block; width: 22px; height: 29px; opacity: 0.16; filter: grayscale(1); }
 .bt-blood.full { opacity: 1; filter: none; }

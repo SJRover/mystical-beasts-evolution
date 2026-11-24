@@ -50,11 +50,11 @@ export const SHOWCASE = [
 // half-time beats is 3.558 s, 107 frames), then CometWorldMusic from its drop at 74.0 s (64 bpm, four
 // beats 3.75 s, 112 frames), crossfaded at the cut to the comet (build.py --giants).
 export const GIANTS = [
-  { name: 'g_chimera', frames: 160, pre: 0, until: 'boss', after: 330 },
+  { name: 'g_chimera', frames: 160, pre: 0, until: 'deep', after: 60 },
   { name: 'g_dragon', frames: 107, pre: 0, until: 'boss', after: 120 },
-  { name: 'g_titans', frames: 107, pre: 0, until: 'boss', after: 270 },
+  { name: 'g_titans', frames: 107, pre: 0, until: 'deep', after: 150 },
   { name: 'g_eater', frames: 107, pre: 0, until: 'boss', after: 200 },
-  { name: 'g_special', frames: 107, pre: 0, until: 'boss', after: 140 },
+  { name: 'g_special', frames: 107, pre: 0, until: 'deep', after: 60 },
   { name: 'g_comet', frames: 112 },
   { name: 'g_cosmic', frames: 112 },
   { name: 'g_end', frames: 85 },
@@ -94,7 +94,8 @@ for (const shot of GIANT ? GIANTS : SHOW ? SHOWCASE : PLAN) {
     // waiting frames are numbered far below zero.
     let w = -100000;
     for (let i = 0; i < 1500; i++) {
-      const cond = shot.until === 'result' ? `!!document.querySelector('.bt-modal [data-a=map]')` : `!!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss))`;
+      // ('deep': a giant well into the field, so it shows whole, not half off the top.)
+      const cond = shot.until === 'result' ? `!!document.querySelector('.bt-modal [data-a=map]')` : shot.until === 'deep' ? `!!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss && u.state !== 'dying' && u.y > 640))` : `!!(BATTLE.run && BATTLE.run.battle.units.some((u) => u.boss))`;
       const out = await ev(`TRAILER.act(${w}); __TW.step(1000 / ${FPS}); return ${cond};`);
       w++;
       if (out === true) break;

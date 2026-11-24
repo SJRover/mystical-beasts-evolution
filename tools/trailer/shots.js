@@ -352,7 +352,7 @@ window.TRAILER = (() => {
       playCards(f, every);
       followGiants(k);
       if (f >= 8 && f % 4 === 0) specialNear(260);
-      if (f === 0) { snap = true; followGiants(k); caption(text || '', 9); }
+      if (f === 0) { snap = true; followGiants(k); caption(text || '', 21); }
       if (f === 75) caption('');
     };
   }
