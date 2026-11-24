@@ -326,7 +326,7 @@ const BATTLE = (() => {
       ${mutantWorlds ? `<div class="bt-system mutants">The Mutant Worlds</div>${mutantWorlds}` : ''}
       <div class="bt-row">
         <button class="bt-btn" id="bt-open-legends">Folded Legends <small>${legendsOwned().length}/${D.LEGEND_LIST.length}</small></button>
-        <button class="bt-btn" id="bt-open-ach">Achievements <small>${Object.keys(b.ach).length + Object.keys(b.mach || {}).length}/${D.ACHIEVEMENTS.length + MERGE_ACH.length}</small></button>
+        <button class="bt-btn" id="bt-open-ach">Achievements <small>${Object.keys(b.ach).length + Object.keys(b.mach || {}).length + Object.keys(b.cach || {}).length}/${D.ACHIEVEMENTS.length + MERGE_ACH.length + (typeof COMET !== 'undefined' ? COMET.ACH.length : 0)}</small></button>
       </div>
       <div class="bt-row">
         <button class="bt-btn" id="bt-open-wiki">Foe Wiki <small>${t.seen}/${D.ENEMY_LIST.length}</small></button>
@@ -2437,6 +2437,7 @@ const BATTLE = (() => {
     if (won) {
       b.best[level.id] = Math.min(b.best[level.id] || Infinity, Math.round(time));
       if (starNow) b.stars[level.id] = true;
+      if (level.world >= 7 && !battle.cards.some((c) => (BEAST_TEMPLATES[c.id] || {}).comet)) (b.noComet || (b.noComet = {}))[level.id] = true;
       if (level.boss) b.bosses[level.id] = true;
       const full = battle.piles.you >= battle.pileMax.you;
       if (full && level.n >= 5) b.flawless = (b.flawless || 0) + 1;
@@ -2469,6 +2470,7 @@ const BATTLE = (() => {
     }
     // Achievements first (the last of them gives a legend), then any legends now earned.
     const ach = checkAchievements(level);
+    checkCometAch();
     const legends = checkLegends();
     const newPerks = D.PERKS.filter((p) => p.unlock(totals()) && !perksBefore.includes(p.id));
     if (legends.length && typeof renderBeastopedia === 'function') { try { renderBeastopedia(); } catch (e) { console.error(e); } }
@@ -2546,6 +2548,8 @@ const BATTLE = (() => {
     }
     if (rw.spins) { B().freeSpins = (B().freeSpins || 0) + rw.spins; if (typeof updateDailySpinHUD === 'function') updateDailySpinHUD(); notes.push(`+${rw.spins} free spin${rw.spins > 1 ? 's' : ''}${why ? ` (${why})` : ''}`); }
     if (rw.legend) notes.push(`The ${D.LEGENDS[rw.legend].name.replace(/^The /, '')} joins you`);
+    if (rw.eggs) { state.cometEggBank = (state.cometEggBank || 0) + rw.eggs; notes.push(`+${rw.eggs} comet egg${rw.eggs > 1 ? 's' : ''} (${typeof COMET !== 'undefined' && COMET.inComet() ? 'falling now' : 'waiting on the comet'})`); }
+    if (rw.comet && typeof deliverCometBeast === 'function' && BEAST_TEMPLATES[rw.comet]) { const t = BEAST_TEMPLATES[rw.comet]; deliverCometBeast(rw.comet); notes.push(`${t.name}, Tier ${t.tier} ${typeof COMET !== 'undefined' ? COMET.STAGE_WORD[t.comet.stage].toLowerCase() : ''}, joins you on the comet`); }
     // 1.5: comet shards (they buy comet eggs on the comet).
     if (rw.shards) { state.cometShards = (state.cometShards || 0) + rw.shards; notes.push(`+${formatNumber(rw.shards)} comet shards`); }
     if (rw.chest && rw.chest.chest.comet && typeof deliverCometBeast === 'function') {
@@ -2562,6 +2566,56 @@ const BATTLE = (() => {
         notes.push(`World chest: ${BEAST_TEMPLATES[id].name} (Tier ${BEAST_TEMPLATES[id].tier} ${RARITIES[BEAST_TEMPLATES[id].rarity].name})`);
       }
     }
+  }
+
+  /** 1.5: the comet's achievements (comet.js COMET.ACH): what they count, from saved totals. */
+  function cometTotals() {
+    const b = B(), cs = state.cometStats || {};
+    const ids = state.unlockedBeasts.filter((id) => (BEAST_TEMPLATES[id] || {}).comet);
+    const cp = state.currentSolarSystem === 'comet' ? state.prestigeLevel || 0 : (state.cometSystem || {}).prestigeLevel || 0;
+    const stars = (w) => Object.keys(b.stars).filter((k) => k.startsWith(w + '-')).length;
+    return {
+      reached: state.cometUnlocked || state.currentSolarSystem === 'comet' ? 1 : 0, fusions: cs.fusions || 0, shardsMade: cs.shardsMade || 0, cosmicFused: cs.cosmicFused || 0,
+      bestTier: cs.bestGrown || 0, species: new Set(ids.map((id) => BEAST_TEMPLATES[id].comet.species)).size,
+      prestige: cp, w7stars: stars(7), w8stars: stars(8), noComet: b.noComet || {},
+    };
+  }
+  function checkCometAch() {
+    if (typeof COMET === 'undefined') return;
+    const done = B().cach || (B().cach = {});
+    const c = cometTotals();
+    let any = false;
+    for (const a of COMET.ACH) {
+      if (done[a.id]) continue;
+      const [have, need] = a.count(c);
+      if (have < need) continue;
+      done[a.id] = Date.now(); any = true;
+      const notes = [];
+      grant(a.reward, notes, a.name);
+      if (typeof spawnToastNotification === 'function') spawnToastNotification('🏅 ' + a.name, notes.join('. '), a.reward.comet ? COMET.svg(a.reward.comet) : '');
+    }
+    if (any && typeof saveGame === 'function') saveGame();
+  }
+  function cometAchHtml() {
+    const done = B().cach || {};
+    const c = cometTotals();
+    let html = '';
+    for (const [name, icon, group] of [['The Comet', '☄', 'comet'], ['The Mutant Worlds', '💀', 'hard']]) {
+      const list = COMET.ACH.filter((a) => a.group === group);
+      html += `<div class="bt-system">${name} <small>${list.filter((a) => done[a.id]).length}/${list.length}</small></div><div class="bt-achs">`;
+      for (const a of list) {
+        const got = !!done[a.id];
+        const [have, need] = a.count(c);
+        html += `<div class="bt-ach ${got ? 'done' : ''}">
+          <div class="bt-medal"><span>${icon}</span></div>
+          <div class="bt-ach-body"><b>${a.name}</b><span>${a.desc}</span>
+            ${got ? '<em class="bt-ach-got">Earned</em>' : `<div class="bt-bar"><i style="width:${Math.min(100, (have / need) * 100)}%"></i></div><em>${Math.min(have, need).toLocaleString()}/${need.toLocaleString()}</em>`}</div>
+          <div class="bt-ach-rw">${rewardChips(a.reward, true)}</div>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    return html;
   }
 
   /** The merge achievements (relics.js): the counts they test. */
@@ -2790,6 +2844,8 @@ const BATTLE = (() => {
     if (rw.income) out.push(`<span class="bt-rw"><i>✨</i>${rw.income >= 60 ? `${rw.income / 60}h` : `${rw.income}m`} income</span>`);
     if (rw.boost) out.push(`<span class="bt-rw premium"><i>⚡</i>x${rw.boost.mult} ${rw.boost.minutes >= 60 ? `${rw.boost.minutes / 60}h` : `${rw.boost.minutes}m`}</span>`);
     if (rw.shards) out.push(`<span class="bt-rw premium"><i>☄</i>${formatNumber(rw.shards)} shards</span>`);
+    if (rw.eggs) out.push(`<span class="bt-rw premium"><i>🥚</i>${rw.eggs} comet egg${rw.eggs > 1 ? 's' : ''}</span>`);
+    if (rw.comet && BEAST_TEMPLATES[rw.comet] && typeof COMET !== 'undefined') { const t = BEAST_TEMPLATES[rw.comet]; out.push(`<span class="bt-rw legend comet-rw ${got ? '' : 'hidden'}">${COMET.svg(rw.comet)}<b>${t.name.replace(/^The /, '')}</b><small>T${t.tier} ${COMET.STAGE_WORD[t.comet.stage]}</small></span>`); }
     if (rw.legend) out.push(`<span class="bt-rw legend"><img data-legend="${rw.legend}" alt="">${D.LEGENDS[rw.legend].name.replace(/^The /, '')}</span>`);
     if (rw.perk) out.push(`<span class="bt-rw perk">${perkIcon(rw.perk)}${D.PERKS.find((p) => p.id === rw.perk).name}</span>`);
     if (rw.relic) out.push(`<span class="bt-rw legend relic ${got ? '' : 'hidden'}"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(RELIC_ART.svg(rw.relic, { evolved: !!rw.evolved, noGround: true }))}" alt="">${BEAST_TEMPLATES[rw.relic].name.replace(/^The /, '')}${rw.evolved ? ' ✦' : ''}</span>`);
@@ -2822,10 +2878,12 @@ const BATTLE = (() => {
     const b = B();
     const t = totals();
     const mergeDone = Object.keys(b.mach || {}).length;
-    const sh = sheet('Achievements', `${Object.keys(b.ach).length + mergeDone} of ${D.ACHIEVEMENTS.length + MERGE_ACH.length} earned`);
-    const tabs = `<div class="bt-ach-tabs"><button class="${which === 'battle' ? 'on' : ''}" data-w="battle">Battle</button><button class="${which === 'merge' ? 'on' : ''}" data-w="merge">Merge</button></div>`;
+    const cometN = typeof COMET !== 'undefined' ? COMET.ACH.length : 0, cometDone = Object.keys(b.cach || {}).length;
+    const sh = sheet('Achievements', `${Object.keys(b.ach).length + mergeDone + cometDone} of ${D.ACHIEVEMENTS.length + MERGE_ACH.length + cometN} earned`);
+    const tabs = `<div class="bt-ach-tabs"><button class="${which === 'battle' ? 'on' : ''}" data-w="battle">Battle</button><button class="${which === 'merge' ? 'on' : ''}" data-w="merge">Merge</button>${cometN ? `<button class="${which === 'comet' ? 'on' : ''}" data-w="comet">Comet</button>` : ''}</div>`;
     const bindTabs = () => sh.body.querySelectorAll('.bt-ach-tabs button').forEach((btn) => btn.addEventListener('click', () => { click(); sh.close(); openAchievements(btn.dataset.w); }));
     if (which === 'merge') { sh.body.innerHTML = tabs + mergeAchHtml(); bindTabs(); return; }
+    if (which === 'comet' && cometN) { checkCometAch(); sh.body.innerHTML = tabs + cometAchHtml(); bindTabs(); return; }
     let html = tabs;
     for (const [name, icon, test] of ACH_GROUPS) {
       const list = D.ACHIEVEMENTS.filter(test);
@@ -2975,5 +3033,5 @@ const BATTLE = (() => {
     renderTab();
   }
 
-  return { init, renderTab, start, openWorld, openLevel, openWiki, openAchievements, openHow, openLegends, openLegend, noteOwned, B, totals, get run() { return run; }, closeSheets, checkMergeAch };
+  return { init, renderTab, start, openWorld, openLevel, openWiki, openAchievements, openHow, openLegends, openLegend, noteOwned, B, totals, get run() { return run; }, closeSheets, checkMergeAch, checkCometAch };
 })();

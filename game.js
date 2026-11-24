@@ -437,6 +437,8 @@ function saveGame() {
     cometSystem: state.cometSystem || null,
     cometCocoons: state.cometCocoons || [],
     cometShards: state.cometShards || 0,
+    cometStats: state.cometStats || {},
+    cometEggBank: state.cometEggBank || 0,
     cometUnlocked: !!state.cometUnlocked,
     shardIncubator: state.shardIncubator || null,
     shardFeedAt: state.shardFeedAt || 0,
@@ -520,6 +522,8 @@ function loadGame() {
     state.cometSystem = saveData.cometSystem || null;
     state.cometCocoons = saveData.cometCocoons || [];
     state.cometShards = saveData.cometShards || 0;
+    state.cometStats = saveData.cometStats || {};
+    state.cometEggBank = saveData.cometEggBank || 0;
     state.cometUnlocked = !!saveData.cometUnlocked;
     state.shardIncubator = saveData.shardIncubator && typeof saveData.shardIncubator === 'object' ? saveData.shardIncubator : null;
     state.shardFeedAt = saveData.shardFeedAt || 0;
@@ -1949,7 +1953,13 @@ window.addEventListener('touchmove', (e) => {
 // 1-second clock loop
 function tickGameSeconds() {
   state.maxTimeSeen = Math.max(state.maxTimeSeen || 0, Date.now());
-  if (typeof COMET !== 'undefined') { tickCocoons(); tickShardIncubators(); }
+  if (typeof COMET !== 'undefined') {
+    tickCocoons(); tickShardIncubators();
+    // Comet eggs won elsewhere fall on the comet's meadow, as room allows.
+    if (state.cometEggBank > 0 && COMET.inComet() && cratesOnField() < MAX_FIELD_CRATES && fieldHasRoom()) { state.cometEggBank--; spawnCrateOnField(); }
+    // The comet's achievements, every few seconds.
+    if (typeof BATTLE !== 'undefined' && BATTLE.checkCometAch && !((state._cometAchAt || 0) > Date.now())) { state._cometAchAt = Date.now() + 4000; BATTLE.checkCometAch(); }
+  }
   let cps = state.inBeastHub ? 0 : calculateTotalCps();
   if (isBoostActive() && !state.inBeastHub) {
     cps *= 2;
@@ -4223,7 +4233,9 @@ function warpToSolarSystem(systemId) {
     unlockedIncubators: state.unlockedIncubators,
     upgrades: state.upgrades,
     incubators: state.incubators,
-    beastsOnField: savedBeasts
+    beastsOnField: savedBeasts,
+    // (1.5: crates waiting in the queue stay in their own world: Prime's must not come out as comet eggs.)
+    crateQueue
   };
 
   state[SYSTEM_BRANCH[state.currentSolarSystem] || 'primeSystem'] = activeBranch;
@@ -4245,6 +4257,8 @@ function warpToSolarSystem(systemId) {
   
   state.essence = newSys.essence;
   state.prestigeLevel = newSys.prestigeLevel;
+  crateQueue = newSys.crateQueue || 0;
+  if (typeof updateCrateQueueBadge === 'function') updateCrateQueueBadge();
   state.shopPurchases = newSys.shopPurchases;
   state.unlockedIncubators = newSys.unlockedIncubators;
   state.upgrades = newSys.upgrades;
@@ -4845,6 +4859,7 @@ function openPremiumCrate(crateId, x, y) {
   // 1.5: on the comet a premium crate hatches as a premium egg (Ultra Rare or better).
   if (currentSys === 'comet' && !state.inBeastHub && typeof COMET !== 'undefined') {
     const id = COMET.hatch(true);
+    noteCometGrown(id);
     const land = () => {
       spawnBeastOnField(id, x, y, false, false);
       checkDiscovery(id);
@@ -5113,9 +5128,15 @@ function deliverCometBeast(id) {
   checkDiscovery(id);
   saveGame();
 }
+/** 1.5: the highest tier you have grown a comet beast to yourself (hatched or fused, not won). */
+function noteCometGrown(id) {
+  const cs = state.cometStats || (state.cometStats = {});
+  cs.bestGrown = Math.max(cs.bestGrown || 0, (BEAST_TEMPLATES[id] || { tier: 0 }).tier);
+}
 function hatchCometEgg(x, y) {
   const id = COMET.hatch();
   const t = BEAST_TEMPLATES[id];
+  noteCometGrown(id);
   spawnBeastOnField(id, x, y, false, false);
   const abs = getAbsolutePosition(x, y);
   if (particles) particles.spawnMerge(abs.x, abs.y, (RARITIES[t.rarity] || {}).color || '#c8a8ff');
@@ -5134,6 +5155,10 @@ function startCometFusion(a, b) {
   const c = { id: 'cocoon-' + Math.random().toString(36).slice(2, 9), to: f.to, x: b.x, y: b.y, start: Date.now(), until: Date.now() + COMET.fusionTime(tier) * 1000 };
   removeBeastFromField(a.id); removeBeastFromField(b.id);
   cocoons.push(c);
+  // (Counted for the comet's achievements; a Cosmic made from two Dark Matter ones too.)
+  const cs = state.cometStats || (state.cometStats = {});
+  cs.fusions = (cs.fusions || 0) + 1;
+  if (BEAST_TEMPLATES[f.to].rarity === 'COSMIC' && BEAST_TEMPLATES[a.type].rarity !== 'COSMIC') cs.cosmicFused = (cs.cosmicFused || 0) + 1;
   drawCocoons();
   const abs = getAbsolutePosition(c.x, c.y);
   if (particles) particles.spawnMerge(abs.x, abs.y, '#c8a8ff');
@@ -5201,7 +5226,7 @@ function tickShardIncubators() {
   let paid = 0, told = false;
   for (const sys of Object.keys(jobs)) {
     const j = jobs[sys];
-    if (j && j.until <= Date.now()) { paid += j.shards; told = told || !j.auto; state.cometShards = (state.cometShards || 0) + j.shards; jobs[sys] = null; }
+    if (j && j.until <= Date.now()) { paid += j.shards; told = told || !j.auto; state.cometShards = (state.cometShards || 0) + j.shards; jobs[sys] = null; const cs = state.cometStats || (state.cometStats = {}); cs.shardsMade = (cs.shardsMade || 0) + j.shards; }
   }
   autoFeedShards();
   drawShardIncubator();
@@ -5238,6 +5263,7 @@ function tickCocoons() {
     const el = document.getElementById(c.id); if (el) el.remove();
     state.cometCocoons = state.cometCocoons.filter((x) => x !== c);
     spawnBeastOnField(c.to, c.x, c.y, false, false);
+    noteCometGrown(c.to);
     const t = BEAST_TEMPLATES[c.to], abs = getAbsolutePosition(c.x, c.y);
     if (particles) particles.spawnMerge(abs.x, abs.y, (RARITIES[t.rarity] || {}).color || '#c8a8ff');
     if (audio) audio.playUnlock(t.rarity === 'COSMIC' ? 'DARK_MATTER' : t.rarity);

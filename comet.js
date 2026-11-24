@@ -196,7 +196,37 @@
       <path d="M50 6 Q46 0 52 -6" fill="none" stroke="#c8b8ff" stroke-width="2.4"/></svg>`;
   }
 
+  // ------------------------------------------------------------------ achievements (the Comet tab)
+  /**
+   * 1.5 (Sam, 24 Nov): the comet's achievements, and the hardest of all in the Mutant Worlds, paying
+   * comet eggs, shards, boosts and comet beasts at every stage. Progress comes from saved totals
+   * (battle.js cometTotals), so it is never lost: count(c) gives [have, need].
+   */
+  const ACH = [
+    { id: 'c_reach', group: 'comet', name: 'Comet Rider', desc: 'Reach the Interstellar Comet.', count: (c) => [c.reached, 1], reward: { eggs: 3 } },
+    { id: 'c_fuse_10', group: 'comet', name: 'Cocoon Keeper', desc: 'Fuse comet beasts 10 times.', count: (c) => [c.fusions, 10], reward: { eggs: 2, boost: { mult: 1.5, minutes: 120 } } },
+    { id: 'c_fuse_100', group: 'comet', name: 'Metamorphosis', desc: 'Fuse comet beasts 100 times.', count: (c) => [c.fusions, 100], reward: { comet: 'nebula_jelly_11' } },
+    { id: 'c_young', group: 'comet', name: 'Growing Up', desc: 'Grow a comet beast to Tier 6, young.', count: (c) => [c.bestTier, 6], reward: { shards: 300 } },
+    { id: 'c_adult', group: 'comet', name: 'Coming of Age', desc: 'Grow a comet beast to Tier 11, adult.', count: (c) => [c.bestTier, 11], reward: { eggs: 4, income: 240 } },
+    { id: 'c_ascended', group: 'comet', name: 'Ascension', desc: 'Grow a comet beast to Tier 16, ascended.', count: (c) => [c.bestTier, 16], reward: { shards: 1500, boost: { mult: 2, minutes: 180 } } },
+    { id: 'c_species_5', group: 'comet', name: 'Xenobiologist', desc: 'Find 5 kinds of comet beast.', count: (c) => [c.species, 5], reward: { shards: 600 } },
+    { id: 'c_species_all', group: 'comet', name: 'Every Star-Born', desc: 'Find all 15 kinds of comet beast.', count: (c) => [c.species, 15], reward: { comet: 'architect_20' } },
+    { id: 'c_prestige_5', group: 'comet', name: 'Comet Ascendant', desc: 'Reach comet prestige 5.', count: (c) => [c.prestige, 5], reward: { eggs: 5 } },
+    { id: 'c_prestige_10', group: 'comet', name: 'Comet Pinnacle', desc: 'Reach comet prestige 10, the highest.', count: (c) => [c.prestige, 10], reward: { comet: 'gilded_leafwing_18' } },
+    { id: 'c_cosmic', group: 'comet', name: 'Born of Two Darknesses', desc: 'Fuse two Tier 20 Dark Matter comet beasts into a Cosmic one.', count: (c) => [c.cosmicFused, 1], reward: { income: 720, boost: { mult: 2, minutes: 360 } } },
+    { id: 'c_shards', group: 'comet', name: 'Shardsmith', desc: 'Make 5,000 comet shards in the Shard Incubators.', count: (c) => [c.shardsMade, 5000], reward: { eggs: 4 } },
+    { id: 'h_stars_7', group: 'hard', name: 'Untouchable', desc: 'Earn every star in World 7.', count: (c) => [c.w7stars, 20], reward: { comet: 'prism_stag_16', shards: 800 } },
+    { id: 'h_stars_8', group: 'hard', name: 'Apex of Apexes', desc: 'Earn every star in World 8.', count: (c) => [c.w8stars, 20], reward: { comet: 'eclipse_seraph_18' } },
+    { id: 'h_stars_all', group: 'hard', name: 'A Star on Every Mutant', desc: 'Earn every star in both Mutant Worlds.', count: (c) => [c.w7stars + c.w8stars, 40], reward: { comet: 'astral_sage_20', boost: { mult: 2, minutes: 360 } } },
+    { id: 'h_nc_dragon', group: 'hard', name: 'The Old Ways: Pyraxis', desc: 'Beat Pyraxis the Dragon (World 7, level 9) with no comet beasts in your six.', count: (c) => [c.noComet['7-9'] ? 1 : 0, 1], reward: { comet: 'onyx_wyrm_11' } },
+    { id: 'h_nc_chimera', group: 'hard', name: 'The Old Ways: the Chimera', desc: 'Beat the Omega Chimera (World 7, level 20) with no comet beasts in your six.', count: (c) => [c.noComet['7-20'] ? 1 : 0, 1], reward: { comet: 'mind_leviathan_14' } },
+    { id: 'h_nc_wardens', group: 'hard', name: 'The Old Ways: the Wardens', desc: 'Beat the Three Wardens (World 8, level 8) with no comet beasts in your six.', count: (c) => [c.noComet['8-8'] ? 1 : 0, 1], reward: { comet: 'quasar_phoenix_16' } },
+    { id: 'h_nc_king', group: 'hard', name: 'The Old Ways: the Hollow King', desc: 'Beat Morgrath the Hollow King (World 8, level 9) with no comet beasts in your six.', count: (c) => [c.noComet['8-9'] ? 1 : 0, 1], reward: { comet: 'void_stalker_17' } },
+    { id: 'h_nc_eater', group: 'hard', name: 'The Old Ways: the World-Eater', desc: 'Beat the World-Eater (World 8, level 20) with no comet beasts in your six.', count: (c) => [c.noComet['8-20'] ? 1 : 0, 1], reward: { comet: 'chrononaut_20' } },
+  ];
+
   return void Object.assign(window, { COMET: {
+    ACH,
     canvasFor, svg, eggSvg, cocoonSvg,
     SPECIES, BY_ID, RARITY_ORDER, STAGE_WORD, PASSIVES, SPECIALS, PRESTIGE_MAX, PRESTIGE_TARGETS, BIOMES, EGG_ODDS, SHARDS_PER_EGG,
     stageOf, idOf, unlocked, inComet, hatch, spinPrize, premiumOdds, fusionTime, cocoonSlots, isComet, fusionOf, shardsFor, shardTime,
