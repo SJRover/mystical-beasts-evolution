@@ -2959,9 +2959,30 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .comet-card .beastopedia-card-icon svg { transform: scale(1.2); transform-origin: 50% 75%; }
 .comet-card .beastopedia-card-num { z-index: 3; }
 .comet-card .beastopedia-card-icon { position: relative; z-index: 1; }
-/* (The rarity tag and the number never overlap: both a little smaller on comet cards.) */
-.comet-card .beastopedia-card-num { left: 5px; right: 5px; gap: 3px; font-size: 7.5px; }
-.comet-card .beastopedia-card-rarity { font-size: 6.5px !important; padding: 0 3px; letter-spacing: -0.1px; white-space: nowrap; flex: none; }
+/* (Sam, 24 Nov: the rarity tag sits where it does on every other card. The number never shrinks and
+   the tag gives way instead, so the two never overlap.) */
+.beastopedia-card-num { gap: 4px; }
+.beastopedia-card-num > span:first-child { flex: none; }
+.beastopedia-card-num .beastopedia-card-rarity.rarity-dark_matter, .beastopedia-card-num .beastopedia-card-rarity.rarity-cosmic, .beastopedia-card-num .beastopedia-card-rarity.rarity-limited { font-size: 7px !important; padding: 1px 3px !important; letter-spacing: -0.3px; white-space: nowrap; }
+/* The shining rarity text, Cosmic and Limited (not the names). */
+.rarity-shine { -webkit-background-clip: text; background-clip: text; color: transparent !important; background-size: 250% 100%; }
+.cosmic-shine { background-image: linear-gradient(100deg, #ffffff 0%, #ffffff 34%, #c8a8ff 44%, #ffffff 50%, #7ad8ff 57%, #ffffff 66%, #ffffff 100%); animation: cosmic-sheen 2.4s linear infinite; }
+.limited-shine { background-image: linear-gradient(100deg, #1a2232 0%, #1a2232 36%, #ffffff 47%, #1a2232 58%, #1a2232 100%); animation: limited-sheen 2.4s linear infinite; text-shadow: none; }
+.limited-plain { color: #eef3f8; }
+/* 1.5: Cosmic hatches: a black glow rimmed in violet, and stars flying out (fx.js cosmicBurst). */
+.fx-cosmic-burst { position: fixed; width: 0; height: 0; z-index: 9000; pointer-events: none; }
+.fx-cosmic-burst .cb-glow { position: absolute; width: calc(240px * var(--k, 1)); height: calc(240px * var(--k, 1)); left: calc(-120px * var(--k, 1)); top: calc(-120px * var(--k, 1)); border-radius: 50%; background: radial-gradient(circle, #000 0%, #05010d 36%, rgba(60,24,140,0.75) 54%, rgba(180,107,255,0.35) 63%, transparent 72%); animation: cb-glow 1.6s ease-out forwards; }
+@keyframes cb-glow { 0% { transform: scale(0.15); opacity: 0; } 15% { opacity: 1; } 55% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1.35); opacity: 0; } }
+.fx-cosmic-burst i { position: absolute; left: 0; top: 0; width: 12px; height: 12px; margin: -6px; background: currentColor; clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); filter: drop-shadow(0 0 4px currentColor); opacity: 0; animation: cb-star 1.45s ease-out forwards; }
+@keyframes cb-star { 0% { transform: translate(0, 0) scale(0.2); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(90deg); opacity: 0; } }
+.fx-cosmic .fx-glow { background: radial-gradient(circle, #000 0%, #04010c 40%, rgba(80,36,170,0.6) 57%, transparent 70%) !important; }
+.fx-cosmic .fx-glow.on { opacity: 1; }
+.fx-cosmic .fx-rays { background: repeating-conic-gradient(from 0deg, #12052a 0deg 7deg, transparent 7deg 18deg, #b46bff 18deg 21deg, transparent 21deg 30deg) !important; }
+.fx-cosmic .fx-starfield { position: absolute; left: 0; top: 0; width: 440px; height: 440px; margin: -220px 0 0 -220px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
+  background: radial-gradient(1.6px 1.6px at 22% 30%, #fff 60%, transparent 61%), radial-gradient(1.2px 1.2px at 70% 22%, #c8a8ff 60%, transparent 61%), radial-gradient(2px 2px at 82% 60%, #fff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 35% 76%, #7ad8ff 60%, transparent 61%), radial-gradient(1.2px 1.2px at 56% 48%, #fff 60%, transparent 61%), radial-gradient(1.8px 1.8px at 14% 58%, #ffd36b 60%, transparent 61%), radial-gradient(1.2px 1.2px at 62% 84%, #fff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 44% 16%, #ff9ae8 60%, transparent 61%), radial-gradient(1px 1px at 90% 38%, #fff 60%, transparent 61%), radial-gradient(1.6px 1.6px at 28% 46%, #fff 60%, transparent 61%);
+  -webkit-mask: radial-gradient(circle, #000 45%, transparent 70%); mask: radial-gradient(circle, #000 45%, transparent 70%); animation: fx-spin 40s linear infinite reverse; }
+.fx-cosmic .fx-starfield.on { opacity: 1; }
+.cocoon-cosmic { filter: drop-shadow(0 0 8px rgba(122,60,255,0.8)); }
 .comet-section-note { margin: -2px 4px 6px; padding: 8px 12px; border-radius: 10px; background: rgba(200,168,255,0.08); color: #d8c8ff; font: 600 11px/1.4 "Outfit", sans-serif; }
 
 /* 1.5: limited-time beasts, in silver: a metallic shine sweeping across the name, the banner, their Beastopedia cards. */

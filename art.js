@@ -601,6 +601,50 @@ const ART = (() => {
     return { back, front };
   }
 
+  // ---------------------------------------------------------------- 1.5: more detail
+  /**
+   * Sam (24 Nov): the Prime and Low Gravity beasts a little more detailed, like the newer ones,
+   * without redrawing them: markings of their element on the body (embers, ripples, cracks and
+   * moss, swirls, sparkles, a constellation, a rift, gold filigree), a gem of their rarity on the
+   * chest from Tier 8 (set in gold from Tier 15). `where` is 'body'
+   * (over the body, under the face).
+   */
+  let detailOn = true;
+  function detail(t, A, P, id, where) {
+    if (!detailOn || where !== 'body') return '';
+    const p = t.svgParams || {};
+    let s = '';
+    // A small mark of its element on each flank, either side of the chest, like markings on a coat.
+    if (A.chest) {
+      const [cx, cy] = A.chest;
+      const mark = (x, y, m) => {
+        const g = (inner) => `<g transform="translate(${f(x)} ${f(y)}) scale(${m} 1)">${inner}</g>`;
+        switch (t.element) {
+          case 'FIRE': return g(`<path d="M0 5 C-4 3 -4 -1 -1 -6 C0 -2 3 -3 2 -7 C6 -2 5 4 0 5 Z" fill="#ff8a1a" stroke="${P.line}" stroke-width="1.1" opacity="0.9"/><path d="M0 4 C-2 2 -1 0 0 -2 C1 0 2 2 0 4 Z" fill="#ffe08a"/>`);
+          case 'WATER': return g(`<path d="M-5 2 C-5 -3 0 -5 2 -2 C0 -3 -2 -1 -1 1 C0 3 4 2 5 -1 C5 4 -5 6 -5 2 Z" fill="${P.hi}" stroke="${P.line}" stroke-width="1" opacity="0.85"/>`);
+          case 'EARTH': return g(`<path d="M-5 3 C-5 -3 1 -6 5 -5 C5 0 1 5 -5 3 Z" fill="#6fcf4f" stroke="${P.line}" stroke-width="1" opacity="0.9"/><path d="M-4 2 L3 -3" stroke="#2e6a1e" stroke-width="0.9"/>`);
+          case 'WIND': return g(`<path d="M-5 1 C-5 -4 3 -5 3 -1 C3 1 0 2 -1 0 M-2 4 C2 5 6 3 6 0" stroke="${P.hi}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.9"/>`);
+          case 'LIGHT': return star(x, y, 4.2, '#fff6c0', 0.95);
+          case 'COSMIC': return g(`<path d="M-4 3 L0 -3 L4 1" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.7"/><circle cx="-4" cy="3" r="1.3" fill="#fff"/><circle cx="0" cy="-3" r="1.6" fill="#fff"/><circle cx="4" cy="1" r="1.1" fill="#fff"/>`);
+          case 'VOID': return g(`<path d="M-5 0 Q0 -4 5 0 Q0 4 -5 0 Z" fill="#12001f" stroke="#c35cff" stroke-width="1.1"/><path d="M-2 0 Q0 -1 2 0" stroke="#e8b8ff" stroke-width="0.8" fill="none"/>`);
+          case 'DEITY': return g(`<path d="M-4 4 C-5 -2 1 -4 2 -1 C3 1 0 2 -1 0" stroke="#ffd36b" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="3" cy="3" r="1.2" fill="#fff1b8"/>`);
+          default: return '';
+        }
+      };
+      const dx = 15, dy = -7;
+      s += mark(cx - dx, cy + dy, 1) + mark(cx + dx, cy + dy, -1);
+    }
+    // The chest gem: its rarity's colour, from Tier 8 (not where a core already sits).
+    const R = RARITY[t.rarity];
+    if (A.chest && R && t.tier >= 8 && !p.void_core) {
+      const [x, y] = A.chest, g = Math.min(5.6, 3 + t.tier * 0.13);
+      if (t.tier >= 15) s += `<circle cx="${x}" cy="${y}" r="${f(g + 2.6)}" fill="#ffd36b" stroke="${P.line}" stroke-width="1.4"/>`;
+      s += `<path d="M${x} ${f(y - g)} L${f(x + g * 0.85)} ${y} L${x} ${f(y + g)} L${f(x - g * 0.85)} ${y} Z" fill="${R.c}" stroke="${P.line}" stroke-width="1.5" stroke-linejoin="round"/>`;
+      s += `<path d="M${x} ${f(y - g)} L${f(x + g * 0.85)} ${y} L${x} ${y} Z" fill="#ffffff" opacity="0.45"/><circle cx="${f(x - g * 0.25)}" cy="${f(y - g * 0.35)}" r="${f(g * 0.22)}" fill="#ffffff" opacity="0.9"/>`;
+    }
+    return s;
+  }
+
   // Sparks, stars, bubbles, steam, swirls and orbiting moons: around the beast, outside its body.
   function surround(t, P) {
     const p = t.svgParams;
@@ -676,6 +720,7 @@ const ART = (() => {
     if (p.tail) s += tail(p.tail, A, P, uid);
     s += parts.main;
     s += ex.front;
+    if (!shadow && !o.infected) s += detail(t, A, P, uid, 'body');
     if (A.eyes) s += eyes(p.eyes || 'cute', A.eyes, P, uid, o);
     if (p.horns) s += horns(p.horns, A, P);
     if (p.horn) s += uniHorn(p.horn, A);
@@ -814,6 +859,8 @@ const ART = (() => {
   }
 
   /** How a body type moves on the field (field.js reads it). */
+  /** For checking the 1.5 detail against the plain drawings (tools only). */
+  function setDetail(on) { detailOn = !!on; }
   function motion(id) {
     const t = BEAST_TEMPLATES[id];
     const body = (t && t.svgParams && t.svgParams.body) || 'droplet';
@@ -868,7 +915,7 @@ const ART = (() => {
       `</svg>`;
   }
 
-  return { beast, aura, inline, picture, cached, motion, glowColour, coin, crate, shade, mix, RARITY, queuePaint };
+  return { setDetail, beast, aura, inline, picture, cached, motion, glowColour, coin, crate, shade, mix, RARITY, queuePaint };
 })();
 
 // The menus, toasts and modals all draw beasts through getBeastSVG: from here on, the new art.

@@ -362,3 +362,30 @@ My plan for how the comet works (Sam left it to me):
 - **Timing:** for the Snowman to be won before 27 December, a build with it has to be on the App
   Store early in December. Suggestion: 1.5 = prestige 15, World 7 and the Snowman event (early
   December); 1.6 = the comet (it is the biggest piece by far).
+
+### Sam's last round before release (24 Nov, night)
+- **Worlds 1 to 6, more variety and a bit harder.** Eight new enemy traits (battle_data.js TRAITS,
+  newTrait for the 88 enemies of those worlds that had none): Snipes (camps by its coins, reach 600,
+  slow heavy shots, a red aiming line), Lobs bombs (camps, lobs a bomb that lands 1.2 s later on a
+  red ring), Explodes, Splits, Enrages, Regrows, Spiked, Blinks. Engine (battle_engine.js): one in
+  nine spawns a wildcard of the same role from the world, one in five from level 3 a giant, runt,
+  long-armed or swift variant (seeded by opts.variant in the tools, random in the game), and
+  enemies x1.08 from level 4 (battle.js start()). World 7 and 8 untouched by all of it.
+- **Unlocks:** World 7 after Worlds 1 and 4; World 8 after World 7 and reaching the comet.
+- **Beasts:** element markings on the flanks and a rarity gem on the chest from Tier 8 (art.js
+  detail(), ART.setDetail for checking); more movement animations (field.js: lean, heavy steps,
+  wing flutter, swim ripple; stretch, shake, look, stomp, flip-hop, double hop, swoop, barrel roll,
+  hover, drift, wobble, leap); twelve more area attackers (AREA_LOOK).
+- **Comet:** live slots (three beasts animate their art at a time, eight frames a second; the rest
+  hold a frame); young beasts as big as adults in their box (min 96); eggs for shards only; its own
+  spin wheel (Super Rare to Cosmic) and golden premium eggs; banked eggs wait in the queue when
+  automatic drops are off; merge hint uses COMET.fusionOf; Cosmic hatches and the premium reveal in
+  black and stars (FX.cosmicBurst), a Cosmic cocoon black and starry.
+- **Fixes:** the premium button and Reset used the browser's confirm box (it never showed in the
+  Windows app, so no premium egg fell): askConfirm now. The aura image is hidden until loaded (an
+  empty image drew a white frame for a moment). Beastopedia: rarity tags placed the same on every
+  card; Cosmic and Limited rarity text shines, names do not; the Snowman is #01 and counts when
+  unlocked. Deck picker: a Melee / Ranged / Area filter. World 7 and 8 fields a little lighter at the
+  top (it read as a black border).
+- **Store:** `node tools/store_shots.mjs --giants` (World-Eater, Omega Chimera, the comet, Three
+  Titans, comet beasts' specials) into "App Store 1.5/".

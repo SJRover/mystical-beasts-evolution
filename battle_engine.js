@@ -99,6 +99,13 @@ const BattleEngine = (() => {
       this.deployed = 0;
       this.hurry = 0;
       this.maxTierUsed = 0;
+      // 1.5 (Sam, 24 Nov): Worlds 1 to 6 vary from play to play: an enemy now and then swapped for a
+      // random one of its kind from the same world, and a few of them giants, runts, long-armed or
+      // swift. Chance from here (a seed can be given, so the balance tools play the same each time).
+      this.rng = BATTLE_DATA.seeded(opts.seed != null ? opts.seed : opts.variant != null ? 7919 * (opts.variant + 1) : (Math.random() * 4294967295) >>> 0);
+      this.wild = !this.mut && level.world <= 6;
+      // Bombs lobbed and on their way down (the Lobs bombs trait): where, when, how hard.
+      this.shells = [];
     }
 
     get yours() { return this.units.filter((u) => u.side === 'you' && u.state !== 'dying'); }
@@ -233,6 +240,13 @@ const BattleEngine = (() => {
     }
 
     spawnFoe(s) {
+      // (1.5, Worlds 1 to 6: one in nine is a wildcard, another of its kind from anywhere in the world
+      // up to a few levels ahead; never a boss, a champion, an elite or a garrison.)
+      if (this.wild && !s.boss && !s.champ && !s.elite && !s.child && !s.row && this.rng() < 0.11) {
+        const was = BATTLE_DATA.ENEMIES[s.foe];
+        const pool = was && was.role !== 'boss' ? BATTLE_DATA.ENEMY_LIST.filter((x) => x.world === this.level.world && x.role === was.role && x.id !== was.id && x.debut <= this.level.n + 8) : [];
+        if (pool.length) s = { ...s, foe: pool[Math.floor(this.rng() * pool.length)].id };
+      }
       const e = BATTLE_DATA.ENEMIES[s.foe];
       const role = BATTLE_DATA.ROLES[e.role];
       const elite = !!s.elite && e.role !== 'boss';
@@ -250,6 +264,25 @@ const BattleEngine = (() => {
       if (u.trait === 'cloak') u.cloakAt = this.time + 2 + s.x * 3;
       if (u.trait === 'heal') u.healAt = this.time + 3;
       if (u.trait === 'summon') u.summonAt = this.time + 6;
+      // 1.5: snipers and bomb-lobbers camp back by their own coins (campY) and fire from far away,
+      // slowly; snipers hit hard. Bombers run in; blinkers jump on now and then.
+      if (u.trait === 'snipe') { u.reach = Math.max(u.reach, 600); u.baseSpeed *= 0.45; u.campY = PILES.foe.y + 250 + this.rng() * 130; u.swingRate = 0.5; u.shotMul = 1.9; u.shooter = true; }
+      if (u.trait === 'mortar') { u.reach = Math.max(u.reach, 470); u.baseSpeed *= 0.6; u.campY = PILES.foe.y + 400 + this.rng() * 180; u.swingRate = 0.55; u.lob = true; u.shooter = true; }
+      if (u.trait === 'bomb') u.baseSpeed *= 1.25;
+      if (u.trait === 'blink') u.blinkAt = this.time + 2.5 + this.rng() * 3;
+      u.speed = u.baseSpeed;
+      // (1.5, Worlds 1 to 6, from level 3: one in five comes as a giant, a runt, long-armed or swift.)
+      if (this.wild && !s.child && e.role !== 'boss' && !champ && this.level.n >= 3 && this.rng() < 0.2) {
+        const v = ['giant', 'giant', 'runt', 'long', 'swift'][Math.floor(this.rng() * 5)];
+        u.variant = v;
+        if (v === 'giant') { u.maxHp *= 1.7; u.light *= 1.25; u.baseSpeed *= 0.8; u.r = Math.min(110, u.r * 1.3); u.drawK = 1.3; }
+        if (v === 'runt') { u.maxHp *= 0.55; u.light *= 0.85; u.baseSpeed *= 1.35; u.r *= 0.75; u.drawK = 0.75; }
+        if (v === 'long') u.reach = u.reach < SHOT_REACH ? u.reach + 45 : u.reach * 1.35;
+        if (v === 'swift') { u.baseSpeed *= 1.5; u.swingRate = (u.swingRate || 1) * 1.25; }
+        u.hp = u.maxHp; u.speed = u.baseSpeed;
+      }
+      // (A half of a split one: smaller, and it does not split again.)
+      if (s.child) { u.splitChild = true; u.r *= 0.75; u.drawK = 0.75; }
       if (this.mut && e.look && e.look.plan === 'mutant') MUTANTS.setup(this, u);
       // A level made harder after calibration (battle.js: World 7 +10%, Sam 24 Nov): health, blows, speed.
       const fm = this.level.foeMul || 1;
@@ -335,6 +368,13 @@ const BattleEngine = (() => {
         this.think(u, dt);
       }
       this.units = this.units.filter((u) => u.state !== 'dying' || u.dyingT < DYING);
+      if (this.shells.length) {
+        for (const sh of this.shells.filter((q) => q.at <= this.time)) {
+          this.events.push({ type: 'boom', x: sh.x, y: sh.y, r: sh.r });
+          for (const o of this.units) if (o.side !== sh.side && o.state !== 'dying' && !o.burrowed && Math.hypot(o.x - sh.x, o.y - sh.y) - o.r <= sh.r) this.hurt(o, sh.dmg, sh.by, sh.heavy);
+        }
+        this.shells = this.shells.filter((q) => q.at > this.time);
+      }
       if (this.mut) MUTANTS.step(this, dt);
       if (this.result) return;
       if (this.bossFight && this.mut && MUTANTS.won(this)) { this.finish('won'); return; }
@@ -396,6 +436,14 @@ const BattleEngine = (() => {
     /** An enemy's ability on its clock: cloaking, healing, summoning. */
     traitTick(u) {
       const now = this.time;
+      // (1.5: Blinks: a jump of 220 on, every six seconds, while walking; never onto your coins.)
+      if (u.trait === 'blink' && now >= u.blinkAt && u.state === 'walk' && !u.burrowed) {
+        u.blinkAt = now + 6;
+        const from = { x: u.x, y: u.y };
+        const dir = u.side === 'you' ? -1 : 1;
+        u.y = Math.max(PILES.foe.y + 60, Math.min(ZONE_Y - 90, u.y + dir * 220));
+        this.events.push({ type: 'trait', kind: 'blink', unit: u, from });
+      }
       if (u.trait === 'cloak' && now >= u.cloakAt) { u.cloakUntil = now + 3; u.cloakAt = now + 9; this.events.push({ type: 'trait', kind: 'cloak', unit: u }); }
       if (u.trait === 'heal' && now >= u.healAt) {
         u.healAt = now + 4;
@@ -432,6 +480,11 @@ const BattleEngine = (() => {
       if (u.stunUntil > this.time) return;
       u.frozen = false;
       if (u.trait) this.traitTick(u);
+      // (1.5: Regrows, when nothing has hit it for two seconds.)
+      if (u.trait === 'regen' && u.hp < u.maxHp && this.time - u.lastHurt > 2) {
+        u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.05 * dt);
+        if (!u.regrew) { u.regrew = true; this.events.push({ type: 'trait', kind: 'regen', unit: u }); }
+      }
       // Slowed, or charging (a rush of 1.2 seconds): its speed for now.
       if (u.charging && !(u.chargeUntil > this.time)) u.charging = false;
       u.speed = u.baseSpeed * (u.slowUntil > this.time ? 0.6 : 1) * (u.charging ? 2.5 : 1);
@@ -457,11 +510,19 @@ const BattleEngine = (() => {
         }
         u.capturing = false;
         u.charging = false;
+        // (1.5: Explodes: on reaching a beast it blows up, a heavy blow on every beast near it.)
+        if (u.trait === 'bomb' && u.side === 'foe') {
+          const dmg = u.light * 5;
+          this.events.push({ type: 'trait', kind: 'bomb', unit: u });
+          for (const o of foes) if (Math.hypot(o.x - u.x, o.y - u.y) - o.r <= 125) this.hurt(o, dmg, u, true);
+          this.hurt(u, u.hp + 1, null, false);
+          return;
+        }
         if (u.reach < SHOT_REACH && bd > 6 && !best.boss) {
           const dx = best.x - u.x, dy = best.y - u.y, dd = Math.hypot(dx, dy) || 1, st = Math.min(bd - 4, u.baseSpeed * 0.5 * dt);
           u.x += (dx / dd) * st; u.y += (dy / dd) * st;
         }
-        u.swing -= dt * (u.slowUntil > this.time ? 0.6 : 1) * (u.side === 'you' && this.hasteNear(u) ? 1.3 : 1);
+        u.swing -= dt * (u.slowUntil > this.time ? 0.6 : 1) * (u.side === 'you' && this.hasteNear(u) ? 1.3 : 1) * (u.swingRate || 1);
         if (u.swing <= 0) {
           u.swing += 1;
           if (!u.noBasic) this.attack(u, foes);
@@ -470,6 +531,8 @@ const BattleEngine = (() => {
       }
       u.target = null;
       u.swing = Math.max(0, u.swing - dt);
+      // (1.5: a sniper or a bomb-lobber stays at its camp by its own coins, waiting for something in range.)
+      if (u.campY && u.side === 'foe' && u.y >= u.campY) { u.state = 'walk'; u.capturing = false; return; }
       const pile = u.side === 'you' ? PILES.foe : PILES.you;
       const toPile = Math.hypot(pile.x - u.x, pile.y - u.y);
       if (toPile <= PILE_R + u.r + 8) {
@@ -608,9 +671,17 @@ const BattleEngine = (() => {
       u.swings++;
       const heavy = u.forceHeavy || u.swings % this.heavyEvery === 0 || (u.side === 'foe' && u.swings % 5 === 0);
       u.forceHeavy = false;
-      const dmg = u.light * (heavy ? 5 : 1) * (u.buffUntil > this.time ? u.buff : 1) * (u.sapUntil > this.time ? 0.67 : 1);
+      const dmg = u.light * (heavy ? 5 : 1) * (u.buffUntil > this.time ? u.buff : 1) * (u.sapUntil > this.time ? 0.67 : 1) * (u.shotMul || 1);
       u.lastSwing = this.time;
       u.lastHeavy = heavy;
+      // (1.5: Lobs bombs: the bomb lands where its target stood 1.2 seconds later, on everything there.)
+      if (u.lob && u.target) {
+        const shell = { x: u.target.x, y: u.target.y, at: this.time + 1.2, dmg: dmg * 0.9, by: u, side: u.side, r: 95, heavy };
+        this.shells.push(shell);
+        this.events.push({ type: 'lob', unit: u, shell, dur: 1.2 });
+        if (u.cloakUntil > this.time) u.cloakUntil = this.time;
+        return;
+      }
       // The target first, then (bosses) the nearest others in reach.
       const hit = [u.target];
       if (u.multi > 1) {
@@ -644,6 +715,13 @@ const BattleEngine = (() => {
       if (o.wardUntil > this.time && (heavy || dmg >= o.maxHp * 0.2)) { dmg *= 0.1; o.wardUntil = -1; tag = 'ward'; }
       if (o.passives && o.passives.parry && !o.parried && type !== 'dot' && o.hp - dmg <= 0) { o.parried = true; dmg = Math.max(0, o.hp - 1); tag = 'parry'; }
       o.hp -= dmg;
+      // (1.5: Spiked: a beast hitting it up close takes a quarter back.)
+      if (o.trait === 'thorns' && by && by.side !== o.side && by.state !== 'dying' && type !== 'dot' && type !== 'thorns' && !(by.reach >= SHOT_REACH || by.shooter)) this.hurt(by, dmg * 0.25, o, false, 'thorns');
+      // (1.5: Enrages: under half health, once: bigger, half as hard again, a third faster.)
+      if (o.trait === 'enrage' && !o.enraged && o.hp > 0 && o.hp < o.maxHp * 0.5) {
+        o.enraged = true; o.light *= 1.5; o.baseSpeed *= 1.3; o.speed = o.baseSpeed; o.r = Math.min(120, o.r * 1.12); o.drawK = (o.drawK || 1) * 1.12;
+        this.events.push({ type: 'trait', kind: 'enrage', unit: o });
+      }
       if (by && by.passives && by.passives.lifesteal && by.state !== 'dying' && type !== 'dot' && type !== 'thorns') by.hp = Math.min(by.maxHp, by.hp + dmg * 0.25);
       if (o.passives && by && by.side !== o.side && by.state !== 'dying' && type !== 'dot' && type !== 'thorns') {
         const ranged = by.reach >= SHOT_REACH || by.shooter;
@@ -658,6 +736,16 @@ const BattleEngine = (() => {
         o.dyingT = 0;
         o.target = null;
         if (this.mut) MUTANTS.onDeath(this, o);
+        // (1.5: Splits: two smaller halves where it fell, once.)
+        if (o.trait === 'split' && !o.splitChild && o.side === 'foe' && this.foes.length < this.level.maxEnemies + 6) {
+          for (const sd of [-1, 1]) {
+            this.spawnFoe({ foe: o.kind, x: 0.5, mul: 0.45, child: true });
+            const h = this.units[this.units.length - 1];
+            h.x = Math.max(h.r + 10, Math.min(ARENA.w - h.r - 10, o.x + sd * (o.r * 0.7 + h.r)));
+            h.y = o.y;
+          }
+          this.events.push({ type: 'trait', kind: 'split', unit: o });
+        }
         if (o.passives && o.passives.revive && !o.revived && o.side === 'you') (this.cometRevives || (this.cometRevives = [])).push({ card: o.card, kind: o.kind, stats: o.stats, r: o.r, x: o.x, y: o.y, at: this.time + 10 });
         this.events.push({ type: 'death', unit: o, by });
       } else if (o.mutant) MUTANTS.onHurt(this, o);

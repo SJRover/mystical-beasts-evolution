@@ -98,11 +98,15 @@ const FX = (() => {
       const { c, c2 } = colours(rarity);
       const rank = RANK[rarity] || 1;
       const o = el('div', 'fx-overlay fx-open', document.body);
+      // (1.5: a Cosmic one opens in black and stars.)
+      const cosmic = rarity === 'COSMIC';
+      if (cosmic) o.classList.add('fx-cosmic');
       o.style.setProperty('--fx-c', c); o.style.setProperty('--fx-c2', c2);
       const stage = el('div', 'fx-stage', o);
       stage.style.left = `${x}px`; stage.style.top = `${y}px`;
       const glow = el('div', 'fx-glow', stage);
       const rays = el('div', 'fx-rays', stage);
+      const field = cosmic ? el('div', 'fx-starfield', stage) : null;
       // (1.5: on the comet, a golden premium egg shakes and cracks open instead of a crate.)
       const crate = el('div', 'fx-crate-shake', stage); crate.innerHTML = t && t.comet && typeof COMET !== 'undefined' ? COMET.eggSvg(true) : crateSvg();
       try { ART.picture('beast', beastId, false, false, 360, true, true, true); } catch (e) { /* drawn later */ }
@@ -118,6 +122,7 @@ const FX = (() => {
         crate.classList.add('burst');
         rays.classList.add('on');
         glow.classList.add('on');
+        if (field) { field.classList.add('on'); const sr = stage.getBoundingClientRect(); cosmicBurst(sr.left, sr.top, 1.6); }
         const r = stage.getBoundingClientRect();
         burst(r.left, r.top, rarity, 1.6 + rank * 0.15);
         if (typeof audio !== 'undefined' && audio) { try { audio.playUnlock(['GODLY', 'DARK_MATTER'].includes(rarity) ? 'GODLY' : rarity); } catch (e) { /* no sound */ } }
@@ -141,6 +146,25 @@ const FX = (() => {
       setTimeout(() => o.addEventListener('click', finish), 1300);
       setTimeout(finish, 3300 + rank * 150);
     });
+  }
+
+  /**
+   * 1.5 (Sam, 24 Nov: Cosmic should look cosmic): where a Cosmic beast hatches, from an egg or a
+   * cocoon, a black glow rimmed in violet swells and fades, and stars fly out of it.
+   */
+  function cosmicBurst(x, y, scale = 1) {
+    const b = el('div', 'fx-cosmic-burst', document.body);
+    b.style.left = `${x}px`; b.style.top = `${y}px`; b.style.setProperty('--k', scale);
+    el('div', 'cb-glow', b);
+    const cols = ['#ffffff', '#ffffff', '#c8a8ff', '#7ad8ff', '#ffd36b', '#ff9ae8'];
+    for (let i = 0; i < 22; i++) {
+      const s = el('i', '', b), a = Math.random() * Math.PI * 2, d = (50 + Math.random() * 90) * scale;
+      s.style.color = cols[i % cols.length];
+      s.style.setProperty('--dx', `${(Math.cos(a) * d).toFixed(0)}px`); s.style.setProperty('--dy', `${(Math.sin(a) * d).toFixed(0)}px`);
+      s.style.setProperty('--s', (0.6 + Math.random() * 1.1).toFixed(2));
+      s.style.animationDelay = `${(Math.random() * 0.35).toFixed(2)}s`;
+    }
+    setTimeout(() => b.remove(), 1900);
   }
 
   // ---------------------------------------------------------------- the daily spin
@@ -241,5 +265,5 @@ const FX = (() => {
     if (title) { title.textContent = `${label(rarity)}!`; title.style.color = c; title.style.textShadow = `0 0 12px ${c}`; }
   }
 
-  return { burst, premiumPurchase, premiumOpen, drawWheel, spinLights, spinReveal, colours, RANK };
+  return { burst, premiumPurchase, premiumOpen, cosmicBurst, drawWheel, spinLights, spinReveal, colours, RANK };
 })();

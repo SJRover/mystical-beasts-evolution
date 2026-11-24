@@ -199,6 +199,13 @@
   }
   /** A cocoon of light, tinted by what is growing inside it. */
   function cocoonSvg(rarity) {
+    // (1.5, Sam 24 Nov: a Cosmic one growing is black, rimmed in violet, full of stars.)
+    if (rarity === 'COSMIC') return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible" class="cocoon-svg cocoon-cosmic"><defs><radialGradient id="cmCocCosmic" cx="45%" cy="42%" r="70%"><stop offset="0" stop-color="#000000"/><stop offset="0.6" stop-color="#0a0418"/><stop offset="0.85" stop-color="#3a1a7a"/><stop offset="1" stop-color="#b46bff"/></radialGradient><radialGradient id="cmCocCosmicGlow" cx="50%" cy="50%" r="50%"><stop offset="0.55" stop-color="#000000" stop-opacity="0.7"/><stop offset="0.8" stop-color="#7a3cff" stop-opacity="0.35"/><stop offset="1" stop-color="#7a3cff" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="50" cy="52" rx="48" ry="52" fill="url(#cmCocCosmicGlow)"/><ellipse cx="50" cy="94" rx="22" ry="5" fill="rgba(0,0,0,0.4)"/>
+      <path d="M50 6 C68 14 74 40 70 62 C66 82 58 94 50 94 C42 94 34 82 30 62 C26 40 32 14 50 6 Z" fill="url(#cmCocCosmic)" stroke="#c8a8ff" stroke-width="2.4"/>
+      ${[[44, 30, 1.6, '#ffffff'], [56, 44, 1.2, '#c8a8ff'], [42, 58, 1.4, '#7ad8ff'], [58, 70, 1.6, '#ffffff'], [48, 80, 1.1, '#ffd36b'], [52, 22, 1, '#ffffff'], [62, 56, 1, '#ff9ae8'], [38, 44, 1, '#ffffff']].map(([x, y, r, c]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/>`).join('')}
+      <path d="M46 30 l1 -4 l1 4 l4 1 l-4 1 l-1 4 l-1 -4 l-4 -1 z" fill="#ffffff"/>
+      <path d="M50 6 Q46 0 52 -6" fill="none" stroke="#c8b8ff" stroke-width="2.4"/></svg>`;
     const c = (RARITIES[rarity] || {}).color || '#c8a8ff';
     return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible" class="cocoon-svg"><defs><radialGradient id="cmCoc${rarity}" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="${c}"/><stop offset="1" stop-color="#1a0a3a"/></radialGradient></defs>
       <ellipse cx="50" cy="94" rx="22" ry="5" fill="rgba(0,0,0,0.3)"/>

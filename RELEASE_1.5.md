@@ -14,7 +14,7 @@ WORLD 7: THE UNIVERSAL MUTANTS
 Ten giant bosses, each with its own attacks shown on the ground before they land. They change at a third and two thirds of their health, and they smash your coins if they get close.
 
 WORLD 8: THE APEX MUTANTS
-Beat World 7 to open it. Eleven even bigger giants, two or three at a time, with acid, void, sonic and gravity attacks, and the World-Eater at the end. Bring comet beasts: their passives and specials are made for these fights.
+Beat World 7 and reach the comet to open it. Eleven even bigger giants, two or three at a time, with acid, void, sonic and gravity attacks, and the World-Eater at the end. Bring comet beasts: their passives and specials are made for these fights.
 
 LIMITED: THE ABOMINABLE SNOWMAN
 Win him before the end of 6 January by finishing four challenges. After that he is gone for good.

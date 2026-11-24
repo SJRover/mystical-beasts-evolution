@@ -248,7 +248,7 @@ const LIMITED = (() => {
       <button class="limited-close" aria-label="Close">✕</button>
       <div class="limited-pop"><img alt=""></div>
       <div class="limited-tag">LIMITED NOW</div>
-      <div class="limited-title limited-name">${B.name}</div>
+      <div class="limited-title">${B.name}</div>
       <div class="limited-text">Tier ${B.tier}, with a Blizzard special in battle. Finish four challenges by the end of ${e.endText} to win him; after that he is gone for good. ${daysLeft(e)} day${daysLeft(e) === 1 ? '' : 's'} left.</div>
       <button class="limited-go">See Limited Achievements</button>
     </div>`;
@@ -266,8 +266,8 @@ const LIMITED = (() => {
     let html = '';
     for (const e of EVENTS) {
       const B = BEASTS[e.beast], isLive = now() >= e.start && now() <= e.end, got = won(e);
-      html += `<div class="bt-system limited-head"><span class="limited-name">${B.name}</span> <small>${got ? 'Won' : isLive ? `Until ${e.endText} · ${daysLeft(e)} days left` : 'Ended'}</small></div>
-        <div class="limited-reward"><div class="limited-pic">${svg(e.beast)}</div><div><b class="limited-name">${B.name}</b><span>Tier ${B.tier}, earns in any meadow and battles in every world, with the Blizzard special (enemies near it frozen for three seconds).</span></div></div><div class="bt-achs">`;
+      html += `<div class="bt-system limited-head"><span class="limited-plain">${B.name}</span> <small>${got ? 'Won' : isLive ? `Until ${e.endText} · ${daysLeft(e)} days left` : 'Ended'}</small></div>
+        <div class="limited-reward"><div class="limited-pic">${svg(e.beast)}</div><div><b class="limited-plain">${B.name}</b><span>Tier ${B.tier}, earns in any meadow and battles in every world, with the Blizzard special (enemies near it frozen for three seconds).</span></div></div><div class="bt-achs">`;
       for (const c of e.challenges) {
         const have = Math.min(count(e, c), c.need), done = got || have >= c.need;
         html += `<div class="bt-ach ${done ? 'done' : ''}"><div class="bt-medal"><span>❄</span></div><div class="bt-ach-body"><b>${c.text}</b>${done ? '<em class="bt-ach-got">Done</em>' : `<div class="bt-bar"><i style="width:${(have / c.need) * 100}%"></i></div><em>${have.toLocaleString()}/${c.need.toLocaleString()}</em>`}</div></div>`;
@@ -280,23 +280,25 @@ const LIMITED = (() => {
   function beastopedia(grid) {
     const head = document.createElement('div');
     head.className = 'beastopedia-section-head limited-section-head';
-    const got = EVENTS.filter(won).length;
+    // (Won through the challenges or had some other way: Sam, 24 Nov, an unlocked one counted 0 of 1.)
+    const got = EVENTS.filter((e) => won(e) || state.unlockedBeasts.includes(e.beast)).length;
     head.innerHTML = `<div><span class="limited-dot"></span><span>Limited Beasts</span></div><span class="comet-count">${got} / ${EVENTS.length}</span>`;
     grid.appendChild(head);
     const sub = document.createElement('div');
     sub.className = 'beastopedia-grid';
-    for (const e of EVENTS) {
+    EVENTS.forEach((e, i) => {
       const B = BEASTS[e.beast], has = won(e) || state.unlockedBeasts.includes(e.beast), isLive = now() >= e.start && now() <= e.end;
       const card = document.createElement('div');
       card.className = `beastopedia-card limited-card ${has ? '' : 'locked limited-shadow'}`;
       card.dataset.id = e.beast;
-      card.innerHTML = `<div class="beastopedia-card-num" style="justify-content:center"><span class="limited-badge">LIMITED</span></div>
+      // (Numbered like every other beast, the shining Limited tag on the right: Sam, 24 Nov.)
+      card.innerHTML = `<div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-limited" style="font-weight:bold; font-size:8px; text-transform:uppercase;"><span class="rarity-shine limited-shine">Limited</span></span></div>
         <div class="beastopedia-card-icon">${svg(e.beast)}</div>
-        <div class="beastopedia-card-name ${has ? 'limited-name' : ''}" style="font-size:9px;margin-top:4px;text-align:center;">${has ? B.name : isLive ? `Until ${e.endText}` : 'Missed'}</div>
+        <div class="beastopedia-card-name" style="font-size:9px;margin-top:4px;text-align:center;">${has ? B.name : isLive ? `Until ${e.endText}` : 'Missed'}</div>
         ${has ? '' : `<div class="limited-how">${isLive ? 'Tap for the challenges' : e.challenges.map((c) => c.text.split('.')[0]).join(' · ')}</div>`}`;
       if (!has && isLive) card.addEventListener('click', () => { if (typeof BATTLE !== 'undefined') BATTLE.openAchievements('limited'); });
       sub.appendChild(card);
-    }
+    });
     grid.appendChild(sub);
   }
 

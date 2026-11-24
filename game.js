@@ -1963,7 +1963,12 @@ function tickGameSeconds() {
   if (typeof COMET !== 'undefined') {
     tickCocoons(); tickShardIncubators();
     // Comet eggs won elsewhere fall on the comet's meadow, as room allows.
-    if (state.cometEggBank > 0 && COMET.inComet() && cratesOnField() < MAX_FIELD_CRATES && fieldHasRoom()) { state.cometEggBank--; spawnCrateOnField(); }
+    // (Sam, 24 Nov: with automatic drops off they still fell; now they wait in the delivery queue
+    // instead, to be dropped with the crate button like any other.)
+    if (state.cometEggBank > 0 && COMET.inComet() && !state.inBeastHub) {
+      if (state.autoCrateDrops) { if (cratesOnField() < MAX_FIELD_CRATES && fieldHasRoom()) { state.cometEggBank--; spawnCrateOnField(); } }
+      else if (crateQueue < 5) { state.cometEggBank--; crateQueue++; updateCrateQueueBadge(); }
+    }
     // The comet's achievements, every few seconds.
     if (typeof BATTLE !== 'undefined' && BATTLE.checkCometAch && !((state._cometAchAt || 0) > Date.now())) { state._cometAchAt = Date.now() + 4000; BATTLE.checkCometAch(); }
   }
@@ -2319,6 +2324,12 @@ function dragMove(e) {
     if (!isBossBeast(draggedBeast.type)) {
       state.beastsOnField.forEach(b => {
         const bTemplate = BEAST_TEMPLATES[b.type];
+        // 1.5 (Sam, 24 Nov: a Tier 1 and a Tier 2 comet beast were shown as a match): comet beasts
+        // light up only where the comet's own rule says they fuse.
+        if ((beastTemplate && beastTemplate.comet) || (bTemplate && bTemplate.comet)) {
+          if (b.id !== draggedBeast.id && typeof COMET !== 'undefined' && COMET.fusionOf(draggedBeast.type, b.type).to) b.dom.classList.add('hovering-compatible');
+          return;
+        }
         const isSameTier = (beastTemplate && bTemplate && beastTemplate.tier === bTemplate.tier);
         const isBothLegendary = (beastTemplate && bTemplate && beastTemplate.rarity === 'LEGENDARY' && bTemplate.rarity === 'LEGENDARY');
         if (b.id !== draggedBeast.id && 
@@ -2977,7 +2988,7 @@ function triggerDiscoveryModal(beastId) {
   if (document.body.classList.contains('bt-in-battle') || document.getElementById('battle-screen')) { setTimeout(() => triggerDiscoveryModal(beastId), 1500); return; }
 
   const rarityLabel = document.getElementById('discovery-beast-rarity');
-  rarityLabel.innerText = RARITIES[template.rarity].name;
+  rarityLabel.innerHTML = rarityHtml(template.rarity);
   rarityLabel.className = `unlock-beast-rarity ${template.rarity.toLowerCase()}`;
 
   document.getElementById('discovery-beast-name').innerText = `${template.name} (Tier ${template.tier})`;
@@ -3757,9 +3768,9 @@ function renderBeastopedia() {
         card.className = `beastopedia-card comet-card ${tier ? '' : 'locked'}`;
         card.setAttribute('data-id', id);
         card.innerHTML = `
-          <div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-${s.rarity.toLowerCase()}" style="color:${r.color}; font-weight:bold; font-size:8px; text-transform:uppercase;">${r.name}</span></div>
+          <div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-${s.rarity.toLowerCase()}" style="color:${r.color}; font-weight:bold; font-size:8px; text-transform:uppercase;">${rarityHtml(s.rarity)}</span></div>
           <div class="beastopedia-card-icon ${tier ? '' : 'comet-shadow'}">${getBeastSVG(id, false, false)}</div>
-          <div class="beastopedia-card-name ${tier && s.rarity === 'COSMIC' ? 'cosmic-name' : ''}" style="font-size:9px; margin-top:4px; text-align:center;">${tier ? s.name : 'Unknown'}</div>
+          <div class="beastopedia-card-name" style="font-size:9px; margin-top:4px; text-align:center;">${tier ? s.name : 'Unknown'}</div>
           ${tier ? `<div class="comet-card-tier">T${tier} · ${COMET.STAGE_WORD[t.comet.stage]}</div>` : ''}`;
         sub.appendChild(card);
       });
@@ -3823,12 +3834,12 @@ function updateDetailsModalContent() {
   }
 
   const rarityLabel = document.getElementById('details-beast-rarity');
-  rarityLabel.innerText = `${RARITIES[template.rarity].name} ${detailsStateEvolved ? '(Evolved)' : ''}`;
+  rarityLabel.innerHTML = `${rarityHtml(template.rarity)} ${detailsStateEvolved ? '(Evolved)' : ''}`;
   rarityLabel.className = `unlock-beast-rarity ${template.rarity.toLowerCase()}`;
 
   document.getElementById('details-beast-name').innerText = `${template.name}${detailsStateEvolved ? ' (Evolved)' : ''}`;
-  document.getElementById('details-beast-name').classList.toggle('cosmic-name', template.rarity === 'COSMIC');
-  document.getElementById('details-beast-name').classList.toggle('limited-name', !!template.limited);
+  // (Sam, 24 Nov: the rarity shines, not the name.)
+  document.getElementById('details-beast-name').classList.remove('cosmic-name', 'limited-name');
   
   const elementLabel = ELEMENTS[template.element].name;
   const mult = detailsStateEvolved ? 3.0 : 1.0;
@@ -4037,7 +4048,7 @@ function renderSanctuary() {
         ${getBeastSVG(template.id, false, false)}
       </div>
       <div class="trophy-name">${template.name}</div>
-      <div class="trophy-rarity ${template.rarity.toLowerCase()}">${RARITIES[template.rarity].name}</div>
+      <div class="trophy-rarity ${template.rarity.toLowerCase()}">${rarityHtml(template.rarity)}</div>
       <div class="trophy-stats">Collected: ${merges}</div>
     `;
 
@@ -4092,7 +4103,7 @@ function showTrophyPerkModal(beastId) {
 
       <div style="display:flex; justify-content:center; gap: 8px; margin-bottom: 20px; font-family:'Outfit', sans-serif;">
         <span style="background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1);">Tier ${template.tier}</span>
-        <span class="trophy-rarity ${template.rarity.toLowerCase()}" style="padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">${RARITIES[template.rarity].name}</span>
+        <span class="trophy-rarity ${template.rarity.toLowerCase()}" style="padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;">${rarityHtml(template.rarity)}</span>
         <span style="background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); color: ${elementColor};">${template.element}</span>
       </div>
 
@@ -4213,11 +4224,12 @@ function setupSettingsListeners() {
   }
 
   document.getElementById('reset-btn').addEventListener('click', () => {
-    if (confirm("WARNING: This will delete ALL progress, save data, unlocked beasts, and upgrades permanently. Are you sure you want to reset?")) {
+    // (1.5: the game's own popup; the browser's confirm box does not show in the Windows app.)
+    askConfirm('Reset everything?', 'This deletes all progress, save data, unlocked beasts and upgrades for good. It cannot be undone.', 'Reset', () => {
       state.isResetting = true;
       localStorage.removeItem('mystic_beasts_evolution_save');
       location.reload();
-    }
+    }, '#ff6a6a');
   });
 }
 
@@ -4959,18 +4971,22 @@ function setupSpawnerListeners() {
         return;
       }
 
-      if (state.essence >= getPrestigeTarget()) {
-        if (!confirm("WARNING: Biome progress is at 100%! Ascending will reset your meadow and you will lose any beasts currently on the field. Are you sure you want to spawn this Premium Crate now?")) {
-          return;
-        }
-      }
-
       // Battle crates first (they may hold a lower top tier), then bought ones.
-      const won = battleCrates();
-      if (won.length) spawnPremiumCrateOnField(won.shift());
-      else { state.premiumCratesCount--; spawnPremiumCrateOnField(); }
-      updatePremiumCratesDisplay();
-      saveGame();
+      const drop = () => {
+        const won = battleCrates();
+        if (won.length) spawnPremiumCrateOnField(won.shift());
+        else { state.premiumCratesCount--; spawnPremiumCrateOnField(); }
+        updatePremiumCratesDisplay();
+        saveGame();
+      };
+      // Ready to ascend: a word first, in the game's own popup (1.5, Sam 24 Nov: the browser's confirm
+      // box never showed in the Windows app, so no egg fell). Not on the comet, whose prestige keeps
+      // the meadow, nor at the top prestige, where there is no ascending.
+      if (state.essence >= getPrestigeTarget() && (state.currentSolarSystem || 'prime') !== 'comet' && !(typeof atPrestigeMax === 'function' && atPrestigeMax())) {
+        askConfirm('Ready to ascend', 'Your biome is at 100%. Ascending resets your meadow, so a beast from this crate would be lost when you ascend. Open it anyway?', 'Open it', drop);
+        return;
+      }
+      drop();
     });
   }
 
@@ -5200,6 +5216,11 @@ function noteCometGrown(id) {
   const cs = state.cometStats || (state.cometStats = {});
   cs.bestGrown = Math.max(cs.bestGrown || 0, (BEAST_TEMPLATES[id] || { tier: 0 }).tier);
 }
+/** 1.5: a rarity's name for a label; Cosmic and Limited shine (Sam, 24 Nov: the rarity text, not the beast's name). */
+function rarityHtml(rarity) {
+  const n = (RARITIES[rarity] || {}).name || rarity;
+  return rarity === 'COSMIC' ? `<span class="rarity-shine cosmic-shine">${n}</span>` : rarity === 'LIMITED' ? `<span class="rarity-shine limited-shine">${n}</span>` : n;
+}
 function hatchCometEgg(x, y) {
   const id = COMET.hatch();
   const t = BEAST_TEMPLATES[id];
@@ -5207,6 +5228,7 @@ function hatchCometEgg(x, y) {
   spawnBeastOnField(id, x, y, false, false);
   const abs = getAbsolutePosition(x, y);
   if (particles) particles.spawnMerge(abs.x, abs.y, (RARITIES[t.rarity] || {}).color || '#c8a8ff');
+  if (t.rarity === 'COSMIC' && typeof FX !== 'undefined' && FX.cosmicBurst) FX.cosmicBurst(abs.x, abs.y);
   if (audio) audio.playUnlock(t.rarity === 'COSMIC' ? 'DARK_MATTER' : t.rarity);
   checkDiscovery(id);
   if (['LEGENDARY', 'GODLY', 'DARK_MATTER', 'COSMIC'].includes(t.rarity)) spawnToastNotification(`☄ ${RARITIES[t.rarity].name} hatchling!`, `A <b>${t.name}</b> (Tier ${t.tier}) hatched from a comet egg.`, getBeastSVG(id));
@@ -5336,6 +5358,7 @@ function tickCocoons() {
     noteCometGrown(c.to);
     const t = BEAST_TEMPLATES[c.to], abs = getAbsolutePosition(c.x, c.y);
     if (particles) particles.spawnMerge(abs.x, abs.y, (RARITIES[t.rarity] || {}).color || '#c8a8ff');
+    if (t.rarity === 'COSMIC' && typeof FX !== 'undefined' && FX.cosmicBurst) FX.cosmicBurst(abs.x, abs.y, 1.3);
     if (audio) audio.playUnlock(t.rarity === 'COSMIC' ? 'DARK_MATTER' : t.rarity);
     checkDiscovery(c.to);
     spawnToastNotification('☄ A cocoon hatched', `<b>${t.name}</b> grew to Tier ${t.tier}${t.comet.stage > BEAST_TEMPLATES[COMET.idOf(t.comet.species, Math.max(1, t.tier - 1))].comet.stage ? `, now ${COMET.STAGE_WORD[t.comet.stage].toLowerCase()}` : ''}.`, getBeastSVG(c.to));

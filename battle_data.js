@@ -215,7 +215,8 @@ const BATTLE_DATA = (() => {
    * target at half strength (never with a long reach or extra attack); the rest hit one target up
    * close.
    */
-  const AREA_LOOK = /titan|colossus|giant|glaciator|pyroclasm|magmadon|kraken|hydra|slime|leviathan|gaia|bark|amethyst|volcanis|ent_|supergiant|chitin|arachno/;
+  // (1.5, Sam 24 Nov: a few more: the fiery and starry ones whose blasts would spread.)
+  const AREA_LOOK = /titan|colossus|giant|glaciator|pyroclasm|magmadon|kraken|hydra|slime|leviathan|gaia|bark|amethyst|volcanis|ent_|supergiant|chitin|arachno|supernova|^phoenix$|ifrit|ragnarok|apocalypse|cosmic_phoenix|nova_jellyfish|nova_ray|plasma_jellyfish/;
   // 1.5 (Sam, 24 Nov: too few area attackers; Low Gravity had one, the comet none, and late on every
   // beast shot single targets): Low Gravity's sharks and gargoyles, and five comet kinds, hit an area
   // too. An area beast keeps it even when it reaches far enough to shoot (its shots burst).
@@ -246,7 +247,33 @@ const BATTLE_DATA = (() => {
     charge: { icon: '🐂', name: 'Charges', text: 'Rushes its first target and hits it hard.' },
     slow: { icon: '❄', name: 'Slows', text: 'What it hits moves and strikes slower.' },
     knock: { icon: '💢', name: 'Knocks back', text: 'Its heavy blows push beasts back.' },
+    // 1.5 (Sam, 24 Nov: Worlds 1 to 6 felt the same level after level): eight more, for the enemies
+    // of those worlds that had none (newTrait below).
+    snipe: { icon: '🎯', name: 'Snipes', text: 'Stays back by its own coins and picks off beasts from far away. A red line shows who it is aiming at.' },
+    mortar: { icon: '💣', name: 'Lobs bombs', text: 'Hangs back and lobs bombs that burst where they land. A ring on the ground shows where.' },
+    bomb: { icon: '🧨', name: 'Explodes', text: 'Runs at your beasts and blows up, hurting every one nearby.' },
+    split: { icon: '➗', name: 'Splits', text: 'Splits into two smaller ones when it is beaten.' },
+    enrage: { icon: '😡', name: 'Enrages', text: 'Once badly hurt, it grows, hits harder and moves faster.' },
+    regen: { icon: '🌿', name: 'Regrows', text: 'Mends itself whenever nothing has hit it for a moment.' },
+    thorns: { icon: '🌵', name: 'Spiked', text: 'Beasts that hit it up close are hurt back.' },
+    blink: { icon: '✨', name: 'Blinks', text: 'Vanishes and appears further on every few seconds.' },
   };
+  /** 1.5: a trait for a World 1 to 6 enemy that had none, from its part in a fight and its weapon. */
+  const LONG_SHOTS = ['crossbow', 'rifle', 'long_rifle', 'longbow'];
+  const LOBS = ['cannon', 'sling', 'potion'];
+  function newTrait(e) {
+    const h = hash(e.id + ':trait');
+    switch (e.role) {
+      case 'ranged': return LONG_SHOTS.includes(e.look.weapon) ? 'snipe' : LOBS.includes(e.look.weapon) ? 'mortar' : ['snipe', 'mortar', 'blink'][h % 3];
+      case 'caster': return ['mortar', 'blink', 'regen'][h % 3];
+      case 'swarm': return ['bomb', 'split'][h % 2];
+      case 'tank': return e.look.armor || e.look.shield ? 'thorns' : 'regen';
+      case 'brute': return 'enrage';
+      case 'runner': return 'blink';
+      case 'grunt': return /twin/.test(e.id) ? 'split' : ['enrage', 'regen', 'thorns', 'blink'][h % 4];
+      default: return null;
+    }
+  }
   const TRAIT_WORDS = [
     ['leap', /goblin|imp|satyr|ninja|jester|hopper|harpy|jet_|dust_devil|powder|comet_imps/],
     ['cloak', /cloaker|thief|phase|void_hunter|night_blade|smuggl|wraith|mirror/],
@@ -266,6 +293,7 @@ const BATTLE_DATA = (() => {
     else if (e && e.role !== 'boss' && e.role !== 'mutant') {
       for (const [k, re] of TRAIT_WORDS) if (re.test(id)) { t = k; break; }
       if (!t && enemyAttackKind(id) === 'area') t = 'knock';
+      if (!t && e.world <= 6) t = newTrait(e);
     }
     traitCache[id] = t;
     return t;

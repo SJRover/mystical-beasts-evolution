@@ -13,11 +13,13 @@ const SIZES = {
   duo_outer: { dir: 'iPhone Duo outer 1398x2034', width: 466, height: 678, scale: 3 },
 };
 // `--battle`: the 1.4 battle mode set, iPhone and iPad, into "App Store 1.4/".
+// `--giants`: the 1.5 set (World 7 and 8 giants, the comet), iPhone and iPad, into "App Store 1.5/".
 const BATTLE_SET = process.argv.includes('--battle');
-const SCENES = BATTLE_SET ? ['battle', 'specials', 'boss', 'worlds', 'legends'] : ['field', 'merge', 'premium', 'biomes', 'zoom', 'spin', 'beastopedia'];
+const GIANT_SET = process.argv.includes('--giants');
+const SCENES = GIANT_SET ? ['w8eater', 'w7boss', 'comet', 'w8duo', 'cometbattle'] : BATTLE_SET ? ['battle', 'specials', 'boss', 'worlds', 'legends'] : ['field', 'merge', 'premium', 'biomes', 'zoom', 'spin', 'beastopedia'];
 const pick = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-const sizes = pick.length ? pick : BATTLE_SET ? ['iphone', 'ipad'] : Object.keys(SIZES);
-const root = new URL(BATTLE_SET ? '../App Store 1.4/' : '../App Store 1.3/', import.meta.url);
+const sizes = pick.length ? pick : BATTLE_SET || GIANT_SET ? ['iphone', 'ipad'] : Object.keys(SIZES);
+const root = new URL(GIANT_SET ? '../App Store 1.5/' : BATTLE_SET ? '../App Store 1.4/' : '../App Store 1.3/', import.meta.url);
 
 for (const key of sizes) {
   const S = SIZES[key];
