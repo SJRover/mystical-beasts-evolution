@@ -128,7 +128,7 @@ const BATTLE = (() => {
   const isEvo = (x) => String(x).endsWith('*');
   const evolvedOwned = (id) => !D.LEGENDS[id] && ((state.unlockedEvolved || []).includes(id));
   // (1.5: a comet beast has a special from Tier 10 without evolving.)
-  const specialOwned = (id) => evolvedOwned(id) || (!!(BEAST_TEMPLATES[id] || {}).comet && !!D.abilityOf(id));
+  const specialOwned = (id) => evolvedOwned(id) || (!!((BEAST_TEMPLATES[id] || {}).comet || (BEAST_TEMPLATES[id] || {}).limited) && !!D.abilityOf(id));
   /** How a beast or enemy fights, as a little label. */
   const KIND = { single: ['⚔️', 'Single'], area: ['💥', 'Area'], ranged: ['🎯', 'Ranged'] };
   const kindChip = (k) => `<span class="bt-kindchip ${k}">${KIND[k][0]} ${KIND[k][1]}</span>`;
@@ -2437,6 +2437,7 @@ const BATTLE = (() => {
     if (won) {
       b.best[level.id] = Math.min(b.best[level.id] || Infinity, Math.round(time));
       if (starNow) b.stars[level.id] = true;
+      if (starNow && typeof LIMITED !== 'undefined') LIMITED.noteStar(level.id);
       if (level.world >= 7 && !battle.cards.some((c) => (BEAST_TEMPLATES[c.id] || {}).comet)) (b.noComet || (b.noComet = {}))[level.id] = true;
       if (level.boss) b.bosses[level.id] = true;
       const full = battle.piles.you >= battle.pileMax.you;
@@ -2880,10 +2881,11 @@ const BATTLE = (() => {
     const mergeDone = Object.keys(b.mach || {}).length;
     const cometN = typeof COMET !== 'undefined' ? COMET.ACH.length : 0, cometDone = Object.keys(b.cach || {}).length;
     const sh = sheet('Achievements', `${Object.keys(b.ach).length + mergeDone + cometDone} of ${D.ACHIEVEMENTS.length + MERGE_ACH.length + cometN} earned`);
-    const tabs = `<div class="bt-ach-tabs"><button class="${which === 'battle' ? 'on' : ''}" data-w="battle">Battle</button><button class="${which === 'merge' ? 'on' : ''}" data-w="merge">Merge</button>${cometN ? `<button class="${which === 'comet' ? 'on' : ''}" data-w="comet">Comet</button>` : ''}</div>`;
+    const tabs = `<div class="bt-ach-tabs"><button class="${which === 'battle' ? 'on' : ''}" data-w="battle">Battle</button><button class="${which === 'merge' ? 'on' : ''}" data-w="merge">Merge</button>${cometN ? `<button class="${which === 'comet' ? 'on' : ''}" data-w="comet">Comet</button>` : ''}${typeof LIMITED !== 'undefined' ? `<button class="limited-tab ${which === 'limited' ? 'on' : ''}" data-w="limited">Limited</button>` : ''}</div>`;
     const bindTabs = () => sh.body.querySelectorAll('.bt-ach-tabs button').forEach((btn) => btn.addEventListener('click', () => { click(); sh.close(); openAchievements(btn.dataset.w); }));
     if (which === 'merge') { sh.body.innerHTML = tabs + mergeAchHtml(); bindTabs(); return; }
     if (which === 'comet' && cometN) { checkCometAch(); sh.body.innerHTML = tabs + cometAchHtml(); bindTabs(); return; }
+    if (which === 'limited' && typeof LIMITED !== 'undefined') { sh.body.innerHTML = tabs + LIMITED.achHtml(rewardChips); bindTabs(); return; }
     let html = tabs;
     for (const [name, icon, test] of ACH_GROUPS) {
       const list = D.ACHIEVEMENTS.filter(test);

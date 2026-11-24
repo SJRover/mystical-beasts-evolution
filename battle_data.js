@@ -143,7 +143,7 @@ const BATTLE_DATA = (() => {
     if (!t) return null;
     const s = share(Math.max(0, t.tier - 1), order(id), { atk: 1, hp: 1, spd: 1, rng: 1 });
     // (1.5: a comet beast has four points more than any other of its tier, a Cosmic one seven more.)
-    const bonus = (RARITY_BONUS[t.rarity] || (t.rarity === 'COSMIC' ? 7 : 0)) + (t.comet ? 4 : 0);
+    const bonus = (RARITY_BONUS[t.rarity] || (t.rarity === 'COSMIC' ? 7 : 0)) + (t.comet ? 4 : 0) + (t.limited ? 8 : 0);
     if (bonus) {
       const top = Math.max(...STATS.map((k) => s[k]));
       const tied = STATS.filter((k) => s[k] === top);
@@ -302,6 +302,8 @@ const BATTLE_DATA = (() => {
     gravity: { name: 'Gravity well', icon: '🌀', text: 'Pulls nearby enemies in, hurting and holding them.' },
     starfall: { name: 'Starfall', icon: '☄', text: 'Drops stars on the four nearest enemies.' },
     rally: { name: 'War cry', icon: '📯', text: 'Nearby beasts hit half as hard again for five seconds.' },
+    // 1.5: a limited beast's (limited.js).
+    blizzard: { name: 'Blizzard', icon: '🌨', text: 'A storm of snow round it: the enemies near it are hurt and frozen for three seconds.' },
     // 1.5: the comet beasts' specials, from Tier 10 (comet.js says which has which).
     stagger: { name: 'Stagger', icon: '💫', text: 'A huge blow that knocks even a giant back up the field and stops the move it was winding up.' },
     anchor: { name: 'Anchor', icon: '⚓', text: 'Holds a boss for six seconds, slowed, so that it cannot start a big attack.' },
@@ -312,6 +314,7 @@ const BATTLE_DATA = (() => {
   function abilityOf(id) {
     const t = T(id);
     if (!t) return null;
+    if (t.limited) return t.ability || null;
     // (1.5: a comet beast has its own special from Tier 10, and none before.)
     if (t.comet) return t.tier >= 10 && typeof COMET !== 'undefined' ? COMET.BY_ID[t.comet.species].special : null;
     const s = beastStats(id, 0);

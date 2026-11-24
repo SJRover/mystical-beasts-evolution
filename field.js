@@ -28,7 +28,7 @@ const FIELD = (() => {
     if (!motions.has(type)) {
       const t = BEAST_TEMPLATES[type];
       // (1.5: a comet beast moves the way its species does: walking, flying, floating or swimming.)
-      let m = t && t.comet && typeof COMET !== 'undefined' ? (COMET.BY_ID[t.comet.species] || {}).motion || 'walk' : ART.motion(type);
+      let m = t && t.limited ? 'walk' : t && t.comet && typeof COMET !== 'undefined' ? (COMET.BY_ID[t.comet.species] || {}).motion || 'walk' : ART.motion(type);
       if (t && t.system === 'low_gravity' && m === 'walk') m = 'float';
       motions.set(type, m);
     }
@@ -61,13 +61,13 @@ const FIELD = (() => {
     const px = size * 1.25 * DPR() * 1.35; // room to zoom in before it softens
     // 1.5: a comet beast is drawn live from its artwork (comet_art.js), so it moves: legs, wings,
     // tails, its colours shifting, a Cosmic one's stars circling (animate() below redraws it).
-    if (t && t.comet && typeof COMET_ART !== 'undefined' && !infected) {
+    if (t && ((t.comet && typeof COMET_ART !== 'undefined') || (t.limited && typeof LIMITED !== 'undefined')) && !infected) {
       const cv = document.createElement('canvas');
       cv.className = 'beast-img comet-live';
       const n = Math.min(512, Math.round(px));
       cv.width = cv.height = n;
       sprite.appendChild(cv);
-      container._comet = { cv, g: cv.getContext('2d'), px: n, species: t.comet.species, stage: t.comet.stage, glow: (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.5)', next: 0 };
+      container._comet = { cv, g: cv.getContext('2d'), px: n, species: t.comet ? t.comet.species : null, stage: t.comet ? t.comet.stage : 0, limited: t.limited ? id : null, glow: t.limited ? 'rgba(220,232,245,0.7)' : (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.5)', next: 0 };
       drawComet(container._comet, Math.random() * 10, 0);
       const auraNow2 = ART.cached('aura', id, evolved, infected, px * 1.2);
       if (auraNow2) auraImg.src = auraNow2;
@@ -101,7 +101,8 @@ const FIELD = (() => {
     gr.addColorStop(0, c.glow); gr.addColorStop(1, 'rgba(0,0,0,0)');
     g.globalAlpha = 0.45; g.fillStyle = gr; g.fillRect(0, 0, px, px); g.globalAlpha = 1;
     g.translate(px / 2, px * 0.9);
-    COMET_ART.draw(g, c.species, c.stage, { t, walk }, px * 0.6);
+    if (c.limited) LIMITED.draw(g, c.limited, { t, walk }, px * 0.62);
+    else COMET_ART.draw(g, c.species, c.stage, { t, walk }, px * 0.6);
   }
 
   /** This frame's speed multiplier for a beast, easing towards a new target every few seconds. */

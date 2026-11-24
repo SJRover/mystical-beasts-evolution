@@ -1913,6 +1913,8 @@ const BEAST_TEMPLATES = {
 function getBeastSVG(beastId, evolved = false, infected = false) {
   const template = BEAST_TEMPLATES[beastId];
   if (!template) return '';
+  // 1.5: a limited beast is drawn from its own artwork (limited.js).
+  if (template.limited && typeof LIMITED !== 'undefined') return LIMITED.svg(beastId);
   // 1.4: a Relic is stained glass (relics.js).
   if (template.relic && typeof RELIC_ART !== 'undefined') return RELIC_ART.svg(beastId, { evolved, noGround: true });
   // 1.5: a comet beast is drawn from its own artwork (comet.js, comet_art.js).

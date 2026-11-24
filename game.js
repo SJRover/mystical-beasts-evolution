@@ -296,6 +296,8 @@ window.addEventListener('DOMContentLoaded', () => {
   audio = new AudioEngine();
   particles = new ParticleSystem(document.getElementById('particles-canvas'));
   particles.loop();
+  // 1.5: while a limited beast's event is live, a banner a moment after opening (limited.js).
+  setTimeout(() => { if (typeof LIMITED !== 'undefined') try { LIMITED.banner(); } catch (e) { console.error(e); } }, 3500);
 
   // Load save data
   loadGame();
@@ -438,6 +440,7 @@ function saveGame() {
     cometCocoons: state.cometCocoons || [],
     cometShards: state.cometShards || 0,
     cometStats: state.cometStats || {},
+    limited: state.limited || {},
     cometEggBank: state.cometEggBank || 0,
     cometUnlocked: !!state.cometUnlocked,
     shardIncubator: state.shardIncubator || null,
@@ -523,6 +526,7 @@ function loadGame() {
     state.cometCocoons = saveData.cometCocoons || [];
     state.cometShards = saveData.cometShards || 0;
     state.cometStats = saveData.cometStats || {};
+    state.limited = saveData.limited || {};
     state.cometEggBank = saveData.cometEggBank || 0;
     state.cometUnlocked = !!saveData.cometUnlocked;
     state.shardIncubator = saveData.shardIncubator && typeof saveData.shardIncubator === 'object' ? saveData.shardIncubator : null;
@@ -2602,6 +2606,7 @@ function executeMergeInner(beastA, beastB) {
   const ms = mergeStats();
   ms.merges++;
   ms.mergesOf[beastA.type] = (ms.mergesOf[beastA.type] || 0) + 1;
+  if (typeof LIMITED !== 'undefined' && (BEAST_TEMPLATES[beastA.type] || { tier: 0 }).tier > 5) LIMITED.note('merge6');
 
   const abs = getAbsolutePosition(mergeX, mergeY);
   const elementColor = ELEMENTS[template.element].color;
@@ -2983,7 +2988,7 @@ function triggerDiscoveryModal(beastId) {
   const modal = document.getElementById('discovery-modal');
   // 1.4: a Relic says so.
   const title = modal.querySelector('.modal-title');
-  if (title) title.textContent = template.relic ? 'A Relic joins you!' : 'New Mutation Discovered!';
+  if (title) title.textContent = template.limited ? 'A limited beast joins you!' : template.relic ? 'A Relic joins you!' : 'New Mutation Discovered!';
   modal.classList.add('active');
 }
 
@@ -3249,6 +3254,7 @@ function retrieveBeastFromIncubatorSlot(slotNum) {
       if (p[inc.beastType] >= EVOLVE_NEEDED) {
         p[inc.beastType] = 0;
         mergeStats().evolved++;
+        if (typeof LIMITED !== 'undefined' && (BEAST_TEMPLATES[inc.beastType] || { tier: 0 }).tier > 5) LIMITED.note('evolve6');
         spawnBeastOnField(inc.beastType, spot.x, spot.y, true, false);
         if (!state.unlockedEvolved.includes(inc.beastType)) state.unlockedEvolved.push(inc.beastType);
         spawnToastNotification('🧬 EVOLVED!', `${EVOLVE_NEEDED} incubations: an evolved <b>${name}</b>!`, getBeastSVG(inc.beastType, true, false));
@@ -3718,8 +3724,10 @@ function renderBeastopedia() {
   createSection('Prime Solar System', primeTemplates, primeUnlocked);
   createSection('Low Gravity Solar System', lgTemplates, lgUnlocked);
   // 1.4: the Relics, won by merge achievements (Battle tab, Achievements, Merge).
-  const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic);
+  const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic && !b.limited);
   if (relicTemplates.length) createSection('Relics', relicTemplates, relicTemplates.filter((b) => state.unlockedBeasts.includes(b.id)).length);
+  // 1.5: limited-time beasts, in silver (limited.js).
+  if (typeof LIMITED !== 'undefined') LIMITED.beastopedia(grid);
   // 1.5: the comet's fifteen species, always shown, at the very bottom (battle.js moves them below the
   // Folded Legends), so everyone can see the extreme beasts waiting later on (Sam, 24 Nov). Each at
   // the highest tier you have had; one not found yet is a shadow with only its rarity.
@@ -3796,8 +3804,8 @@ function updateDetailsModalContent() {
 
   const evoBtn = document.getElementById('details-toggle-evolved');
   // (1.5: comet beasts grow by stages rather than evolving, so they have no evolved form.)
-  evoBtn.style.display = template.comet ? 'none' : '';
-  document.getElementById('details-toggle-base').style.display = template.comet ? 'none' : '';
+  evoBtn.style.display = template.comet || template.limited ? 'none' : '';
+  document.getElementById('details-toggle-base').style.display = template.comet || template.limited ? 'none' : '';
   if (isEvoUnlocked) {
     evoBtn.innerText = 'Evolved Form';
     evoBtn.disabled = false;
@@ -3819,6 +3827,7 @@ function updateDetailsModalContent() {
 
   document.getElementById('details-beast-name').innerText = `${template.name}${detailsStateEvolved ? ' (Evolved)' : ''}`;
   document.getElementById('details-beast-name').classList.toggle('cosmic-name', template.rarity === 'COSMIC');
+  document.getElementById('details-beast-name').classList.toggle('limited-name', !!template.limited);
   
   const elementLabel = ELEMENTS[template.element].name;
   const mult = detailsStateEvolved ? 3.0 : 1.0;
@@ -5341,6 +5350,8 @@ function getBeastPerkDescription(template) {
 function trashBeast(beast) {
   const template = BEAST_TEMPLATES[beast.type];
   if (!template) return;
+  // (1.5: a limited beast can never be won again, so it cannot go in the trash.)
+  if (template.limited) { showWarning('A limited beast', `${template.name} can never be won again, so it cannot go in the trash.`); return; }
 
   state.lastTrashedBeast = {
     type: beast.type,
@@ -5348,6 +5359,8 @@ function trashBeast(beast) {
     infected: beast.infected,
     deathTimer: beast.deathTimer
   };
+  // (Towards a limited beast's challenge; taken back off if it is brought out of the bin.)
+  if (typeof LIMITED !== 'undefined' && template.tier >= 15) state.lastTrashedBeast.lim = LIMITED.note('trash15');
 
   if (audio) audio.playClick();
 
@@ -5392,6 +5405,7 @@ function retrieveBeastFromTrash(e) {
 
   const restored = state.lastTrashedBeast;
   state.lastTrashedBeast = null;
+  if (restored && restored.lim && typeof LIMITED !== 'undefined') LIMITED.unnote('trash15');
   updateTrashBinUI();
 
   // Spawn the beast back on field. We spawn it near the bottom-center of the playground

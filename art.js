@@ -765,10 +765,11 @@ const ART = (() => {
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (pending.has(key)) return pending.get(key);
     // 1.5: a comet beast is painted straight from its artwork (comet.js), between frames.
-    const ct = kind === 'beast' && typeof BEAST_TEMPLATES !== 'undefined' && BEAST_TEMPLATES[id] && BEAST_TEMPLATES[id].comet;
-    if (ct && typeof COMET !== 'undefined') {
+    const bt = kind === 'beast' && typeof BEAST_TEMPLATES !== 'undefined' && BEAST_TEMPLATES[id];
+    const ct = bt && (bt.comet || bt.limited);
+    if (ct && (bt.limited ? typeof LIMITED !== 'undefined' : typeof COMET !== 'undefined')) {
       const job = new Promise((resolve) => queuePaint(() => {
-        const c = COMET.canvasFor(id, bucket, glow);
+        const c = (bt.limited ? LIMITED : COMET).canvasFor(id, bucket, glow);
         const done = (url) => { cache.set(key, url); pending.delete(key); resolve(url); };
         if (c.toBlob && typeof URL !== 'undefined' && URL.createObjectURL) c.toBlob((b) => done(b ? URL.createObjectURL(b) : c.toDataURL('image/png')), 'image/png');
         else done(c.toDataURL('image/png'));
@@ -877,6 +878,7 @@ if (typeof getBeastSVG === 'function') {
     // (1.5: a comet beast is drawn from its own artwork, comet.js.)
     const t = typeof BEAST_TEMPLATES !== 'undefined' && BEAST_TEMPLATES[beastId];
     if (t && t.comet && typeof COMET !== 'undefined') return COMET.svg(beastId);
+    if (t && t.limited && typeof LIMITED !== 'undefined') return LIMITED.svg(beastId);
     return ART.inline(beastId, evolved, infected);
   };
 }

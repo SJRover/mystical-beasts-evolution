@@ -2963,3 +2963,35 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .comet-card .beastopedia-card-num { left: 5px; right: 5px; gap: 3px; font-size: 7.5px; }
 .comet-card .beastopedia-card-rarity { font-size: 6.5px !important; padding: 0 3px; letter-spacing: -0.1px; white-space: nowrap; flex: none; }
 .comet-section-note { margin: -2px 4px 6px; padding: 8px 12px; border-radius: 10px; background: rgba(200,168,255,0.08); color: #d8c8ff; font: 600 11px/1.4 "Outfit", sans-serif; }
+
+/* 1.5: limited-time beasts, in silver: a metallic shine sweeping across the name, the banner, their Beastopedia cards. */
+.limited-name { background: linear-gradient(100deg, #8a96a8 0%, #c8d2de 30%, #ffffff 45%, #e8eef6 50%, #9aa6b8 62%, #c8d2de 80%, #8a96a8 100%); background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6)); animation: limited-sheen 2.6s linear infinite; }
+@keyframes limited-sheen { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+.limited-banner-wrap { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(6,10,20,0.6); animation: limited-in 0.35s ease-out; }
+.limited-banner-wrap.out { opacity: 0; transition: opacity 0.3s; }
+@keyframes limited-in { from { opacity: 0; } to { opacity: 1; } }
+.limited-banner { position: relative; width: min(340px, 88vw); max-height: 92vh; overflow: hidden auto; padding: 14px 18px 18px; border-radius: 22px; text-align: center; background: linear-gradient(160deg, #f4f8fc 0%, #b8c4d2 40%, #6a7a90 100%); border: 3px solid #ffffff; box-shadow: 0 0 0 3px #8a96a8, 0 0 40px rgba(220,235,255,0.7), inset 0 2px 0 rgba(255,255,255,0.9); animation: limited-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes limited-pop { from { transform: scale(0.6); } to { transform: scale(1); } }
+.limited-banner::before { content: ""; position: absolute; inset: 0; border-radius: 20px; background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.75) 45%, transparent 60%); background-size: 260% 100%; animation: limited-sheen 2.4s linear infinite; pointer-events: none; }
+.limited-close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #ffffff; background: #4a5668; color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; z-index: 2; }
+.limited-pop { position: relative; width: min(210px, 52vw); aspect-ratio: 1; margin: 0 auto -4px; animation: limited-bob 2.4s ease-in-out infinite; filter: drop-shadow(0 8px 14px rgba(0,0,0,0.45)); }
+.limited-pop img { width: 100%; height: 100%; }
+@keyframes limited-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.03); } }
+.limited-tag { display: inline-block; padding: 3px 12px; border-radius: 20px; background: #2a3444; color: #e8f2ff; font: 800 12px Fredoka, sans-serif; letter-spacing: 2px; margin-bottom: 4px; }
+.limited-title { font: 800 24px Fredoka, sans-serif; margin: 2px 0 6px; filter: drop-shadow(0 1px 0 #ffffff) drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+.limited-text { font: 600 13px/1.4 "Outfit", sans-serif; color: #1a2232; margin-bottom: 12px; position: relative; }
+.limited-go { position: relative; padding: 10px 18px; border-radius: 14px; border: 2px solid #ffffff; background: linear-gradient(180deg, #4a5a74, #2a3444); color: #fff; font: 800 15px Fredoka, sans-serif; cursor: pointer; }
+.limited-section-head { margin: 15px 0 5px; padding: 10px 14px; background: linear-gradient(90deg, rgba(220,232,245,0.16), rgba(255,255,255,0.03)); border: 1px solid rgba(220,232,245,0.45); border-radius: 12px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+.limited-section-head > div { display: flex; align-items: center; gap: 8px; font-size: 14px; font-family: "Outfit", sans-serif; }
+.limited-dot { width: 8px; height: 8px; border-radius: 50%; background: #e8eef6; box-shadow: 0 0 8px #ffffff; }
+.limited-card { border-color: rgba(220,232,245,0.6) !important; background: radial-gradient(circle at 50% 40%, rgba(220,232,245,0.16), rgba(255,255,255,0.02) 70%) !important; }
+.limited-card.limited-shadow .beastopedia-card-icon svg { filter: brightness(0) opacity(0.4); }
+.limited-badge { padding: 1px 6px; border-radius: 6px; background: linear-gradient(90deg, #8a96a8, #ffffff, #8a96a8); color: #1a2232; font: 800 7px "Outfit", sans-serif; letter-spacing: 1px; }
+.limited-how { font: 600 7px/1.2 "Outfit", sans-serif; color: #c8d2de; text-align: center; margin-top: 2px; }
+.limited-reward { display: flex; gap: 10px; align-items: center; padding: 10px; margin: 4px 0 8px; border-radius: 14px; background: rgba(220,232,245,0.08); border: 1px solid rgba(220,232,245,0.3); }
+.limited-reward .limited-pic { width: 70px; height: 70px; flex: none; }
+.limited-reward .limited-pic svg { width: 100%; height: 100%; }
+.limited-reward b { display: block; font: 800 15px Fredoka, sans-serif; }
+.limited-reward span { font: 600 11px/1.35 "Outfit", sans-serif; color: #c8d2de; }
+/* The Limited rarity: a shining silver badge (Sam: not Godly). */
+.unlock-beast-rarity.limited, .beastopedia-card-rarity.rarity-limited, .trophy-rarity.limited { background: linear-gradient(100deg, #6a7688 0%, #b8c4d2 30%, #ffffff 45%, #dfe7f0 52%, #8a96a8 65%, #b8c4d2 85%, #6a7688 100%) !important; background-size: 260% 100% !important; color: #1a2232 !important; border: 1.5px solid #ffffff !important; box-shadow: 0 0 10px rgba(230,238,248,0.8); text-shadow: 0 1px 0 rgba(255,255,255,0.7); animation: limited-sheen 2.6s linear infinite; font-weight: 800 !important; }

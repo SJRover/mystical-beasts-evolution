@@ -134,7 +134,7 @@ const BattleEngine = (() => {
       const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed && !o.airborne && !(o.cloakUntil > this.time));
       const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
       const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
-      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480, dash: 520, stagger: u.reach + 140, anchor: 700 }[c.ability];
+      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480, dash: 520, stagger: u.reach + 140, anchor: 700, blizzard: 260 }[c.ability];
       if (reach && !near(foes, reach).length) { this.events.push({ type: 'special-miss', unit: u }); return false; }
       // (Dispel needs a boss winding up a move within 800, or an enemy near it with a shield or a war cry.)
       const winding = foes.filter((f) => f.cast && f.cast.stage === 'wind' && Math.hypot(f.x - u.x, f.y - u.y) - f.r <= 800);
@@ -179,6 +179,7 @@ const BattleEngine = (() => {
           for (const o of near(foes, 300)) { o.buffUntil = -1; o.shieldUntil = -1; o.mirrorShield = -1; o.hardenUntil = -1; if (!hit.includes(o)) hit.push(o); }
           break;
         case 'ward': for (const o of near(friends, 260)) { o.wardUntil = now + 10; hit.push(o); } break;
+        case 'blizzard': for (const o of near(foes, 260)) { this.hurt(o, L * 2.5, u, true, 'frost'); o.stunUntil = Math.max(o.stunUntil, now + 3); o.frozen = true; hit.push(o); } break;
         case 'sunder': u.sunderUntil = now + 10; u.forceHeavy = true; break;
         case 'leap': {
           const ahead = foes.filter((o) => (o.y - u.y) * dir > -u.r && Math.hypot(o.x - u.x, o.y - u.y) < 480).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y))[0];

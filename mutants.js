@@ -686,7 +686,7 @@ const MUTANTS = (() => {
     b.events.push({ type: 'mutant', kind: 'text', unit: u, text: `🪞 ${name}!`, col: '#e0d0ff' });
     switch (c.copy) {
       case 'blast': case 'quake': blast(b, u, near(c.copy === 'blast' ? 200 : 230), L * (c.copy === 'blast' ? 4 : 2), 'shock', { stun: c.copy === 'quake' ? 1.4 : 0 }); break;
-      case 'freeze': for (const o of near(220).slice(0, 5)) freeze(b, o, 2.5); break;
+      case 'freeze': case 'blizzard': for (const o of near(220).slice(0, 5)) freeze(b, o, 2.5); break;
       case 'gust': for (const o of near(250)) knockFrom(b, o, u.x, u.y, 200); break;
       case 'gravity': for (const o of near(260).slice(0, 5)) { o.x += (u.x - o.x) * 0.5; o.y += (u.y - o.y) * 0.5; b.hurt(o, L * 1.2, u, false, 'shock'); o.stunUntil = Math.max(o.stunUntil, now + 1); } break;
       case 'heal': u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.12); break;
