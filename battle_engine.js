@@ -133,8 +133,11 @@ const BattleEngine = (() => {
       const foes = this.units.filter((o) => o.side !== u.side && o.state !== 'dying' && !o.burrowed && !o.airborne && !(o.cloakUntil > this.time));
       const friends = this.units.filter((o) => o.side === u.side && o.state !== 'dying');
       const near = (list, R, x = u.x, y = u.y) => list.filter((o) => Math.hypot(o.x - x, o.y - y) - o.r <= R);
-      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480, dash: 520 }[c.ability];
+      const reach = { blast: 190, freeze: 200, gust: 230, quake: 210, gravity: 220, starfall: 450, volley: u.reach * 1.6 + 120, leap: 480, dash: 520, stagger: u.reach + 140, anchor: 700 }[c.ability];
       if (reach && !near(foes, reach).length) { this.events.push({ type: 'special-miss', unit: u }); return false; }
+      // (Dispel needs a boss winding up a move within 800, or an enemy near it with a shield or a war cry.)
+      const winding = foes.filter((f) => f.cast && f.cast.stage === 'wind' && Math.hypot(f.x - u.x, f.y - u.y) - f.r <= 800);
+      if (c.ability === 'dispel' && !winding.length && !near(foes, 300).some((f) => f.buffUntil > this.time || f.shieldUntil > this.time || f.mirrorShield > this.time)) { this.events.push({ type: 'special-miss', unit: u }); return false; }
       c.abilityUsed = true;
       // The Mirror Witch copies the last special used (mutants.js).
       this.lastSpecial = { ability: c.ability, t: this.time };
@@ -145,7 +148,7 @@ const BattleEngine = (() => {
       switch (c.ability) {
         case 'blast': for (const o of near(foes, 190)) { this.hurt(o, L * 4, u, true); hit.push(o); } break;
         case 'freeze': for (const o of nearest(foes, 200, 5)) { o.stunUntil = Math.max(o.stunUntil, now + 2.5); o.frozen = true; hit.push(o); } break;
-        case 'gust': for (const o of near(foes, 230)) { if (!o.mutant) o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y - dir * 170)); o.stunUntil = Math.max(o.stunUntil, now + 0.6); o.frozen = false; hit.push(o); } break;
+        case 'gust': for (const o of near(foes, 230)) { if (!o.mutant) o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y + dir * 170)); o.stunUntil = Math.max(o.stunUntil, now + 0.6); o.frozen = false; hit.push(o); } break;
         case 'quake': for (const o of near(foes, 210)) { this.hurt(o, L * 2, u, true); o.stunUntil = Math.max(o.stunUntil, now + 1.6); o.frozen = false; hit.push(o); } break;
         case 'heal': for (const o of near(friends, 240)) { o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.4); hit.push(o); } break;
         case 'gravity': for (const o of nearest(foes, 220, 5)) { if (!o.mutant) { o.x += (u.x - o.x) * 0.6; o.y += (u.y - o.y) * 0.6; } this.hurt(o, L * 1.2, u, false); o.stunUntil = Math.max(o.stunUntil, now + 1); o.frozen = false; hit.push(o); } break;
@@ -154,6 +157,28 @@ const BattleEngine = (() => {
         case 'dash': u.dashUntil = now + 1.8; u.forceHeavy = true; break;
         case 'shield': u.shieldUntil = now + 5; break;
         case 'volley': for (const o of nearest(foes, u.reach * 1.6 + 120, 5)) { this.hurt(o, L * 2, u, false); hit.push(o); } break;
+        // 1.5: the comet beasts' specials (comet.js), made for World 7's giants.
+        case 'stagger': {
+          const o = nearest(foes, u.reach + 140, 1)[0];
+          if (o) {
+            this.hurt(o, L * 3, u, true);
+            if (o.mutant && typeof MUTANTS !== 'undefined') MUTANTS.stagger(this, o, 240);
+            else if (!o.boss) o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y + dir * 200));
+            o.stunUntil = Math.max(o.stunUntil, now + 1.2); o.frozen = false; hit.push(o);
+          }
+          break;
+        }
+        case 'anchor': {
+          const o = foes.filter((f) => f.boss && Math.hypot(f.x - u.x, f.y - u.y) - f.r <= 700)[0] || nearest(foes, 700, 1)[0];
+          if (o) { o.anchorUntil = now + 6; o.slowUntil = Math.max(o.slowUntil, now + 6); hit.push(o); }
+          break;
+        }
+        case 'dispel':
+          for (const o of winding) { if (typeof MUTANTS !== 'undefined') MUTANTS.dispel(this, o); hit.push(o); }
+          for (const o of near(foes, 300)) { o.buffUntil = -1; o.shieldUntil = -1; o.mirrorShield = -1; if (!hit.includes(o)) hit.push(o); }
+          break;
+        case 'ward': for (const o of near(friends, 260)) { o.wardUntil = now + 10; hit.push(o); } break;
+        case 'sunder': u.sunderUntil = now + 10; u.forceHeavy = true; break;
         case 'leap': {
           const ahead = foes.filter((o) => (o.y - u.y) * dir > -u.r && Math.hypot(o.x - u.x, o.y - u.y) < 480).sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y))[0];
           if (ahead) {
@@ -185,6 +210,9 @@ const BattleEngine = (() => {
       u.evolved = c.evolved;
       u.card = i;
       c.unit = u;
+      // 1.5: a comet beast's passive, always on (comet.js).
+      const ct = (BATTLE_DATA.T(c.id) || {}).comet;
+      if (ct && typeof COMET !== 'undefined') u.passives = { [COMET.BY_ID[ct.species].passive]: true };
       this.mana -= c.cost;
       if (this.firstDeployAt == null) this.firstDeployAt = this.time;
       let x = Math.max(r + 10, Math.min(ARENA.w - r - 10, xFrac * ARENA.w));
@@ -281,6 +309,17 @@ const BattleEngine = (() => {
         this.loop = this.time;
         this.queue = this.level.spawns.filter((s) => !s.boss && s.t > 4).map((s) => ({ ...s, t: s.t - 4 }));
       }
+      // 1.5: a comet beast with Revive rises again ten seconds after it fell, once, at half health.
+      if (this.cometRevives && this.cometRevives.length) {
+        for (const rv of this.cometRevives.filter((q) => q.at <= this.time)) {
+          const c = this.cards[rv.card] || {};
+          const u = unitFrom('you', rv.kind, rv.stats, rv.r, { area: c.area || 0 });
+          Object.assign(u, { card: rv.card, evolved: c.evolved, x: rv.x, y: rv.y, hp: u.maxHp * 0.5, revived: true, passives: { revive: true } });
+          this.units.push(u);
+          this.events.push({ type: 'deploy', unit: u, revive: true });
+        }
+        this.cometRevives = this.cometRevives.filter((q) => q.at > this.time);
+      }
       for (const u of this.units) {
         u.age += dt;
         if (u.state === 'dying') { u.dyingT += dt; continue; }
@@ -375,6 +414,11 @@ const BattleEngine = (() => {
     think(u, dt) {
       // A World 7 boss: its moves first (mutants.js); while one is under way it does nothing else.
       if (u.mutant && MUTANTS.think(this, u, dt)) return;
+      // (1.5: comet passives. Unshakeable is never stunned; Frostproof is never frozen or slowed.)
+      if (u.passives) {
+        if (u.passives.unshakeable) { u.stunUntil = -1; u.frozen = false; }
+        if (u.passives.frostproof) { u.slowUntil = -1; if (u.frozen) { u.frozen = false; u.stunUntil = -1; } }
+      }
       // Stunned or frozen: nothing until it wears off (the blow it was winding up waits too).
       if (u.stunUntil > this.time) return;
       u.frozen = false;
@@ -408,7 +452,7 @@ const BattleEngine = (() => {
           const dx = best.x - u.x, dy = best.y - u.y, dd = Math.hypot(dx, dy) || 1, st = Math.min(bd - 4, u.baseSpeed * 0.5 * dt);
           u.x += (dx / dd) * st; u.y += (dy / dd) * st;
         }
-        u.swing -= dt * (u.slowUntil > this.time ? 0.6 : 1);
+        u.swing -= dt * (u.slowUntil > this.time ? 0.6 : 1) * (u.side === 'you' && this.hasteNear(u) ? 1.3 : 1);
         if (u.swing <= 0) {
           u.swing += 1;
           if (!u.noBasic) this.attack(u, foes);
@@ -546,6 +590,11 @@ const BattleEngine = (() => {
       u.y += (dy / d) * step;
     }
 
+    /** 1.5: whether a comet beast with Haste aura is near one of yours (its swings come 30% faster). */
+    hasteNear(u) {
+      return this.units.some((a) => a.passives && a.passives.haste && a.side === u.side && a.state !== 'dying' && Math.hypot(a.x - u.x, a.y - u.y) < 220);
+    }
+
     attack(u, foes) {
       u.swings++;
       const heavy = u.forceHeavy || u.swings % this.heavyEvery === 0 || (u.side === 'foe' && u.swings % 5 === 0);
@@ -569,7 +618,7 @@ const BattleEngine = (() => {
       for (const o of splash) this.hurt(o, dmg * u.area, u, false, u.dmgType);
       if (u.trait === 'slow') for (const o of hit) o.slowUntil = this.time + 2;
       if (u.trait === 'knock' && heavy) for (const o of [...hit, ...splash]) {
-        if (o.state === 'dying' || o.boss) continue;
+        if (o.state === 'dying' || o.boss || (o.passives && o.passives.unshakeable)) continue;
         o.y = Math.max(PILES.foe.y - 40, Math.min(PILES.you.y + 40, o.y + (o.side === 'you' ? 90 : -90)));
         o.stunUntil = Math.max(o.stunUntil, this.time + 0.3);
       }
@@ -578,11 +627,20 @@ const BattleEngine = (() => {
     /** `type`: World 7's damage types (fire, frost, poison, crush, shock), or 'dot' for a burn's tick. */
     hurt(o, dmg, by, heavy, type = null) {
       if (o.state === 'dying') return;
-      if (o.shieldUntil > this.time) dmg *= 0.2;
+      if (o.shieldUntil > this.time && !(by && by.sunderUntil > this.time)) dmg *= 0.2;
       if (o.side === 'foe' && this.units.some((a) => a.trait === 'aura' && a !== o && a.state !== 'dying' && a.side === 'foe' && Math.hypot(a.x - o.x, a.y - o.y) < 180)) dmg *= 0.75;
       let tag = null;
       if (this.mut) { const m = MUTANTS.modify(this, o, dmg, by, heavy, type); dmg = m.dmg; tag = m.tag; }
+      // 1.5: a Ward takes the next big blow (nine tenths of it); Parry survives one that would kill.
+      if (o.wardUntil > this.time && (heavy || dmg >= o.maxHp * 0.2)) { dmg *= 0.1; o.wardUntil = -1; tag = 'ward'; }
+      if (o.passives && o.passives.parry && !o.parried && type !== 'dot' && o.hp - dmg <= 0) { o.parried = true; dmg = Math.max(0, o.hp - 1); tag = 'parry'; }
       o.hp -= dmg;
+      if (by && by.passives && by.passives.lifesteal && by.state !== 'dying' && type !== 'dot' && type !== 'thorns') by.hp = Math.min(by.maxHp, by.hp + dmg * 0.25);
+      if (o.passives && by && by.side !== o.side && by.state !== 'dying' && type !== 'dot' && type !== 'thorns') {
+        const ranged = by.reach >= SHOT_REACH || by.shooter;
+        if (o.passives.thorns && !ranged) this.hurt(by, dmg * 0.2, o, false, 'thorns');
+        if (o.passives.reflect && ranged) this.hurt(by, dmg * 0.3, o, false, 'thorns');
+      }
       o.lastHurt = this.time;
       this.events.push({ type: 'hit', unit: o, by, dmg, heavy, tag, dot: type === 'dot' });
       if (o.hp <= 0) {
@@ -591,6 +649,7 @@ const BattleEngine = (() => {
         o.dyingT = 0;
         o.target = null;
         if (this.mut) MUTANTS.onDeath(this, o);
+        if (o.passives && o.passives.revive && !o.revived && o.side === 'you') (this.cometRevives || (this.cometRevives = [])).push({ card: o.card, kind: o.kind, stats: o.stats, r: o.r, x: o.x, y: o.y, at: this.time + 10 });
         this.events.push({ type: 'death', unit: o, by });
       } else if (o.mutant) MUTANTS.onHurt(this, o);
     }

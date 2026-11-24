@@ -122,6 +122,8 @@ const BATTLE = (() => {
   const baseOf = (x) => String(x).replace(/\*$/, '');
   const isEvo = (x) => String(x).endsWith('*');
   const evolvedOwned = (id) => !D.LEGENDS[id] && ((state.unlockedEvolved || []).includes(id));
+  // (1.5: a comet beast has a special from Tier 10 without evolving.)
+  const specialOwned = (id) => evolvedOwned(id) || (!!(BEAST_TEMPLATES[id] || {}).comet && !!D.abilityOf(id));
   /** How a beast or enemy fights, as a little label. */
   const KIND = { single: ['⚔️', 'Single'], area: ['💥', 'Area'], ranged: ['🎯', 'Ranged'] };
   const kindChip = (k) => `<span class="bt-kindchip ${k}">${KIND[k][0]} ${KIND[k][1]}</span>`;
@@ -413,11 +415,11 @@ const BATTLE = (() => {
     for (const id of pool) if (picked.length < max && !picked.includes(id)) picked.push(id);
     const six = picked;
     // Evolved beasts first, into the ability slots.
-    return [...six.filter(evolvedOwned), ...six.filter((id) => !evolvedOwned(id))];
+    return [...six.filter(specialOwned), ...six.filter((id) => !specialOwned(id))];
   }
   /** The ability slots: the left three of the six (Sam, 19 Nov). */
   const ABILITY_SLOTS = 3;
-  const hasSpecial = (id, i) => i < ABILITY_SLOTS && evolvedOwned(id);
+  const hasSpecial = (id, i) => i < ABILITY_SLOTS && specialOwned(id);
   /**
    * Sync down (Sam, 19 Nov): when a level's rule leaves you fewer beasts than it allows, your
    * beasts can battle as the rule's own level (no higher than its tier, no rarer than it lets in),
@@ -489,7 +491,7 @@ const BATTLE = (() => {
         const tierNow = sy && cap.tier ? Math.min(t.tier, cap.tier) : t.tier;
         const inDeck = deck.includes(id);
         const allowed = ok(id);
-        const ab = evolvedOwned(id) ? D.ABILITIES[D.abilityOf(id)] : null;
+        const ab = specialOwned(id) ? D.ABILITIES[D.abilityOf(id)] : null;
         return `<button class="bt-pick ${inDeck ? 'in' : ''} ${allowed ? '' : 'barred'} ${t.legend ? 'legend' : ''}" data-id="${id}">
           <img data-pic="${id}" alt="">
           <div class="bt-pick-body"><div class="bt-pick-name">${t.name}${prestigeOf(id) ? ` <i class="bt-prest">Prestige ${prestigeOf(id)}</i>` : ''}${t.legend ? ' <i class="bt-prest legend">Legend</i>' : ''}</div>

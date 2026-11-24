@@ -150,7 +150,10 @@ const BATTLE_DATA = (() => {
       const pick = tied.length === STATS.length ? tied[Math.floor(seeded(hash(id + '|rarity'))() * tied.length)] : order(id).find((k) => tied.includes(k));
       s[pick] += bonus;
     }
-    for (let k = 1; k <= Math.min(prestige, 15); k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
+    // (1.5: a comet beast is only found by a player at prestige 15 in both solar systems, so it always
+    // has those fifteen points, and one more for each of the comet's own prestiges, up to ten.)
+    const pts = t.comet ? 15 + Math.min(prestige, 10) : Math.min(prestige, 15);
+    for (let k = 1; k <= pts; k++) s[STATS[Math.floor(seeded(hash(id + '|prestige|' + k))() * 4)]]++;
     return s;
   }
 
@@ -287,10 +290,18 @@ const BATTLE_DATA = (() => {
     gravity: { name: 'Gravity well', icon: '🌀', text: 'Pulls nearby enemies in, hurting and holding them.' },
     starfall: { name: 'Starfall', icon: '☄', text: 'Drops stars on the four nearest enemies.' },
     rally: { name: 'War cry', icon: '📯', text: 'Nearby beasts hit half as hard again for five seconds.' },
+    // 1.5: the comet beasts' specials, from Tier 10 (comet.js says which has which).
+    stagger: { name: 'Stagger', icon: '💫', text: 'A huge blow that knocks even a giant back up the field and stops the move it was winding up.' },
+    anchor: { name: 'Anchor', icon: '⚓', text: 'Holds a boss for six seconds, slowed, so that it cannot start a big attack.' },
+    dispel: { name: 'Dispel', icon: '✨', text: 'Cancels an attack a boss is winding up, and strips the shields and war cries from enemies near it.' },
+    ward: { name: 'Ward', icon: '🔰', text: 'Shields the beasts around it: the next big blow on each, within ten seconds, does a tenth of its damage.' },
+    sunder: { name: 'Sunder', icon: '🗡', text: 'For ten seconds its blows go straight through armour, shields and resistances, and the first is heavy.' },
   };
   function abilityOf(id) {
     const t = T(id);
     if (!t) return null;
+    // (1.5: a comet beast has its own special from Tier 10, and none before.)
+    if (t.comet) return t.tier >= 10 && typeof COMET !== 'undefined' ? COMET.BY_ID[t.comet.species].special : null;
     const s = beastStats(id, 0);
     const top = ['atk', 'hp', 'spd', 'rng'].sort((a, c) => s[c] - s[a])[0];
     // Hunters built to pounce (foxes, cats, wolves, lions, dinosaurs) leap.

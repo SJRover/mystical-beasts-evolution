@@ -52,11 +52,11 @@
     frostproof: ['Frostproof', 'Nothing can slow it or freeze it.'],
   };
   const SPECIALS = {
-    stagger: ['Stagger', 'A huge blow that knocks even a giant back.'],
-    anchor: ['Anchor', 'It holds a boss so that it cannot start its next move.'],
+    stagger: ['Stagger', 'A huge blow that knocks even a giant back up the field.'],
+    anchor: ['Anchor', 'It holds a boss for six seconds, so that it cannot start a big attack.'],
     dispel: ['Dispel', 'It cancels an attack that a boss is winding up.'],
-    ward: ['Ward', 'It shields the beasts around it against the next big attack.'],
-    sunder: ['Sunder', 'Its blows go straight through armour.'],
+    ward: ['Ward', 'It shields the beasts around it against the next big blow.'],
+    sunder: ['Sunder', 'For ten seconds its blows go straight through armour.'],
   };
   const idOf = (species, tier) => `${species}_${tier}`;
 

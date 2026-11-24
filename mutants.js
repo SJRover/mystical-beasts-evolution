@@ -276,7 +276,7 @@ const MUTANTS = (() => {
   const SHORT = { hulk_goblin: 'Gorrak', walking_hive: 'The hive', frost_giant: 'Rime', three_headed_serpent: 'Trisskar', mirror_witch: 'Vitriel', twin_sol: 'Sol', twin_luna: 'Luna', rot_behemoth: 'The behemoth', colossus: 'The Colossus', dragon: 'Pyraxis', omega_chimera: 'The Chimera' };
   const zone = (b, z) => { z.id = (b.zoneN = (b.zoneN || 0) + 1); z.start = b.time; b.zones.push(z); return z; };
   function knockFrom(b, o, x, y, dist) {
-    if (o.mutant || dist <= 0) return;
+    if (o.mutant || dist <= 0 || (o.passives && o.passives.unshakeable)) return;
     if (elementOf(o) === 'EARTH') dist *= 0.4;
     const d = Math.hypot(o.x - x, o.y - y) || 1;
     o.x = clampX(o.x + ((o.x - x) / d) * dist, o.r + 4);
@@ -306,7 +306,8 @@ const MUTANTS = (() => {
   const pileHit = (b, x, y, r, sec, u) => { if (Math.hypot(YOUR_PILE.x - x, YOUR_PILE.y - y) <= r + PILE_R * 0.8) takePile(b, sec, u); };
   function freeze(b, o, sec) {
     const el = elementOf(o);
-    if (el === 'WATER' || el === 'FIRE' || o.passive === 'frostproof') { o.slowUntil = Math.max(o.slowUntil, b.time + sec); return; }
+    if (o.passives && o.passives.frostproof) return;
+    if (el === 'WATER' || el === 'FIRE') { o.slowUntil = Math.max(o.slowUntil, b.time + sec); return; }
     o.stunUntil = Math.max(o.stunUntil, b.time + sec); o.frozen = true;
   }
   const spawnAt = (b, id, x, y, mul, extra = {}) => {
@@ -341,8 +342,8 @@ const MUTANTS = (() => {
     // Facing: towards what it fights, else down the field.
     if (u.target && u.target.state !== 'dying') u.facing = Math.atan2(u.target.y - u.y, u.target.x - u.x);
     else u.facing += (Math.PI / 2 - u.facing) * Math.min(1, dt * 2);
-    // A move that is ready (the first in the list wins).
-    for (let i = 0; i < def.moves.length; i++) {
+    // A move that is ready (the first in the list wins); none while it is anchored (a comet special).
+    if (!(u.anchorUntil > now)) for (let i = 0; i < def.moves.length; i++) {
       const m = def.moves[i];
       if ((m.phase || 0) > u.phase || (m.upto != null && u.phase > m.upto) || now < u.moveAt[i]) continue;
       if (begin(b, u, m, i)) return true;
@@ -359,6 +360,18 @@ const MUTANTS = (() => {
     return false;
   }
 
+  /** 1.5: comet specials. Stagger hurls a giant back up the field (stopping a wind-up); Dispel cancels one. */
+  function stagger(b, o, dist) {
+    const dx = o.x - YOUR_PILE.x, dy = o.y - YOUR_PILE.y, d = Math.hypot(dx, dy) || 1;
+    dist = Math.min(dist, Math.max(0, o.y - 240));
+    o.slide = { vx: ((dx / d) * dist) / 0.45, vy: ((dy / d) * dist) / 0.45, until: b.time + 0.45 };
+    if (o.cast && o.cast.stage === 'wind' && !o.cast.noStop) interrupt(b, o);
+    b.events.push({ type: 'mutant', kind: 'text', unit: o, text: 'Staggered!', col: '#c8a8ff' });
+  }
+  function dispel(b, o) {
+    if (o.cast) interrupt(b, o);
+    b.events.push({ type: 'mutant', kind: 'text', unit: o, text: 'Dispelled!', col: '#c8a8ff' });
+  }
   function interrupt(b, u) {
     const c = u.cast;
     if (c.zone) c.zone.dead = true;
@@ -659,7 +672,9 @@ const MUTANTS = (() => {
       case 'gust': for (const o of near(250)) knockFrom(b, o, u.x, u.y, 200); break;
       case 'gravity': for (const o of near(260).slice(0, 5)) { o.x += (u.x - o.x) * 0.5; o.y += (u.y - o.y) * 0.5; b.hurt(o, L * 1.2, u, false, 'shock'); o.stunUntil = Math.max(o.stunUntil, now + 1); } break;
       case 'heal': u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.12); break;
-      case 'shield': case 'dash': u.shieldUntil = now + 5; break;
+      case 'shield': case 'dash': case 'ward': u.shieldUntil = now + 5; break;
+      case 'anchor': for (const o of near(260).slice(0, 4)) o.stunUntil = Math.max(o.stunUntil, now + 2); break;
+      case 'dispel': for (const o of all) { o.wardUntil = -1; o.buffUntil = -1; o.shieldUntil = -1; } break;
       case 'rally': for (const o of foesAlive(b)) if (Math.hypot(o.x - u.x, o.y - u.y) < 400) { o.buffUntil = now + 5; o.buff = 1.5; } break;
       case 'starfall': case 'volley': case 'leap': default: {
         // Shards (or stars) on the four nearest beasts.
@@ -786,22 +801,23 @@ const MUTANTS = (() => {
     const now = b.time;
     if (type === 'dot') return { dmg, tag: 'dot' };
     if (o.mutant && by && by.side === 'you') {
-      const def = o.mutant, el = elementOf(by);
+      const def = o.mutant, el = elementOf(by), pierce = by.sunderUntil > now;
       if (def.weak && def.weak[el]) { dmg *= def.weak[el]; tag = 'weak'; }
-      else if (def.resist && def.resist[el]) { dmg *= def.resist[el]; tag = 'resist'; }
+      else if (def.resist && def.resist[el] && !pierce) { dmg *= def.resist[el]; tag = 'resist'; }
       if (el === 'FIRE') o.burningUntil = now + 3;
       if (def.armour) {
         const a = angDiff(Math.atan2(by.y - o.y, by.x - o.x), o.facing);
-        const k = a < 0.9 ? def.armour.front : a > 2.2 ? def.armour.back : def.armour.side;
+        const k0 = a < 0.9 ? def.armour.front : a > 2.2 ? def.armour.back : def.armour.side;
+        const k = pierce ? Math.max(1, k0) : k0;
         dmg *= k;
         if (k < 1 && !tag) tag = 'armour'; else if (k > 1.3) tag = 'flank';
       }
       if (def.core) {
         const ranged = by.reach >= 74;
-        dmg *= ranged ? def.core.ranged : def.core.melee;
+        dmg *= ranged ? def.core.ranged : pierce ? 1 : def.core.melee;
         tag = ranged ? 'core' : tag || 'armour';
       }
-      if (o.mirrorShield > now) dmg *= 0.4;
+      if (o.mirrorShield > now && !pierce) dmg *= 0.4;
     }
     if (o.side === 'you' && type && RESIST[type]) {
       const el = elementOf(o);
@@ -813,7 +829,7 @@ const MUTANTS = (() => {
       }
       if (k >= 1 && o.state !== 'dying') {
         if (type === 'fire' && !(o.passives && o.passives.fireproof)) { o.burnUntil = now + 3; o.burnDps = Math.max(o.burnDps || 0, dmg * 0.12); }
-        if (type === 'frost') { o.slowUntil = Math.max(o.slowUntil, now + 2.5); if (heavy) freeze(b, o, 1.2); }
+        if (type === 'frost' && !(o.passives && o.passives.frostproof)) { o.slowUntil = Math.max(o.slowUntil, now + 2.5); if (heavy) freeze(b, o, 1.2); }
         if (type === 'poison') poison(b, o, dmg * 0.15, by && by.uid);
         if (type === 'shock') o.stunUntil = Math.max(o.stunUntil, now + 0.35);
       }
@@ -911,7 +927,7 @@ const MUTANTS = (() => {
     };
   }
 
-  return { BOSSES, LEVELS, LEVEL_COUNT, TYPES, RESIST, level, setup, think, step, modify, onHurt, onDeath, won, pose, bloodStars, bossNotes, ELEMENT_WORD };
+  return { BOSSES, LEVELS, LEVEL_COUNT, TYPES, RESIST, level, setup, think, step, modify, onHurt, onDeath, won, pose, bloodStars, bossNotes, ELEMENT_WORD, stagger, dispel };
 })();
 
 if (typeof module !== 'undefined') module.exports = MUTANTS;
