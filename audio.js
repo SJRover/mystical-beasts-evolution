@@ -130,7 +130,7 @@ class AudioEngine {
     const isLocalFile = window.location.protocol === 'file:';
     const volumeMultiplier = isLocalFile ? 0.35 : 1.0;
     const currentSystem = (window.state && window.state.currentSolarSystem) || 'prime';
-    if (currentSystem === 'low_gravity') {
+    if (currentSystem === 'low_gravity' || currentSystem === 'comet') {
       if (enabled) {
         if (this.lgActiveAudio) {
           this.lgActiveAudio.volume = this.volume * volumeMultiplier;
@@ -212,7 +212,7 @@ class AudioEngine {
     this.musicPlaying = true;
     
     const currentSystem = (window.state && window.state.currentSolarSystem) || 'prime';
-    if (currentSystem === 'low_gravity') {
+    if (currentSystem === 'low_gravity' || currentSystem === 'comet') {
       this.startLgPlaylist();
     } else {
       this.startPrimePlaylist();
@@ -812,6 +812,10 @@ class AudioEngine {
 
   startLgPlaylist() {
     if (!this.musicEnabled) return;
+    // 1.5: on the comet, Sam's comet music instead.
+    const comet = !!(window.state && window.state.currentSolarSystem === 'comet');
+    if (!this.lgTracks) this.lgTracks = this.lgPlaylist.slice();
+    this.lgPlaylist = comet ? ['CometWorldMusic.mp3', 'CometWorldMusic2.mp3'] : this.lgTracks;
     this.lgCurrentTrackIdx = 0;
     this.playLgTrack(this.lgCurrentTrackIdx);
   }
@@ -953,8 +957,10 @@ class AudioEngine {
       this.ctx.resume();
     }
     
-    if (systemId === 'low_gravity') {
+    if (systemId === 'low_gravity' || systemId === 'comet') {
+      // (Low Gravity to the comet, or back: the same player with the other world's tracks.)
       this.stopPrimePlaylist();
+      this.stopLgPlaylist();
       this.startLgPlaylist();
     } else {
       this.stopLgPlaylist();
@@ -1101,7 +1107,7 @@ class AudioEngine {
 
   skipToNextSong() {
     const currentSystem = (window.state && window.state.currentSolarSystem) || 'prime';
-    if (currentSystem === 'low_gravity') {
+    if (currentSystem === 'low_gravity' || currentSystem === 'comet') {
       this.lgCurrentTrackIdx = (this.lgCurrentTrackIdx + 1) % this.lgPlaylist.length;
       this.playLgTrack(this.lgCurrentTrackIdx);
     } else {

@@ -52,6 +52,22 @@ const BIOMES = (() => {
     { name: 'Wormhole Reef', sky: ['#001418', '#0a5a5a'], horizon: 'rings', hz: ['#3ff6c6', '#ff7ab6'], ground: ['#0e4a4a', '#063232', '#166262'], tex: 'water', feat: 'river', featC: '#3ff6c6', low: { coral: 3, bubbleCluster: 2, shell: 1, mushroomGlow: 1.5 }, edge: 'coralTall', edgeC: ['#3ff6c6', '#ff7ab6'] },
     { name: 'Event Horizon', sky: ['#000000', '#2a0e00'], horizon: 'quasar', hz: ['#ffcf3d', '#ff6a1a'], ground: ['#1a1008', '#0a0604', '#2a1a0c'], tex: 'glitter', feat: 'lava', featC: '#ffcf3d', low: { shard: 3, crystal: 2, ember: 2, floatRock: 1 }, edge: 'obelisk', edgeC: ['#1a1008', '#ffcf3d'] },
   ];
+  // 1.5: the Interstellar Comet, prestige 0 to 10: crust and ice, its tail of light, crystal
+  // hollows, dust storms, aurora, time-worn craters, a nebula in its wake, a sea of stardust, its
+  // burning heart, and the bright place where everything began.
+  const COMET = [
+    { name: 'Comet Crust', sky: ['#04060e', '#1a2a4a'], horizon: 'void', hz: ['#7ad8ff', '#c8a8ff'], ground: ['#3a4458', '#262c3c', '#4a566e'], tex: 'ice', feat: 'chasm', featC: '#7ad8ff', low: { rock: 3, iceSpike: 2, crystal: 1, shard: 1 }, edge: 'iceSpire', edgeC: ['#e6f6ff', '#7ad8ff'] },
+    { name: 'Ice Geyser Fields', sky: ['#020814', '#1a3a6a'], horizon: 'mountains', hz: ['#a8c8e8', '#6a8ab8'], ground: ['#5a6e8a', '#3a4a64', '#7a8ea8'], tex: 'ice', feat: 'river', featC: '#9ae8ff', low: { geyser: 3, iceSpike: 2, rock: 2 }, edge: 'iceSpire', edgeC: ['#e6f6ff', '#9ae8ff'] },
+    { name: 'Tail of Light', sky: ['#000000', '#2a1a4a'], horizon: 'pulsar', hz: ['#fff2c8', '#ffb4ff'], ground: ['#2a2440', '#1a1628', '#3a3458'], tex: 'stars', feat: 'path', featC: '#fff2c8', low: { starCluster: 4, shard: 2, rune: 1 }, edge: 'obelisk', edgeC: ['#1a1628', '#fff2c8'] },
+    { name: 'Crystal Hollows', sky: ['#0a0420', '#3a1a6a'], horizon: 'stalactites', hz: ['#3a2a6a', '#1a1240'], ground: ['#2a1e50', '#1a1236', '#3a2c6a'], tex: 'crystal', feat: 'river', featC: '#c8a8ff', low: { crystal: 5, mushroomGlow: 2 }, edge: 'crystalSpire', edgeC: ['#c8a8ff', '#7ad8ff'] },
+    { name: 'Dust Storm Plains', sky: ['#1a0e08', '#6a4a2a'], horizon: 'mountains', hz: ['#5a3a2a', '#3a2418'], ground: ['#7a5a44', '#5a402e', '#8a6a52'], tex: 'ash', feat: 'chasm', featC: '#ffb46a', low: { rock: 4, bones: 1, floatRock: 2 }, edge: 'basalt', edgeC: ['#3a2418', '#ffb46a'] },
+    { name: 'Aurora Glacier', sky: ['#020a18', '#1a3a5a'], horizon: 'aurora', hz: ['#7affc8', '#c87aff'], ground: ['#c8e0f0', '#9ac0dc', '#e0f0fc'], tex: 'ice', feat: 'river', featC: '#7affc8', low: { iceSpike: 3, crystal: 2, rock: 1 }, edge: 'iceSpire', edgeC: ['#e6f6ff', '#7affc8'] },
+    { name: 'Chrono Craters', sky: ['#0a0a14', '#2a2a4a'], horizon: 'clockwork', hz: ['#2a2a40', '#ffd36b'], ground: ['#4a4a5a', '#2e2e3e', '#5a5a6c'], tex: 'circuit', feat: 'chasm', featC: '#ffd36b', low: { hourglass: 2, gear: 2, rock: 2, rune: 1 }, edge: 'obelisk', edgeC: ['#2a2a40', '#ffd36b'] },
+    { name: 'Nebula Wake', sky: ['#14062a', '#6a2a8a'], horizon: 'nebula', hz: ['#ff7ad8', '#7ad8ff'], ground: ['#3a1e5a', '#24123e', '#4e2a72'], tex: 'stars', feat: 'river', featC: '#ff9ad8', low: { starCluster: 3, mushroomGlow: 2, crystal: 2 }, edge: 'alienTree', edgeC: ['#ff7ad8', '#3a1e5a'] },
+    { name: 'Stardust Sea', sky: ['#000814', '#0a2a5a'], horizon: 'waves', hz: ['#7ad8ff', '#c8a8ff'], ground: ['#1a2a5a', '#0e1a3e', '#2a3a72'], tex: 'glitter', feat: 'river', featC: '#c8e8ff', low: { starCluster: 3, bubbleCluster: 2, shell: 1, coral: 1 }, edge: 'coralTall', edgeC: ['#c8a8ff', '#7ad8ff'] },
+    { name: 'Heart of the Comet', sky: ['#000000', '#3a0a2a'], horizon: 'rings', hz: ['#ff7a3a', '#c8a8ff'], ground: ['#3a1424', '#220a16', '#4e1a32'], tex: 'veins', feat: 'lava', featC: '#ff9a5a', low: { crystal: 2, ember: 3, shard: 2 }, edge: 'crystalSpire', edgeC: ['#ff9a5a', '#c8a8ff'] },
+    { name: 'The Origin', sky: ['#000000', '#e8d8ff'], horizon: 'genesis', hz: ['#ffffff', '#c8a8ff'], ground: ['#d8d0f0', '#a8a0d0', '#ece6fc'], tex: 'glitter', feat: 'river', featC: '#ffffff', low: { crystal: 3, starCluster: 2, floatRock: 1 }, edge: 'crystalTree', edgeC: ['#ffffff', '#8a7ac8'] },
+  ];
   const HUB = { name: 'Beast Hub', sky: ['#0a1030', '#3a2a7a'], horizon: 'planets', hz: ['#ffd36b', '#ff8fd1'], ground: ['#2a2a5a', '#1a1a3e', '#3a3a78'], tex: 'circuit', feat: 'path', featC: '#ffd36b', low: { rune: 3, starCluster: 2, gear: 1 }, edge: 'pylonTall', edgeC: ['#2a2a5a', '#ffd36b'] };
 
   // ---------------------------------------------------------------- helpers
@@ -376,7 +392,7 @@ const BIOMES = (() => {
     let B;
     if (state.inBeastHub) B = HUB;
     else {
-      const list = state.currentSolarSystem === 'low_gravity' ? LOW : PRIME;
+      const list = state.currentSolarSystem === 'comet' ? COMET : state.currentSolarSystem === 'low_gravity' ? LOW : PRIME;
       B = list[Math.min(state.prestigeLevel || 0, list.length - 1)];
     }
     const { w, h } = WORLD.worldSize();
@@ -398,7 +414,7 @@ const BIOMES = (() => {
     zoomChanged(WORLD.zoom());
   }
 
-  return { show, paint, zoomChanged, PRIME, LOW, HUB };
+  return { show, paint, zoomChanged, PRIME, LOW, COMET, HUB };
 })();
 
 // Every time the game sets the biome's backdrop, paint the new one over it.

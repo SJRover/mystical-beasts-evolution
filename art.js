@@ -764,6 +764,18 @@ const ART = (() => {
     const key = `${kind}|${id}|${evolved ? 1 : 0}|${infected ? 1 : 0}|${bucket}|${noGround ? 1 : 0}|${glow ? 1 : 0}`;
     if (cache.has(key)) return Promise.resolve(cache.get(key));
     if (pending.has(key)) return pending.get(key);
+    // 1.5: a comet beast is painted straight from its artwork (comet.js), between frames.
+    const ct = kind === 'beast' && typeof BEAST_TEMPLATES !== 'undefined' && BEAST_TEMPLATES[id] && BEAST_TEMPLATES[id].comet;
+    if (ct && typeof COMET !== 'undefined') {
+      const job = new Promise((resolve) => queuePaint(() => {
+        const c = COMET.canvasFor(id, bucket, glow);
+        const done = (url) => { cache.set(key, url); pending.delete(key); resolve(url); };
+        if (c.toBlob && typeof URL !== 'undefined' && URL.createObjectURL) c.toBlob((b) => done(b ? URL.createObjectURL(b) : c.toDataURL('image/png')), 'image/png');
+        else done(c.toDataURL('image/png'));
+      }, urgent));
+      pending.set(key, job);
+      return job;
+    }
     const svg = kind === 'aura' ? aura(id, { evolved, infected }) : beast(id, { evolved, infected, noGround, pad: glow });
     const gc = kind === 'beast' && glow ? glowColour(id, evolved, infected) : null;
     if (!svg) return Promise.resolve('');
@@ -861,5 +873,10 @@ const ART = (() => {
 // The menus, toasts and modals all draw beasts through getBeastSVG: from here on, the new art.
 if (typeof getBeastSVG === 'function') {
   // eslint-disable-next-line no-global-assign
-  getBeastSVG = function (beastId, evolved = false, infected = false) { return ART.inline(beastId, evolved, infected); };
+  getBeastSVG = function (beastId, evolved = false, infected = false) {
+    // (1.5: a comet beast is drawn from its own artwork, comet.js.)
+    const t = typeof BEAST_TEMPLATES !== 'undefined' && BEAST_TEMPLATES[beastId];
+    if (t && t.comet && typeof COMET !== 'undefined') return COMET.svg(beastId);
+    return ART.inline(beastId, evolved, infected);
+  };
 }

@@ -25,7 +25,7 @@ const BATTLE = (() => {
   }
   function sysPrestige(sys) {
     if (sys === state.currentSolarSystem) return state.prestigeLevel || 0;
-    const branch = sys === 'prime' ? state.primeSystem : state.lowGravitySystem;
+    const branch = sys === 'prime' ? state.primeSystem : sys === 'comet' ? state.cometSystem : state.lowGravitySystem;
     return (branch && branch.prestigeLevel) || 0;
   }
   /** A beast has been on your field at this prestige: its battle version is at least that. */
@@ -2420,7 +2420,7 @@ const BATTLE = (() => {
   function mergeTotals() {
     const s = state.mergeStats || {};
     const boss = ['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'];
-    const all = Object.values(BEAST_TEMPLATES).filter((t) => !t.relic && !boss.includes(t.id));
+    const all = Object.values(BEAST_TEMPLATES).filter((t) => !t.relic && !t.comet && !boss.includes(t.id));
     return [
       { merges: s.merges || 0, mergesOf: s.mergesOf || {}, mutations: s.mutations || 0, cures: s.cures || 0, evolved: s.evolved || 0 },
       { discovered: all.filter((t) => state.unlockedBeasts.includes(t.id)).length, allBeasts: all.length, prestige: Math.max(state.prestigeLevel || 0, (state.primeSystem && state.primeSystem.prestigeLevel) || 0) },

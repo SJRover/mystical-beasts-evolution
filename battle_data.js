@@ -142,7 +142,8 @@ const BATTLE_DATA = (() => {
     const t = BEAST_TEMPLATES[id];
     if (!t) return null;
     const s = share(Math.max(0, t.tier - 1), order(id), { atk: 1, hp: 1, spd: 1, rng: 1 });
-    const bonus = RARITY_BONUS[t.rarity] || 0;
+    // (1.5: a comet beast has four points more than any other of its tier, a Cosmic one seven more.)
+    const bonus = (RARITY_BONUS[t.rarity] || (t.rarity === 'COSMIC' ? 7 : 0)) + (t.comet ? 4 : 0);
     if (bonus) {
       const top = Math.max(...STATS.map((k) => s[k]));
       const tied = STATS.filter((k) => s[k] === top);
@@ -170,7 +171,8 @@ const BATTLE_DATA = (() => {
     return !!t && !['shadow_fiend', 'shadow_fiend_evolved', 'void_parasite', 'void_parasite_evolved'].includes(id);
   }
   /** A beast's solar system ('any' for a legend, which battles in every world). */
-  const systemOf = (id) => (LEGENDS[id] || (BEAST_TEMPLATES[id] || {}).relic ? 'any' : (BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : 'prime');
+  // (1.5: comet beasts are the comet's, and battle only in World 7.)
+  const systemOf = (id) => (LEGENDS[id] || (BEAST_TEMPLATES[id] || {}).relic ? 'any' : (BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : (BEAST_TEMPLATES[id] || {}).system === 'comet' ? 'comet' : 'prime');
   /** A beast's card rests this long after it is played: its tier in seconds. */
   const cooldownOf = (id) => (T(id) || { tier: 1 }).tier;
 

@@ -39,6 +39,25 @@
   /** A tier's look: hatchling (1-5), young (6-10), adult (11-15), ascended (16-20). */
   const stageOf = (tier) => (tier <= 5 ? 1 : tier <= 10 ? 2 : tier <= 15 ? 3 : 4);
   const STAGE_WORD = ['', 'Hatchling', 'Young', 'Adult', 'Ascended'];
+  // What each passive (from the start) and special (from Tier 10) does in World 7 (battle_engine.js).
+  const PASSIVES = {
+    fireproof: ['Fireproof', 'It never burns, and fire does it only half the damage.'],
+    parry: ['Parry', 'Once a battle it survives a blow that would have killed it.'],
+    thorns: ['Thorns', 'Anything that strikes it up close is hurt in return.'],
+    lifesteal: ['Lifesteal', 'It heals by a share of the damage it deals.'],
+    haste: ['Haste aura', 'Beasts near it attack faster.'],
+    reflect: ['Reflect', 'Some of the shots fired at it fly back at whoever fired them.'],
+    unshakeable: ['Unshakeable', 'Nothing can knock it back or stun it.'],
+    revive: ['Revive', 'Once a battle it rises again ten seconds after it falls.'],
+    frostproof: ['Frostproof', 'Nothing can slow it or freeze it.'],
+  };
+  const SPECIALS = {
+    stagger: ['Stagger', 'A huge blow that knocks even a giant back.'],
+    anchor: ['Anchor', 'It holds a boss so that it cannot start its next move.'],
+    dispel: ['Dispel', 'It cancels an attack that a boss is winding up.'],
+    ward: ['Ward', 'It shields the beasts around it against the next big attack.'],
+    sunder: ['Sunder', 'Its blows go straight through armour.'],
+  };
   const idOf = (species, tier) => `${species}_${tier}`;
 
   // Every species at every tier, as a beast template (system 'comet').
@@ -66,18 +85,41 @@
   };
   const inComet = () => state.currentSolarSystem === 'comet' && !state.inBeastHub;
 
-  /** A hatched beast: a species by the odds, at a low tier (higher with Egg Quality and prestige). */
-  function hatch() {
-    let x = Math.random() * 100, rarity = 'SUPER_RARE';
-    for (const [r, w] of EGG_ODDS) { x -= w; if (x <= 0) { rarity = r; break; } }
+  // A premium crate opened on the comet is a premium egg: Ultra Rare or better, the same odds
+  // between those as a comet egg has (these are the numbers the shop shows).
+  const PREMIUM_EGG_ODDS = EGG_ODDS.filter(([r]) => RARITY_ORDER.indexOf(r) >= 1);
+  const pick = (odds) => {
+    const total = odds.reduce((a, [, w]) => a + w, 0);
+    let x = Math.random() * total;
+    for (const [r, w] of odds) { x -= w; if (x <= 0) return r; }
+    return odds[0][0];
+  };
+  /** A beast of that rarity's species (any of them), at that tier. */
+  const ofRarity = (rarity, tier) => {
     const pool = SPECIES.filter((s) => s.rarity === rarity);
-    const s = pool[Math.floor(Math.random() * pool.length)];
+    return idOf(pool[Math.floor(Math.random() * pool.length)].id, Math.max(1, Math.min(20, tier)));
+  };
+
+  /**
+   * A hatched beast: a species by the odds, at a low tier (higher with Egg Quality and prestige).
+   * A premium egg (premium crates are bought) is Ultra Rare or better and hatches at Tier 3 to 10.
+   */
+  function hatch(premium = false) {
+    const rarity = pick(premium ? PREMIUM_EGG_ODDS : EGG_ODDS);
     const q = (state.upgrades && state.upgrades.crateQuality) || 0;
-    const top = Math.min(8, 1 + q + Math.floor((state.prestigeLevel || 0) / 2));
+    const low = premium ? 3 : 1;
+    const top = Math.min(premium ? 10 : 8, (premium ? 5 : 1) + q + Math.floor((state.prestigeLevel || 0) / 2));
     // Skewed low: a high tier is rare even with every upgrade.
-    const tier = Math.max(1, Math.min(top, 1 + Math.floor(Math.pow(Math.random(), 2.2) * top)));
-    return idOf(s.id, tier);
+    const tier = Math.max(low, Math.min(top, low + Math.floor(Math.pow(Math.random(), premium ? 1.6 : 2.2) * (top - low + 1))));
+    return ofRarity(rarity, tier);
   }
+  /** The daily spin on the comet: the rarity the wheel landed on (Super Rare at least), a third of its tier. */
+  const spinPrize = (tier, rarity) => ofRarity(RARITY_ORDER.includes(rarity) ? rarity : 'SUPER_RARE', Math.ceil(tier / 3));
+  /** The premium egg's chances, for the shop (Apple guideline 3.1.1). */
+  const premiumOdds = () => {
+    const total = PREMIUM_EGG_ODDS.reduce((a, [, w]) => a + w, 0);
+    return PREMIUM_EGG_ODDS.map(([r, w]) => ({ rarity: RARITIES[r].name, pct: (w / total) * 100 }));
+  };
 
   // ------------------------------------------------------------------ fusion
   /** How long a cocoon takes to a tier (seconds): 20 s a tier, less with Fusion Speed. */
@@ -111,8 +153,52 @@
   /** Seconds a beast takes to break down: a minute, longer for the big ones. */
   const shardTime = (id) => 30 + 6 * ((BEAST_TEMPLATES[id] || { tier: 1 }).tier);
 
+  // ------------------------------------------------------------------ pictures
+  /** A comet beast drawn on a canvas `px` square from its artwork (comet_art.js), feet near the bottom, its rarity glowing off it. */
+  function canvasFor(id, px, glow = true) {
+    const t = BEAST_TEMPLATES[id];
+    const raw = document.createElement('canvas'); raw.width = raw.height = px;
+    const g = raw.getContext('2d');
+    g.translate(px / 2, px * 0.9);
+    if (typeof COMET_ART !== 'undefined') COMET_ART.draw(g, t.comet.species, t.comet.stage, { t: 1.3 + (t.tier % 5) * 0.37 }, px * 0.6);
+    if (!glow) return raw;
+    const c = document.createElement('canvas'); c.width = c.height = px;
+    const ctx = c.getContext('2d');
+    ctx.shadowColor = (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.6)';
+    ctx.shadowBlur = px * 0.07; ctx.drawImage(raw, 0, 0);
+    ctx.shadowBlur = px * 0.03; ctx.drawImage(raw, 0, 0);
+    ctx.shadowBlur = 0; ctx.shadowColor = 'rgba(0,0,0,0)'; ctx.drawImage(raw, 0, 0);
+    return c;
+  }
+  const svgCache = new Map();
+  /** For getBeastSVG (menus, cards, toasts): the picture inside an svg, made once. */
+  function svg(id) {
+    if (!svgCache.has(id)) svgCache.set(id, `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><image href="${canvasFor(id, 192).toDataURL('image/png')}" x="0" y="0" width="100" height="100"/></svg>`);
+    return svgCache.get(id);
+  }
+
+  /** A comet egg: dark and speckled with stars, a glowing crack across it. */
+  function eggSvg() {
+    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><defs><radialGradient id="cmEgg" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#7a6ad8"/><stop offset="0.55" stop-color="#2a1a5a"/><stop offset="1" stop-color="#0a0618"/></radialGradient><radialGradient id="cmEggGlow" cx="50%" cy="55%" r="50%"><stop offset="0" stop-color="#c8a8ff" stop-opacity="0.65"/><stop offset="1" stop-color="#c8a8ff" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="50" cy="58" rx="46" ry="44" fill="url(#cmEggGlow)"/><ellipse cx="50" cy="94" rx="26" ry="5" fill="rgba(0,0,0,0.3)"/>
+      <path d="M50 12 C72 12 82 46 80 64 C78 84 64 94 50 94 C36 94 22 84 20 64 C18 46 28 12 50 12 Z" fill="url(#cmEgg)" stroke="#1c1426" stroke-width="3"/>
+      <path d="M28 52 L38 46 L44 56 L54 48 L60 58 L72 50" fill="none" stroke="#ffe8a0" stroke-width="3" stroke-linejoin="round"/><path d="M28 52 L38 46 L44 56 L54 48 L60 58 L72 50" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
+      ${[[36, 30, 2.2], [60, 26, 1.6], [66, 70, 2], [40, 74, 1.4], [52, 38, 1.2], [30, 64, 1.2], [70, 40, 1.4]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="0.85"/>`).join('')}
+      <ellipse cx="38" cy="28" rx="7" ry="4" fill="#ffffff" opacity="0.35" transform="rotate(-30 38 28)"/></svg>`;
+  }
+  /** A cocoon of light, tinted by what is growing inside it. */
+  function cocoonSvg(rarity) {
+    const c = (RARITIES[rarity] || {}).color || '#c8a8ff';
+    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible" class="cocoon-svg"><defs><radialGradient id="cmCoc${rarity}" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="${c}"/><stop offset="1" stop-color="#1a0a3a"/></radialGradient></defs>
+      <ellipse cx="50" cy="94" rx="22" ry="5" fill="rgba(0,0,0,0.3)"/>
+      <path d="M50 6 C68 14 74 40 70 62 C66 82 58 94 50 94 C42 94 34 82 30 62 C26 40 32 14 50 6 Z" fill="url(#cmCoc${rarity})" stroke="#1c1426" stroke-width="3"/>
+      <path d="M36 30 Q50 38 64 30 M32 50 Q50 60 68 50 M34 70 Q50 80 66 70" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2.4"/>
+      <path d="M50 6 Q46 0 52 -6" fill="none" stroke="#c8b8ff" stroke-width="2.4"/></svg>`;
+  }
+
   return void Object.assign(window, { COMET: {
-    SPECIES, BY_ID, RARITY_ORDER, STAGE_WORD, PRESTIGE_MAX, PRESTIGE_TARGETS, BIOMES, EGG_ODDS, SHARDS_PER_EGG,
-    stageOf, idOf, unlocked, inComet, hatch, fusionTime, cocoonSlots, isComet, fusionOf, shardsFor, shardTime,
+    canvasFor, svg, eggSvg, cocoonSvg,
+    SPECIES, BY_ID, RARITY_ORDER, STAGE_WORD, PASSIVES, SPECIALS, PRESTIGE_MAX, PRESTIGE_TARGETS, BIOMES, EGG_ODDS, SHARDS_PER_EGG,
+    stageOf, idOf, unlocked, inComet, hatch, spinPrize, premiumOdds, fusionTime, cocoonSlots, isComet, fusionOf, shardsFor, shardTime,
   } });
 })();

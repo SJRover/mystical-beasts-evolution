@@ -1915,6 +1915,8 @@ function getBeastSVG(beastId, evolved = false, infected = false) {
   if (!template) return '';
   // 1.4: a Relic is stained glass (relics.js).
   if (template.relic && typeof RELIC_ART !== 'undefined') return RELIC_ART.svg(beastId, { evolved, noGround: true });
+  // 1.5: a comet beast is drawn from its own artwork (comet.js, comet_art.js).
+  if (template.comet && typeof COMET !== 'undefined') return COMET.svg(beastId);
 
   const p = template.svgParams;
   const elementColor = ELEMENTS[template.element].color;

@@ -2920,3 +2920,18 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 
 /* 1.4: the rarity stays on one line (SUPER RARE wrapped over the picture). */
 .beastopedia-card-rarity { white-space: nowrap; letter-spacing: -0.2px; }
+
+/* 1.5: the Interstellar Comet: its eggs, cocoons growing, the starry name of the Cosmic rarity. */
+#meadow-bg.comet { background: linear-gradient(to bottom, #04060e 0%, #262c3c 60%, #04060e 100%); }
+.crate-container.comet-egg { filter: drop-shadow(0 0 10px rgba(200,168,255,0.7)); }
+.crate-container.comet-egg svg { width: 100%; height: 100%; }
+.comet-cocoon { position: absolute; width: 64px; height: 64px; transform: translate(-50%, -80%); pointer-events: none; z-index: 4; animation: cocoon-breathe 2.4s ease-in-out infinite; }
+.comet-cocoon .cocoon-svg { width: 100%; height: 100%; filter: drop-shadow(0 0 12px rgba(200,168,255,0.8)); }
+.comet-cocoon .cocoon-ring { position: absolute; left: 50%; bottom: -14px; width: 46px; height: 10px; transform: translateX(-50%); border-radius: 6px; background: conic-gradient(#c8a8ff var(--k, 0deg), rgba(255,255,255,0.15) 0); }
+.comet-cocoon .cocoon-time { position: absolute; left: 50%; bottom: -32px; transform: translateX(-50%); font: 800 12px Fredoka, sans-serif; color: #fff; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+@keyframes cocoon-breathe { 0%, 100% { transform: translate(-50%, -80%) scale(1); } 50% { transform: translate(-50%, -82%) scale(1.06); } }
+.cosmic-name { background: linear-gradient(100deg, #140c28 0%, #140c28 32%, #ffffff 46%, #c8a8ff 53%, #140c28 68%, #140c28 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent !important; filter: drop-shadow(0 0 1.2px #ffffff) drop-shadow(0 0 6px #a88aff); animation: cosmic-sheen 3.2s linear infinite; }
+@keyframes cosmic-sheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.unlock-beast-rarity.cosmic, .trophy-rarity.cosmic, .beastopedia-card-rarity.rarity-cosmic { background: radial-gradient(1px 1px at 18% 30%, #ffffff 60%, transparent 61%), radial-gradient(1px 1px at 64% 70%, #c8a8ff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 82% 28%, #7ad8ff 60%, transparent 61%), radial-gradient(1px 1px at 40% 78%, #ffd36b 60%, transparent 61%), linear-gradient(100deg, transparent 0%, transparent 36%, rgba(255,255,255,0.5) 48%, transparent 60%, transparent 100%), #000 !important; background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 260% 100%, auto !important; color: #ffffff !important; border: 1.5px solid #c8a8ff !important; text-shadow: 0 0 4px #c8a8ff; box-shadow: 0 0 10px rgba(200,168,255,0.7); animation: cosmic-badge 2.8s linear infinite; font-weight: 800 !important; }
+@keyframes cosmic-badge { from { background-position: 0 0, 0 0, 0 0, 0 0, 130% 0; } to { background-position: 0 0, 0 0, 0 0, 0 0, -130% 0; } }
+#details-beast-evolve b { color: #c8a8ff; }
