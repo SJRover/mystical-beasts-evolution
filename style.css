@@ -2956,3 +2956,5 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .comet-card { border-color: rgba(200,168,255,0.28); background: radial-gradient(circle at 50% 40%, rgba(200,168,255,0.08), rgba(255,255,255,0.02) 70%); }
 .comet-card .comet-shadow svg { filter: brightness(0) opacity(0.35); }
 .comet-card-tier { font: 700 8px "Outfit", sans-serif; color: #c8a8ff; margin-top: 1px; white-space: nowrap; }
+.comet-card .beastopedia-card-icon svg { transform: scale(1.2); transform-origin: 50% 75%; }
+.comet-card .beastopedia-card-num { z-index: 2; }
