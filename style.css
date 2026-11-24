@@ -2957,4 +2957,8 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .comet-card .comet-shadow svg { filter: brightness(0) opacity(0.35); }
 .comet-card-tier { font: 700 8px "Outfit", sans-serif; color: #c8a8ff; margin-top: 1px; white-space: nowrap; }
 .comet-card .beastopedia-card-icon svg { transform: scale(1.2); transform-origin: 50% 75%; }
-.comet-card .beastopedia-card-num { z-index: 2; }
+.comet-card .beastopedia-card-num { z-index: 3; }
+.comet-card .beastopedia-card-icon { position: relative; z-index: 1; }
+/* (The rarity tag and the number never overlap: both a little smaller on comet cards.) */
+.comet-card .beastopedia-card-num { left: 5px; right: 5px; gap: 3px; font-size: 7.5px; }
+.comet-card .beastopedia-card-rarity { font-size: 6.5px !important; padding: 0 3px; letter-spacing: -0.1px; white-space: nowrap; flex: none; }

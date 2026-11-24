@@ -64,7 +64,7 @@ const BattleEngine = (() => {
         const tier = sync && sync.tier ? Math.min(sync.tier, BATTLE_DATA.T(c.id).tier) : BATTLE_DATA.T(c.id).tier;
         return {
           id: c.id, prestige: c.prestige || 0, stats, sync, cooldown: ((BATTLE_DATA.T(c.id) || {}).comet ? Math.round(tier * BATTLE_DATA.COMET_REST) : tier) * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0,
-          cost: BATTLE_DATA.costOfTier(tier),
+          cost: (BATTLE_DATA.T(c.id) || {}).comet ? BATTLE_DATA.cometCost(tier) : BATTLE_DATA.costOfTier(tier),
           // An evolved form: its special, once a battle, and one of it on the field at a time.
           evolved: !!c.evolved, ability: c.evolved ? BATTLE_DATA.abilityOf(c.id) : null, abilityUsed: false, unit: null,
           area: BATTLE_DATA.attackKind(c.id, c.prestige || 0) === 'area' ? 0.5 : 0, // (by look; a synced one keeps its kind)
@@ -249,6 +249,9 @@ const BattleEngine = (() => {
       if (u.trait === 'heal') u.healAt = this.time + 3;
       if (u.trait === 'summon') u.summonAt = this.time + 6;
       if (this.mut && e.look && e.look.plan === 'mutant') MUTANTS.setup(this, u);
+      // A level made harder after calibration (battle.js: World 7 +10%, Sam 24 Nov): health, blows, speed.
+      const fm = this.level.foeMul || 1;
+      if (fm !== 1) { u.maxHp *= fm; u.hp = u.maxHp; u.light *= fm; u.baseSpeed *= fm; u.speed = u.baseSpeed; }
       if (s.announce) this.events.push({ type: 'wave', text: s.announce, champ });
       // Out of their camp around the pile (the middle half of the width), so it is defended; a
       // horde or a garrison across the whole width, in rows.

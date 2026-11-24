@@ -622,8 +622,11 @@ const BATTLE = (() => {
   // ================================================================== the battle
   let run = null;
 
+  /** How much stronger a world's enemies are than calibrated (Sam, 24 Nov: World 7 a tenth harder). */
+  const FOE_MUL = { 7: 1.1 };
   function start(level, deck, onDone, sync = null) {
     if (run) return;
+    if (FOE_MUL[level.world]) level = { ...level, foeMul: FOE_MUL[level.world] };
     const cards = deck.map(baseOf).map((id, i) => ({ id, prestige: sync ? 0 : prestigeOf(id), evolved: hasSpecial(id, i), sync }));
     const perk = D.PERKS.find((p) => p.id === B().perk && p.unlock(totals()));
     const battle = new BE.Battle(level, cards, perk ? { ...perk.opts, perk: perk.id } : {});

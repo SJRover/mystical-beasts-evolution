@@ -192,7 +192,10 @@ const BATTLE_DATA = (() => {
    */
   const MANA = { max: 50, start: 25, regen: 2 };
   const costOfTier = (tier) => Math.round(2 + 0.75 * tier);
-  const costOf = (id) => costOfTier((T(id) || { tier: 1 }).tier);
+  // (1.5: a comet beast costs a fifth more mana, as well as resting longer, Sam 24 Nov.)
+  const COMET_MANA = 1.2;
+  const cometCost = (tier) => Math.round(costOfTier(tier) * COMET_MANA);
+  const costOf = (id) => { const t = T(id) || { tier: 1 }; return t.comet ? cometCost(t.tier) : costOfTier(t.tier); };
   /** A beast's stats synced down to a tier and rarity (Sync down), at prestige 0. */
   function syncStats(id, cap) {
     const t = BEAST_TEMPLATES[id];
@@ -1015,7 +1018,7 @@ const BATTLE_DATA = (() => {
     PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, DECK_RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
     STATS, STAT_NAMES, RARITY_BONUS, ROLES, ENEMIES, ENEMY_LIST: E, WORLDS, BOSS_EVERY, ACHIEVEMENTS, STAR_TIMES, LEVEL_POINTS,
     hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, COMET_REST, beastRadius,
-    MANA, costOf, costOfTier, syncStats, attackKind, enemyAttackKind, ABILITIES, abilityOf, TRAITS, traitOf,
+    MANA, costOf, costOfTier, cometCost, syncStats, attackKind, enemyAttackKind, ABILITIES, abilityOf, TRAITS, traitOf,
     enemyStats, enemyRadius, level, levelPoints, difficulty, clearMinutes,
   };
 })();
