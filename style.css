@@ -2962,3 +2962,4 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 /* (The rarity tag and the number never overlap: both a little smaller on comet cards.) */
 .comet-card .beastopedia-card-num { left: 5px; right: 5px; gap: 3px; font-size: 7.5px; }
 .comet-card .beastopedia-card-rarity { font-size: 6.5px !important; padding: 0 3px; letter-spacing: -0.1px; white-space: nowrap; flex: none; }
+.comet-section-note { margin: -2px 4px 6px; padding: 8px 12px; border-radius: 10px; background: rgba(200,168,255,0.08); color: #d8c8ff; font: 600 11px/1.4 "Outfit", sans-serif; }

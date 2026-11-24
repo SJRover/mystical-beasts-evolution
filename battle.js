@@ -646,6 +646,8 @@ const BATTLE = (() => {
   function start(level, deck, onDone, sync = null) {
     if (run) return;
     if (FOE_MUL[level.world]) level = { ...level, foeMul: FOE_MUL[level.world] };
+    // (Sam, 24 Nov: Worlds 1 to 6's bosses and champions bigger, so they stand out, and stronger.)
+    if (level.world <= 6) level = { ...level, bigFoes: { boss: { hp: 1.6, atk: 1.3, r: 1.25, draw: 1.4 }, champ: { hp: 1.5, atk: 1.25, r: 1.15, draw: 1.25 } } };
     const cards = deck.map(baseOf).map((id, i) => ({ id, prestige: sync ? 0 : prestigeOf(id), evolved: hasSpecial(id, i), sync }));
     const perk = D.PERKS.find((p) => p.id === B().perk && p.unlock(totals()));
     const battle = new BE.Battle(level, cards, perk ? { ...perk.opts, perk: perk.id } : {});
@@ -674,7 +676,7 @@ const BATTLE = (() => {
     run = {
       level, battle, screen, canvas, ctx: canvas.getContext('2d'), onDone,
       sprites: {}, whites: {}, cam: { zoom: 1, x: W / 2, y: H / 2 }, fit: 1, max: 2,
-      marker: 0.3, markY: 1720, speed: 1, paused: false, over: false, last: performance.now(), acc: 0,
+      marker: 0.5, markY: 1720, speed: 1, paused: false, over: false, last: performance.now(), acc: 0,
       fx: [], shots: [], shake: 0, flash: 0, bg: null, dpr: Math.min(2, window.devicePixelRatio || 1),
       cardEls: [...screen.querySelectorAll('.bt-cardbtn')], walk: new Map(), coinsAt: 0, tipUntil: B().tipSeen ? 0 : performance.now() + 9000,
       toastUntil: 0, alarmAt: 0, ended: false,
@@ -1492,12 +1494,14 @@ const BATTLE = (() => {
 
   // ------------------------------------------------------------------ the arena's look
   /** The battlefield, painted once for the level: the world's theme, varied by the level. */
+  const SIDE = 500;
   function paintArena(level) {
     const k = 1;
     const c = document.createElement('canvas');
-    c.width = W * k; c.height = H * k;
+    c.width = (W + SIDE * 2) * k; c.height = H * k;
     const g = c.getContext('2d');
     g.scale(k, k);
+    g.translate(SIDE, 0);
     const r = D.seeded(D.hash('arena|' + level.id));
     const theme = D.WORLDS[level.world - 1].theme;
     const T = {
@@ -1512,7 +1516,17 @@ const BATTLE = (() => {
     }[theme];
     const grd = g.createLinearGradient(0, 0, 0, H);
     grd.addColorStop(0, T.top); grd.addColorStop(0.5, T.mid); grd.addColorStop(1, T.low);
-    g.fillStyle = grd; g.fillRect(0, 0, W, H);
+    g.fillStyle = grd; g.fillRect(-SIDE, 0, W + SIDE * 2, H);
+    // (Beyond the field's sides: the same ground, darker, with rocks and patches of its own.)
+    {
+      const rs = D.seeded(D.hash('arena-side|' + level.id));
+      for (const [x0] of [[-SIDE], [W]]) {
+        for (let i = 0; i < 90; i++) { g.globalAlpha = 0.18 + rs() * 0.22; g.fillStyle = T.blob[Math.floor(rs() * T.blob.length)]; g.beginPath(); g.ellipse(x0 + rs() * SIDE, rs() * H, 20 + rs() * 70, 12 + rs() * 40, rs() * 3, 0, Math.PI * 2); g.fill(); }
+        g.globalAlpha = 0.42; g.fillStyle = T.edge; g.fillRect(x0, 0, SIDE, H);
+        for (let i = 0; i < 26; i++) { const x = x0 + 30 + rs() * (SIDE - 60), y = rs() * H, s = 14 + rs() * 30; g.globalAlpha = 0.55; g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(x + 4, y + s * 0.5, s, s * 0.35, 0, 0, Math.PI * 2); g.fill(); g.globalAlpha = 0.8; g.fillStyle = T.blob[i % T.blob.length]; g.beginPath(); g.moveTo(x - s, y + s * 0.4); g.lineTo(x - s * 0.5, y - s * 0.6); g.lineTo(x + s * 0.4, y - s * 0.8); g.lineTo(x + s, y + s * 0.4); g.closePath(); g.fill(); }
+        g.globalAlpha = 1;
+      }
+    }
     // Patches of colour over the ground.
     for (let i = 0; i < 260; i++) {
       g.globalAlpha = 0.18 + r() * 0.22;
@@ -1654,13 +1668,16 @@ const BATTLE = (() => {
       g.fillStyle = '#4a5058'; g.beginPath(); g.ellipse(500, -40, 520, 120, 0, 0, Math.PI); g.fill();
       for (let i = 0; i < 9; i++) { g.fillStyle = i % 2 ? '#7aff5a' : '#ff5a3a'; g.beginPath(); g.arc(80 + i * 105, 40, 7, 0, Math.PI * 2); g.fill(); }
     }
-    // A soft edge so the map fades out at its sides.
-    const ed = g.createLinearGradient(0, 0, 120, 0);
+    // A soft edge so the field's sides read, and a low ridge along each.
+    const ed = g.createLinearGradient(0, 0, 90, 0);
     ed.addColorStop(0, T.edge); ed.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = ed; g.fillRect(0, 0, 120, H);
-    const ed2 = g.createLinearGradient(W, 0, W - 120, 0);
+    g.globalAlpha = 0.55; g.fillStyle = ed; g.fillRect(0, 0, 90, H);
+    const ed2 = g.createLinearGradient(W, 0, W - 90, 0);
     ed2.addColorStop(0, T.edge); ed2.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = ed2; g.fillRect(W - 120, 0, 120, H);
+    g.fillStyle = ed2; g.fillRect(W - 90, 0, 90, H);
+    g.globalAlpha = 0.5; g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 4;
+    for (const x of [0, W]) { g.beginPath(); for (let y = 0; y <= H; y += 40) g.lineTo(x + Math.sin(y * 0.03) * 6, y); g.stroke(); }
+    g.globalAlpha = 1;
     return c;
   }
 
@@ -1880,7 +1897,7 @@ const BATTLE = (() => {
     ctx.fillRect(0, 0, run.vw, run.vh);
     ctx.save();
     if (run.shake > 0) ctx.translate((Math.random() - 0.5) * run.shake, (Math.random() - 0.5) * run.shake);
-    ctx.drawImage(run.bg, sx(0), sy(0), W * z, H * z);
+    ctx.drawImage(run.bg, sx(-SIDE), sy(0), (W + SIDE * 2) * z, H * z);
     // Your zone lights up for a moment when you tap it.
     if (run.markPulse > 0 || run.drag) { ctx.fillStyle = `rgba(120,210,255,${0.14 * Math.max(run.markPulse, run.drag ? 1 : 0)})`; ctx.fillRect(sx(0), sy(SAFE_Y), W * z, (H - SAFE_Y) * z); }
     // (World 7: no coin pile at their end; the giants' attacks show on the ground first.)
@@ -2287,7 +2304,7 @@ const BATTLE = (() => {
     ctx.save();
     ctx.translate(sx(u.x), sy(u.y));
     // Drawn to fill its footprint (battle_data.js enemyRadius), an elite a size up.
-    const px = (90 * z * D.enemySize(u.kind) * (u.elite ? 1.15 : 1) * (u.champ ? 1.45 : 1)) / (e.look.size || 1);
+    const px = (90 * z * D.enemySize(u.kind) * (u.elite ? 1.15 : 1) * (u.champ ? 1.45 : 1) * (u.drawK || 1)) / (e.look.size || 1);
     if (u.champ && u.state !== 'dying') {
       // A champion: a red-gold glow and a pulsing ring on the ground round it.
       ctx.globalAlpha = 0.5 + 0.15 * Math.sin(t * 4 + u.uid); ctx.drawImage(ENEMY_ART.glowSprite('#ff6a3c'), -u.r * z * 1.8, -u.r * z * 2.9, u.r * z * 3.6, u.r * z * 3.6);
@@ -2922,7 +2939,14 @@ const BATTLE = (() => {
     }
     if (typeof renderBeastopedia === 'function' && !renderBeastopedia.battleHooked) {
       const orig = renderBeastopedia;
-      renderBeastopedia = function (...a) { const r = orig.apply(this, a); try { beastopediaLegends(); } catch (e) { console.error(e); } return r; };
+      renderBeastopedia = function (...a) {
+        const r = orig.apply(this, a);
+        try { beastopediaLegends(); } catch (e) { console.error(e); }
+        // (1.5: the comet's section last of all, after the Legends.)
+        const grid = document.getElementById('beastopedia-grid');
+        if (grid) grid.querySelectorAll('[data-comet]').forEach((x) => grid.appendChild(x));
+        return r;
+      };
       renderBeastopedia.battleHooked = true;
       try { renderBeastopedia(); } catch (e) { console.error(e); }
     }

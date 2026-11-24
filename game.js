@@ -3710,17 +3710,27 @@ function renderBeastopedia() {
   // 1.4: the Relics, won by merge achievements (Battle tab, Achievements, Merge).
   const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic);
   if (relicTemplates.length) createSection('Relics', relicTemplates, relicTemplates.filter((b) => state.unlockedBeasts.includes(b.id)).length);
-  // 1.5: the comet's fifteen species (once the comet is in reach or one has been won), each shown at
+  // 1.5: the comet's fifteen species, always shown, at the very bottom (battle.js moves them below the
+  // Folded Legends), so everyone can see the extreme beasts waiting later on (Sam, 24 Nov). Each at
   // the highest tier you have had; one not found yet is a shadow with only its rarity.
   if (typeof COMET !== 'undefined') {
     const best = (sp) => { for (let t = 20; t >= 1; t--) if (state.unlockedBeasts.includes(COMET.idOf(sp, t))) return t; return 0; };
     const found = COMET.SPECIES.filter((s) => best(s.id)).length;
-    if (found || COMET.unlocked()) {
+    {
       const head = document.createElement('div');
       head.className = 'beastopedia-section-head comet-section-head';
+      head.dataset.comet = '1';
       head.innerHTML = `<div><span class="comet-dot"></span><span>The Interstellar Comet</span></div><span class="comet-count">${found} / ${COMET.SPECIES.length}</span>`;
       grid.appendChild(head);
+      if (!COMET.unlocked()) {
+        const note = document.createElement('div');
+        note.className = 'comet-section-note';
+        note.dataset.comet = '1';
+        note.textContent = 'The rarest beasts in the universe live on a comet that comes into view once both solar systems reach prestige 15. They hatch from eggs and battle in the Mutant Worlds.';
+        grid.appendChild(note);
+      }
       const sub = document.createElement('div');
+      sub.dataset.comet = '1';
       sub.className = 'beastopedia-grid';
       COMET.SPECIES.forEach((s, i) => {
         const tier = best(s.id), id = COMET.idOf(s.id, Math.max(1, tier)), t = BEAST_TEMPLATES[id], r = RARITIES[s.rarity];

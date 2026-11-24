@@ -252,6 +252,10 @@ const BattleEngine = (() => {
       // A level made harder after calibration (battle.js: World 7 +10%, Sam 24 Nov): health, blows, speed.
       const fm = this.level.foeMul || 1;
       if (fm !== 1) { u.maxHp *= fm; u.hp = u.maxHp; u.light *= fm; u.baseSpeed *= fm; u.speed = u.baseSpeed; }
+      // Bosses and champions made bigger and stronger after calibration (battle.js: Worlds 1 to 6,
+      // Sam 24 Nov): health, blows, their size on the field (u.drawK for the drawing).
+      const big = this.level.bigFoes && (e.role === 'boss' ? this.level.bigFoes.boss : champ ? this.level.bigFoes.champ : null);
+      if (big) { u.maxHp *= big.hp; u.hp = u.maxHp; u.light *= big.atk; u.r = Math.min(130, u.r * big.r); u.drawK = big.draw; }
       if (s.announce) this.events.push({ type: 'wave', text: s.announce, champ });
       // Out of their camp around the pile (the middle half of the width), so it is defended; a
       // horde or a garrison across the whole width, in rows.
