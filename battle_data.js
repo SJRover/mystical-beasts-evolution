@@ -588,7 +588,7 @@ const BATTLE_DATA = (() => {
     { id: 5, system: 'low_gravity', name: 'Ring Pirates', theme: 'rings', levels: 40, base: 25, gain: 0.7, chest: { rarity: 'GODLY', tier: 12 } },
     { id: 6, system: 'low_gravity', name: 'Eclipse Court', theme: 'eclipse', levels: 40, base: 48, gain: 0.75, chest: { rarity: 'GODLY', tier: 15 } },
     // 1.5: World 7, the Universal Mutants (mutants.js): beasts of every system, twenty boss fights.
-    { id: 7, system: 'any', name: 'Universal Mutants', theme: 'mutants', levels: 20, base: 70, gain: 1.3, chest: { rarity: 'DARK_MATTER', tier: 20 } },
+    { id: 7, system: 'any', name: 'Universal Mutants', theme: 'mutants', levels: 20, base: 70, gain: 1.3, chest: { rarity: 'DARK_MATTER', tier: 20, comet: 'singularity_dragon_20' } },
   ];
   const BOSS_EVERY = 10;
 
@@ -992,8 +992,8 @@ const BATTLE_DATA = (() => {
     { id: 'perk_wellspring', name: 'Never Idle', desc: 'Win a level from level 10 on without your mana ever filling up.', test: (b) => !!b.perkWon.wellspring, reward: { perk: 'wellspring' } },
     { id: 'perk_deep_pool', name: 'Patience', desc: 'Win a level from level 10 on playing twelve beasts or fewer.', test: (b) => !!b.perkWon.deep_pool, reward: { perk: 'deep_pool' } },
     // (1.5, Sam: late rewards that matter; comet eggs join these once the comet is built.)
-    { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { income: 360, boost: { mult: 1.5, minutes: 180 } } },
-    { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { income: 240, boost: { mult: 1.5, minutes: 120 } } },
+    { id: 'world_7', name: 'Mutation Ended', desc: 'Clear the Universal Mutants.', test: (b) => (b.w7 || 0) >= 1, reward: { income: 360, boost: { mult: 1.5, minutes: 180 }, shards: 600 } },
+    { id: 'mutant_bosses', name: 'Monster Hunter', desc: "Beat all ten of World 7's bosses.", test: (b) => (b.mutantBosses || 0) >= 10, reward: { income: 240, boost: { mult: 1.5, minutes: 120 }, shards: 360 } },
     { id: 'all_ach', name: 'Grand Master', desc: 'Earn every other battle achievement.', test: (b) => b.achTotal > 0 && b.achDone >= b.achTotal, reward: { legend: 'paper_kirin' } },
   ];
   /** The highest tier a boss level's premium crate can hold, by world. */

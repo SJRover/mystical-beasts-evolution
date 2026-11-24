@@ -5064,6 +5064,18 @@ function showOfflineEarningsPopup(earned, offlineSec) {
 // Safely removes a beast from the active field array and DOM
 // ---------------------------------------------------------------- 1.5: the comet's eggs and cocoons
 /** An egg cracks open: a comet beast by the egg's odds (comet.js). */
+/** 1.5: a comet beast won elsewhere (World 7's chest): on the comet's meadow now, or waiting there. */
+function deliverCometBeast(id) {
+  if (state.currentSolarSystem === 'comet' && !state.inBeastHub) {
+    const p = typeof WORLD !== 'undefined' && WORLD.viewPct ? WORLD.viewPct(45, 50) : { x: 45, y: 50 };
+    spawnBeastOnField(id, p.x, p.y, false, false);
+  } else {
+    if (!state.cometSystem) state.cometSystem = freshBranch('comet');
+    state.cometSystem.beastsOnField.push({ type: id, x: 30 + Math.random() * 40, y: 35 + Math.random() * 30, evolved: false, infected: false, deathTimer: 45.0 });
+  }
+  checkDiscovery(id);
+  saveGame();
+}
 function hatchCometEgg(x, y) {
   const id = COMET.hatch();
   const t = BEAST_TEMPLATES[id];

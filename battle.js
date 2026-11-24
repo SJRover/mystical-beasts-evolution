@@ -376,7 +376,7 @@ const BATTLE = (() => {
         </button>`;
       }
       sh.body.innerHTML = `
-        <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>Earn every star in this world for a ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.</span></div><em>${chest}</em></div>
+        <div class="bt-chest ${b.chests[w.id] ? 'done' : ''}"><svg class="bt-chest-icon" viewBox="0 0 48 42"><path d="M4 18 Q4 4 24 4 Q44 4 44 18 Z" fill="#b8762a" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="18" width="40" height="20" rx="2" fill="#8a5420" stroke="#4a2a0a" stroke-width="2"/><rect x="4" y="16" width="40" height="5" fill="#ffd43b" stroke="#8a5a00" stroke-width="1.5"/><rect x="11" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="32" y="4.5" width="5" height="33" fill="#ffd43b" opacity="0.9"/><rect x="19" y="17" width="10" height="11" rx="2" fill="#ffe680" stroke="#8a5a00" stroke-width="1.5"/><circle cx="24" cy="21.5" r="1.8" fill="#3a2400"/><path d="M14 4 Q24 -3 34 4" fill="none" stroke="#fff6c8" stroke-width="1.5" opacity="0.6"/></svg><div><b>World chest</b><span>${w.chest.comet ? `Earn every star in this world for ${BEAST_TEMPLATES[w.chest.comet].name}, a Tier 20 Cosmic comet beast.` : `Earn every star in this world for a ${RARITIES[w.chest.rarity].name} or better, Tier ${w.chest.tier} or higher.`}</span></div><em>${chest}</em></div>
         <div class="bt-levels">${tiles}</div>`;
       fillStills(sh.body);
       sh.body.querySelectorAll('.bt-level').forEach((btn) => btn.addEventListener('click', () => {
@@ -2316,8 +2316,9 @@ const BATTLE = (() => {
       if (first) {
         const cps = typeof calculateTotalCps === 'function' ? calculateTotalCps() : 0;
         const ess = Math.max(150 * level.n * level.world * level.world, cps * 60 * D.clearMinutes(level.world, level.n));
-        grant({ essence: ess, premium: level.boss ? 1 : 0, cap: D.BOSS_CRATE_CAP[level.world] }, rewards, '', level);
+        grant({ essence: ess, premium: level.boss ? 1 : 0, cap: D.BOSS_CRATE_CAP[level.world], shards: level.world === 7 ? 20 + 5 * level.n : 0 }, rewards, '', level);
       }
+      if (newStar && level.world === 7) grant({ shards: 60 }, rewards, '', level);
       if (newStar) {
         const s = totals().stars;
         while (Math.floor(s / 5) > (b.starGifts || 0)) { b.starGifts = (b.starGifts || 0) + 1; grant({ spins: 1 }, rewards, '5 stars', level); }
@@ -2406,7 +2407,13 @@ const BATTLE = (() => {
     }
     if (rw.spins) { B().freeSpins = (B().freeSpins || 0) + rw.spins; if (typeof updateDailySpinHUD === 'function') updateDailySpinHUD(); notes.push(`+${rw.spins} free spin${rw.spins > 1 ? 's' : ''}${why ? ` (${why})` : ''}`); }
     if (rw.legend) notes.push(`The ${D.LEGENDS[rw.legend].name.replace(/^The /, '')} joins you`);
-    if (rw.chest) {
+    // 1.5: comet shards (they buy comet eggs on the comet).
+    if (rw.shards) { state.cometShards = (state.cometShards || 0) + rw.shards; notes.push(`+${formatNumber(rw.shards)} comet shards`); }
+    if (rw.chest && rw.chest.chest.comet && typeof deliverCometBeast === 'function') {
+      const id = rw.chest.chest.comet;
+      deliverCometBeast(id);
+      notes.push(`World chest: ${BEAST_TEMPLATES[id].name} (Tier ${BEAST_TEMPLATES[id].tier} ${RARITIES[BEAST_TEMPLATES[id].rarity].name}), waiting on the comet`);
+    } else if (rw.chest) {
       const w = rw.chest;
       const pool = Object.keys(BEAST_TEMPLATES).filter((id) => D.canBattle(id) && D.systemOf(id) === w.system && BEAST_TEMPLATES[id].tier >= w.chest.tier && RANK.indexOf(BEAST_TEMPLATES[id].rarity) >= RANK.indexOf(w.chest.rarity));
       const id = pool[Math.floor(Math.random() * pool.length)];
@@ -2643,6 +2650,7 @@ const BATTLE = (() => {
     if (rw.essence) out.push(`<span class="bt-rw"><i>✨</i>${formatNumber(rw.essence)}</span>`);
     if (rw.income) out.push(`<span class="bt-rw"><i>✨</i>${rw.income >= 60 ? `${rw.income / 60}h` : `${rw.income}m`} income</span>`);
     if (rw.boost) out.push(`<span class="bt-rw premium"><i>⚡</i>x${rw.boost.mult} ${rw.boost.minutes >= 60 ? `${rw.boost.minutes / 60}h` : `${rw.boost.minutes}m`}</span>`);
+    if (rw.shards) out.push(`<span class="bt-rw premium"><i>☄</i>${formatNumber(rw.shards)} shards</span>`);
     if (rw.legend) out.push(`<span class="bt-rw legend"><img data-legend="${rw.legend}" alt="">${D.LEGENDS[rw.legend].name.replace(/^The /, '')}</span>`);
     if (rw.perk) out.push(`<span class="bt-rw perk">${perkIcon(rw.perk)}${D.PERKS.find((p) => p.id === rw.perk).name}</span>`);
     if (rw.relic) out.push(`<span class="bt-rw legend relic ${got ? '' : 'hidden'}"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(RELIC_ART.svg(rw.relic, { evolved: !!rw.evolved, noGround: true }))}" alt="">${BEAST_TEMPLATES[rw.relic].name.replace(/^The /, '')}${rw.evolved ? ' ✦' : ''}</span>`);
