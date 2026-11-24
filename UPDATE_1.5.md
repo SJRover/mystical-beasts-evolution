@@ -262,6 +262,35 @@ My plan for how the comet works (Sam left it to me):
   achievement picks up where a player already is.
 - Sam's answer on timing (23 Nov): the Snowman was only an idea; finish 1.5's ideas first.
 
+### Built on 24 Nov (branch update-1.5, all [skip ci])
+- **The comet's meadow** (9c203e6). Warp buttons for every world you can reach (two in Settings).
+  Its own essence and prestige (up to 10, keeping its beasts; essence and upgrades restart), eleven
+  biomes (Comet Crust to The Origin), Sam's two comet tracks. Comet eggs fall instead of crates
+  (2.5 times slower) and hatch a comet beast; two of one tier fuse in a cocoon (20 seconds a tier,
+  less with Fusion Speed, a few at once). The shop sells comet eggs for essence (dearer each time)
+  or 120 shards. A premium crate opened there is a premium egg (Ultra Rare or better, Tier 3 to 10,
+  odds shown in the shop for Apple's rule 3.1.1). The daily spin there gives a comet beast at a third
+  of the tier. No evolution incubators on the comet. The details card shows a comet beast's stage,
+  passive and special; Cosmic has a starry badge and a black name outlined in starlight.
+- **Shard Incubators** (5f60f2c). Prime and Low Gravity at prestige 15, above Incubator Alpha on
+  phones. Shards for a beast: 2^(tier/3) x rarity (Common 1 to Dark Matter 13) x2 if evolved;
+  30 + 6 x tier seconds each. Legendary and rarer ask first. Shard Feeder upgrade (prestige 15,
+  from 2Dc, five levels): Common to Super Rare, not evolved, up to Tier 6 (+2 a level), one every
+  25 minutes (5 sooner a level).
+- **Comet beasts in battle** (0654eef). World 7 only. Passives always on; specials from Tier 10
+  in the three left slots (Stagger, Anchor 6 s, Dispel, Ward 10 s, Sunder 10 s). A comet beast
+  always has the full fifteen prestige points in battle, plus one per comet prestige (without this
+  a Tier 20 comet beast was weaker than the Dark Matter beasts players bring). Simulator, Dragonfire:
+  reference deck 1 win in 3, with three Tier 20 comet beasts 3 in 3. Also fixed Gust (it blew
+  enemies towards your own pile). The battle simulator does not load comet.js, so calibration is
+  unchanged.
+- **World 7's rewards** (ad71b9e). Its chest is now The Singularity Dragon (Tier 20 Cosmic), which
+  waits on the comet. (The commit says the old chest was empty; it was not: it always gave the Rose
+  Window relic, the only Tier 20 Dark Matter beast of system "any".) Comet shards for first clears
+  (20 + 5 x level) and stars (60); Mutation Ended +600 shards, Monster Hunter +360.
+- Still to do: the Beastopedia's comet section; comet beasts animated in the meadow (they use a
+  still picture now); limited-time beasts.
+
 ### Limited-time beasts (after World 7 and the comet, Sam said)
 - A shiny silver theme: the name with a metallic shine sweeping left to right, a reflective
   metallic glow round the beast.

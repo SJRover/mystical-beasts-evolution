@@ -177,7 +177,9 @@ const BATTLE_DATA = (() => {
   // (1.5: comet beasts are the comet's, and battle only in World 7.)
   const systemOf = (id) => (LEGENDS[id] || (BEAST_TEMPLATES[id] || {}).relic ? 'any' : (BEAST_TEMPLATES[id] || {}).system === 'low_gravity' ? 'low_gravity' : (BEAST_TEMPLATES[id] || {}).system === 'comet' ? 'comet' : 'prime');
   /** A beast's card rests this long after it is played: its tier in seconds. */
-  const cooldownOf = (id) => (T(id) || { tier: 1 }).tier;
+  // (1.5: a comet beast's card rests a quarter longer, to balance its strength, Sam 24 Nov.)
+  const COMET_REST = 1.25;
+  const cooldownOf = (id) => { const t = T(id) || { tier: 1 }; return t.comet ? Math.round(t.tier * COMET_REST) : t.tier; };
 
   /**
    * Mana (Sam, 18 Nov, like Clash Royale's elixir and Battle Cats' wallet, so the strongest cards
@@ -316,7 +318,8 @@ const BATTLE_DATA = (() => {
    * nothing stands inside anything else (collisions in battle_engine.js). A Tier 1 is 26 across
    * the middle, a Tier 20 about 60 (a Tier 1 was 20 and hard to see: Sam, 17 Nov).
    */
-  const beastRadius = (id) => Math.min(60, 26 + 1.8 * (((T(id) || { tier: 1 }).tier) - 1));
+  // (1.5: comet beasts are half as big again as any other beast of their tier, Sam 24 Nov.)
+  const beastRadius = (id) => { const t = T(id) || { tier: 1 }, r = Math.min(60, 26 + 1.8 * (t.tier - 1)); return t.comet ? Math.round(r * 1.5) : r; };
 
   // ------------------------------------------------------------------ enemies
   /**
@@ -1011,7 +1014,7 @@ const BATTLE_DATA = (() => {
   return {
     PERKS, BOSS_CRATE_CAP, PATTERNS, patternOf, stage, expect, RULES, DECK_RULES, ruleAllows, THEMES, LEGENDS, LEGEND_LIST, T, legendEarned, legendProgress, enemySize,
     STATS, STAT_NAMES, RARITY_BONUS, ROLES, ENEMIES, ENEMY_LIST: E, WORLDS, BOSS_EVERY, ACHIEVEMENTS, STAR_TIMES, LEVEL_POINTS,
-    hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, beastRadius,
+    hash, seeded, order, beastStats, battleNumbers, canBattle, systemOf, cooldownOf, COMET_REST, beastRadius,
     MANA, costOf, costOfTier, syncStats, attackKind, enemyAttackKind, ABILITIES, abilityOf, TRAITS, traitOf,
     enemyStats, enemyRadius, level, levelPoints, difficulty, clearMinutes,
   };

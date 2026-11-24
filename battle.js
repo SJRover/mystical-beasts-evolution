@@ -56,7 +56,7 @@ const BATTLE = (() => {
     if (w.id === 4) return reachedLowGravity() && cleared(`1-${D.WORLDS[0].levels}`);
     return cleared(`${w.id - 1}-${D.WORLDS[w.id - 2].levels}`);
   };
-  const lockText = (w) => (w.id === 7 ? 'Win Worlds 1, 2, 4 and 5 to open' : w.id === 4 ? 'Reach the Low Gravity system and win World 1 to open' : `Clear World ${w.id - 1} to open`);
+  const lockText = (w) => (w.id === 7 ? 'Defeat Worlds 1, 2, 4 and 5 to open' : w.id === 4 ? 'Reach the Low Gravity system and defeat World 1 to open' : `Defeat World ${w.id - 1} to open`);
   /** Any level you have won stays open to play again; the next one opens when you win the one before. */
   const levelOpen = (w, n) => worldOpen(w) && (n === 1 || cleared(`${w.id}-${n}`) || cleared(`${w.id}-${n - 1}`));
   function totals() {
@@ -315,7 +315,7 @@ const BATTLE = (() => {
       </div>`;
     sec.querySelectorAll('.bt-world[data-world]').forEach((btn) => btn.addEventListener('click', () => {
       const w = D.WORLDS[Number(btn.dataset.world) - 1];
-      if (!worldOpen(w)) { showWarning('World locked', w.id === 7 ? 'Win Worlds 1, 2, 4 and 5 in full first. World 7 is the end of the game: bring your strongest beasts from both solar systems.' : w.id === 4 ? 'Win World 1 and reach the Low Gravity system first.' : `Win World ${w.id - 1} first.`); return; }
+      if (!worldOpen(w)) { showWarning('World locked', w.id === 7 ? 'Defeat Worlds 1, 2, 4 and 5 in full first. World 7 is the end of the game: bring your strongest beasts from both solar systems and the comet.' : w.id === 4 ? 'Defeat World 1 and reach the Low Gravity system first.' : `Defeat World ${w.id - 1} first.`); return; }
       click();
       openWorld(w);
     }));

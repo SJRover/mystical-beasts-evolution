@@ -3710,6 +3710,33 @@ function renderBeastopedia() {
   // 1.4: the Relics, won by merge achievements (Battle tab, Achievements, Merge).
   const relicTemplates = Object.values(BEAST_TEMPLATES).filter((b) => b.relic);
   if (relicTemplates.length) createSection('Relics', relicTemplates, relicTemplates.filter((b) => state.unlockedBeasts.includes(b.id)).length);
+  // 1.5: the comet's fifteen species (once the comet is in reach or one has been won), each shown at
+  // the highest tier you have had; one not found yet is a shadow with only its rarity.
+  if (typeof COMET !== 'undefined') {
+    const best = (sp) => { for (let t = 20; t >= 1; t--) if (state.unlockedBeasts.includes(COMET.idOf(sp, t))) return t; return 0; };
+    const found = COMET.SPECIES.filter((s) => best(s.id)).length;
+    if (found || COMET.unlocked()) {
+      const head = document.createElement('div');
+      head.className = 'beastopedia-section-head comet-section-head';
+      head.innerHTML = `<div><span class="comet-dot"></span><span>The Interstellar Comet</span></div><span class="comet-count">${found} / ${COMET.SPECIES.length}</span>`;
+      grid.appendChild(head);
+      const sub = document.createElement('div');
+      sub.className = 'beastopedia-grid';
+      COMET.SPECIES.forEach((s, i) => {
+        const tier = best(s.id), id = COMET.idOf(s.id, Math.max(1, tier)), t = BEAST_TEMPLATES[id], r = RARITIES[s.rarity];
+        const card = document.createElement('div');
+        card.className = `beastopedia-card comet-card ${tier ? '' : 'locked'}`;
+        card.setAttribute('data-id', id);
+        card.innerHTML = `
+          <div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-${s.rarity.toLowerCase()}" style="color:${r.color}; font-weight:bold; font-size:8px; text-transform:uppercase;">${r.name}</span></div>
+          <div class="beastopedia-card-icon ${tier ? '' : 'comet-shadow'}">${getBeastSVG(id, false, false)}</div>
+          <div class="beastopedia-card-name ${tier && s.rarity === 'COSMIC' ? 'cosmic-name' : ''}" style="font-size:9px; margin-top:4px; text-align:center;">${tier ? s.name : 'Unknown'}</div>
+          ${tier ? `<div class="comet-card-tier">T${tier} · ${COMET.STAGE_WORD[t.comet.stage]}</div>` : ''}`;
+        sub.appendChild(card);
+      });
+      grid.appendChild(sub);
+    }
+  }
 
   grid.querySelectorAll('.beastopedia-card:not(.locked)').forEach(card => {
     card.addEventListener('click', () => {

@@ -63,7 +63,7 @@ const BattleEngine = (() => {
         const stats = sync ? BATTLE_DATA.syncStats(c.id, sync) : BATTLE_DATA.beastStats(c.id, c.prestige || 0);
         const tier = sync && sync.tier ? Math.min(sync.tier, BATTLE_DATA.T(c.id).tier) : BATTLE_DATA.T(c.id).tier;
         return {
-          id: c.id, prestige: c.prestige || 0, stats, sync, cooldown: tier * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0,
+          id: c.id, prestige: c.prestige || 0, stats, sync, cooldown: ((BATTLE_DATA.T(c.id) || {}).comet ? Math.round(tier * BATTLE_DATA.COMET_REST) : tier) * (opts.rest || 1) * (kind === 'slow' ? 2 : 1), ready: 0,
           cost: BATTLE_DATA.costOfTier(tier),
           // An evolved form: its special, once a battle, and one of it on the field at a time.
           evolved: !!c.evolved, ability: c.evolved ? BATTLE_DATA.abilityOf(c.id) : null, abilityUsed: false, unit: null,
