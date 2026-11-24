@@ -4320,7 +4320,15 @@ function openPrestigeSelectorModal() {
   // The comet's prestige keeps its beasts (they take too long to grow to lose): essence and upgrades start again.
   if (state.currentSolarSystem === 'comet') {
     if (atPrestigeMax() || state.essence < getPrestigeTarget()) return;
-    if (!confirm(`Ascend the comet to prestige ${state.prestigeLevel + 1}? Its essence and upgrades start again, and your comet beasts stay.`)) return;
+    askConfirm(`Comet prestige ${state.prestigeLevel + 1}`, `Ascend the comet? Its essence and upgrades start again, and your comet beasts and cocoons stay.`, 'Ascend', cometAscend);
+    return;
+  }
+  openPrestigeSelectorModal2();
+}
+/** The comet's prestige, once agreed. */
+function cometAscend() {
+  {
+    if (atPrestigeMax() || state.essence < getPrestigeTarget()) return;
     state.prestigeLevel++;
     state.essence = 0;
     for (const k of Object.keys(state.upgrades)) state.upgrades[k] = 0;
@@ -4330,6 +4338,8 @@ function openPrestigeSelectorModal() {
     spawnToastNotification('☄ The comet ascends', `Comet prestige ${state.prestigeLevel}: ${COMET.BIOMES[Math.min(state.prestigeLevel, COMET.BIOMES.length - 1)]}. Production x${state.prestigeLevel + 1}, eggs hatch higher.`, getBeastSVG('nebula_jelly_5'));
     return;
   }
+}
+function openPrestigeSelectorModal2() {
   const grid = document.getElementById('prestige-selector-grid');
   grid.innerHTML = '';
   selectedSanctuaryIds = [];
@@ -5084,6 +5094,28 @@ function harvestBeastDirectClick(beast, pageX, pageY) {
 }
 
 // Show a beautiful modal popup summarizing offline earnings
+/**
+ * 1.5: a question in the game's own style (the browser's confirm box looks out of place and stops
+ * everything while it is open). onYes runs if the player agrees.
+ */
+function askConfirm(title, text, yesLabel, onYes, colour = '#c8a8ff') {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active ask-confirm';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `<div class="modal-content" style="max-width: 380px; border-color: ${colour};">
+      <div class="modal-title" style="color: ${colour}; font-size: 24px;"></div>
+      <div class="modal-desc" style="font-size: 15px; margin-bottom: 18px;"></div>
+      <div style="display: flex; gap: 10px;"><button class="modal-btn ask-no" style="flex: 1; background: linear-gradient(180deg, #4a5068, #2a2e40); color: #fff;">Not now</button><button class="modal-btn ask-yes" style="flex: 1;"></button></div>
+    </div>`;
+  overlay.querySelector('.modal-title').textContent = title;
+  overlay.querySelector('.modal-desc').textContent = text;
+  overlay.querySelector('.ask-yes').textContent = yesLabel;
+  const close = () => overlay.remove();
+  overlay.querySelector('.ask-no').addEventListener('click', () => { if (audio) audio.playClick(); close(); });
+  overlay.querySelector('.ask-yes').addEventListener('click', () => { close(); onYes(); });
+  document.body.appendChild(overlay);
+}
+
 function showOfflineEarningsPopup(earned, offlineSec) {
   const hours = Math.floor(offlineSec / 3600);
   const minutes = Math.floor((offlineSec % 3600) / 60);
@@ -5190,7 +5222,10 @@ function startShardJob(beast, auto = false) {
   const jobs = shardJobs(), sys = state.currentSolarSystem;
   if (jobs[sys]) { showWarning('Shard Incubator busy', 'It is still breaking down the last beast.'); return false; }
   const shards = COMET.shardsFor(beast.type, beast.evolved);
-  if (!auto && (['LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(t.rarity) || beast.evolved) && !confirm(`Break ${t.name} (Tier ${t.tier}) down into ${shards} comet shards? It will be gone for good.`)) return false;
+  if (!auto && !beast._agreed && (['LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(t.rarity) || beast.evolved)) {
+    askConfirm('Break it down?', `${t.name} (Tier ${t.tier}) will become ${shards} comet shards, and be gone for good.`, 'Break down', () => { beast._agreed = true; if (state.beastsOnField.includes(beast)) startShardJob(beast); });
+    return false;
+  }
   jobs[sys] = { type: beast.type, evolved: !!beast.evolved, shards, auto, start: Date.now(), until: Date.now() + COMET.shardTime(beast.type) * 1000 };
   removeBeastFromField(beast.id);
   if (audio) audio.playClick();
