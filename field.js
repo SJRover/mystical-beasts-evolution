@@ -27,7 +27,8 @@ const FIELD = (() => {
   const motionOf = (type) => {
     if (!motions.has(type)) {
       const t = BEAST_TEMPLATES[type];
-      let m = ART.motion(type);
+      // (1.5: a comet beast moves the way its species does: walking, flying, floating or swimming.)
+      let m = t && t.comet && typeof COMET !== 'undefined' ? (COMET.BY_ID[t.comet.species] || {}).motion || 'walk' : ART.motion(type);
       if (t && t.system === 'low_gravity' && m === 'walk') m = 'float';
       motions.set(type, m);
     }
@@ -52,17 +53,32 @@ const FIELD = (() => {
     if (['SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(r) || (evolved && !infected)) auraWrap.classList.add('spin');
     const sprite = document.createElement('div');
     sprite.className = 'beast-sprite';
-    const img = new Image();
-    img.className = 'beast-img';
-    img.alt = '';
-    img.draggable = false;
-    sprite.appendChild(img);
     container.prepend(sprite);
     container.prepend(shadow);
     container.prepend(auraWrap);
 
     // The picture has a quarter's room round the beast for its glow (the sprite is drawn 125% big).
     const px = size * 1.25 * DPR() * 1.35; // room to zoom in before it softens
+    // 1.5: a comet beast is drawn live from its artwork (comet_art.js), so it moves: legs, wings,
+    // tails, its colours shifting, a Cosmic one's stars circling (animate() below redraws it).
+    if (t && t.comet && typeof COMET_ART !== 'undefined' && !infected) {
+      const cv = document.createElement('canvas');
+      cv.className = 'beast-img comet-live';
+      const n = Math.min(512, Math.round(px));
+      cv.width = cv.height = n;
+      sprite.appendChild(cv);
+      container._comet = { cv, g: cv.getContext('2d'), px: n, species: t.comet.species, stage: t.comet.stage, glow: (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.5)', next: 0 };
+      drawComet(container._comet, Math.random() * 10, 0);
+      const auraNow2 = ART.cached('aura', id, evolved, infected, px * 1.2);
+      if (auraNow2) auraImg.src = auraNow2;
+      else ART.picture('aura', id, evolved, infected, px * 1.2).then((url) => { if (url) auraImg.src = url; else auraWrap.remove(); }, () => auraWrap.remove());
+      return sprite;
+    }
+    const img = new Image();
+    img.className = 'beast-img';
+    img.alt = '';
+    img.draggable = false;
+    sprite.appendChild(img);
     const now = ART.cached('beast', id, evolved, infected, px, true, true);
     if (now) img.src = now;
     else {
@@ -74,6 +90,18 @@ const FIELD = (() => {
     if (auraNow) auraImg.src = auraNow;
     else ART.picture('aura', id, evolved, infected, px * 1.2).then((url) => { if (url) auraImg.src = url; else auraWrap.remove(); });
     return sprite;
+  }
+
+  /** One frame of a comet beast on its canvas: a soft glow of its rarity, then the beast. */
+  function drawComet(c, t, walk) {
+    const g = c.g, px = c.px;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, px, px);
+    const gr = g.createRadialGradient(px / 2, px * 0.62, 0, px / 2, px * 0.62, px * 0.42);
+    gr.addColorStop(0, c.glow); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalAlpha = 0.45; g.fillStyle = gr; g.fillRect(0, 0, px, px); g.globalAlpha = 1;
+    g.translate(px / 2, px * 0.9);
+    COMET_ART.draw(g, c.species, c.stage, { t, walk }, px * 0.6);
   }
 
   /** This frame's speed multiplier for a beast, easing towards a new target every few seconds. */
@@ -147,6 +175,9 @@ const FIELD = (() => {
     const m = motionOf(b.type);
     b.lt = (b.lt === undefined ? Math.random() * 20 : b.lt) + dt;
     const t = b.lt, spd = b.spd || 1;
+    // (A comet beast's next frame, about fifteen a second.)
+    const cm = b.dom._comet;
+    if (cm && (cm.next -= dt) <= 0) { cm.next = 1 / 15; drawComet(cm, t, (b.step || t * 6) / (Math.PI * 2)); }
     if (b.actNext === undefined) b.actNext = 2 + Math.random() * 6;
 
     let y = 0, rot = 0, sx = 1, sy = 1, shadow = 1;
