@@ -2995,3 +2995,6 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .limited-reward span { font: 600 11px/1.35 "Outfit", sans-serif; color: #c8d2de; }
 /* The Limited rarity: a shining silver badge (Sam: not Godly). */
 .unlock-beast-rarity.limited, .beastopedia-card-rarity.rarity-limited, .trophy-rarity.limited { background: linear-gradient(100deg, #6a7688 0%, #b8c4d2 30%, #ffffff 45%, #dfe7f0 52%, #8a96a8 65%, #b8c4d2 85%, #6a7688 100%) !important; background-size: 260% 100% !important; color: #1a2232 !important; border: 1.5px solid #ffffff !important; box-shadow: 0 0 10px rgba(230,238,248,0.8); text-shadow: 0 1px 0 rgba(255,255,255,0.7); animation: limited-sheen 2.6s linear infinite; font-weight: 800 !important; }
+.comet-intro .comet-intro-egg { width: 70px; height: 84px; margin: 4px auto 8px; filter: drop-shadow(0 0 12px rgba(200,168,255,0.8)); }
+.comet-intro .comet-intro-egg svg { width: 100%; height: 100%; }
+.comet-intro p { margin: 0 0 8px; }

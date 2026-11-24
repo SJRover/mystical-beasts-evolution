@@ -645,7 +645,9 @@ const BATTLE = (() => {
   const FOE_MUL = { 7: 1.1 };
   function start(level, deck, onDone, sync = null) {
     if (run) return;
-    if (FOE_MUL[level.world]) level = { ...level, foeMul: FOE_MUL[level.world] };
+    // (Each World 7 and 8 level's own strength, from tools/harden.mjs, else the world's.)
+    const fm = (D.LEVEL_MUL && D.LEVEL_MUL[level.id]) || FOE_MUL[level.world];
+    if (fm) level = { ...level, foeMul: fm };
     // (Sam, 24 Nov: Worlds 1 to 6's bosses and champions bigger, so they stand out, and stronger.)
     if (level.world <= 6) level = { ...level, bigFoes: { boss: { hp: 1.6, atk: 1.3, r: 1.25, draw: 1.4 }, champ: { hp: 1.5, atk: 1.25, r: 1.15, draw: 1.25 } } };
     const cards = deck.map(baseOf).map((id, i) => ({ id, prestige: sync ? 0 : prestigeOf(id), evolved: hasSpecial(id, i), sync }));

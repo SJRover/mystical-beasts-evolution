@@ -441,6 +441,7 @@ function saveGame() {
     cometShards: state.cometShards || 0,
     cometStats: state.cometStats || {},
     limited: state.limited || {},
+    cometIntroSeen: !!state.cometIntroSeen,
     cometEggBank: state.cometEggBank || 0,
     cometUnlocked: !!state.cometUnlocked,
     shardIncubator: state.shardIncubator || null,
@@ -527,6 +528,7 @@ function loadGame() {
     state.cometShards = saveData.cometShards || 0;
     state.cometStats = saveData.cometStats || {};
     state.limited = saveData.limited || {};
+    state.cometIntroSeen = !!saveData.cometIntroSeen;
     state.cometEggBank = saveData.cometEggBank || 0;
     state.cometUnlocked = !!saveData.cometUnlocked;
     state.shardIncubator = saveData.shardIncubator && typeof saveData.shardIncubator === 'object' ? saveData.shardIncubator : null;
@@ -4284,7 +4286,7 @@ function warpToSolarSystem(systemId) {
     // Default fallback spawn
     spawnBeastOnField(startBeastFor(systemId), 30, 50, false, false);
   }
-  if (systemId === 'comet') drawCocoons();
+  if (systemId === 'comet') { drawCocoons(); setTimeout(cometIntro, 600); }
 
   // 6. Update UI
   updateIncubatorsVisibility();
@@ -5098,6 +5100,29 @@ function harvestBeastDirectClick(beast, pageX, pageY) {
  * 1.5: a question in the game's own style (the browser's confirm box looks out of place and stops
  * everything while it is open). onYes runs if the player agrees.
  */
+/** 1.5: the first time on the comet, how it works (once). */
+function cometIntro() {
+  if (state.cometIntroSeen || state.currentSolarSystem !== 'comet') return;
+  state.cometIntroSeen = true;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active ask-confirm';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `<div class="modal-content comet-intro" style="max-width: 390px; border-color: #c8a8ff;">
+      <div class="modal-title" style="color: #c8a8ff; font-size: 24px;">☄ The Interstellar Comet</div>
+      <div class="comet-intro-egg">${COMET.eggSvg()}</div>
+      <div class="modal-desc" style="font-size: 14px; line-height: 1.45; text-align: left; margin-bottom: 16px;">
+        <p>The rarest beasts in the universe live here. They hatch from comet eggs, which fall slowly; you can also buy them in the shop, with essence or with comet shards.</p>
+        <p>Two comet beasts of the same tier fuse into one a tier higher, as the rarer of the two. They wrap themselves in a glowing cocoon for a while first, and only a few cocoons can grow at once.</p>
+        <p>The comet has its own essence and prestige. Its prestige keeps your comet beasts and makes eggs hatch higher.</p>
+        <p>At prestige 15, Prime and Low Gravity each have a Shard Incubator that turns spare beasts into shards. Comet beasts battle in Worlds 7 and 8.</p>
+      </div>
+      <button class="modal-btn" style="width: 100%;">Let's go</button>
+    </div>`;
+  overlay.querySelector('button').addEventListener('click', () => { if (audio) audio.playClick(); overlay.remove(); });
+  document.body.appendChild(overlay);
+  saveGame();
+}
+
 function askConfirm(title, text, yesLabel, onYes, colour = '#c8a8ff') {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay active ask-confirm';

@@ -222,9 +222,12 @@
     { id: 'h_stars_all', group: 'hard', name: 'A Star on Every Mutant', desc: 'Earn every star in both Mutant Worlds.', count: (c) => [c.w7stars + c.w8stars, 40], reward: { comet: 'astral_sage_20', boost: { mult: 2, minutes: 360 } } },
     { id: 'h_nc_dragon', group: 'hard', name: 'The Old Ways: Pyraxis', desc: 'Beat Pyraxis the Dragon (World 7, level 9) with no comet beasts in your six.', count: (c) => [c.noComet['7-9'] ? 1 : 0, 1], reward: { comet: 'onyx_wyrm_11' } },
     { id: 'h_nc_chimera', group: 'hard', name: 'The Old Ways: the Chimera', desc: 'Beat the Omega Chimera (World 7, level 20) with no comet beasts in your six.', count: (c) => [c.noComet['7-20'] ? 1 : 0, 1], reward: { comet: 'mind_leviathan_14' } },
-    { id: 'h_nc_wardens', group: 'hard', name: 'The Old Ways: the Wardens', desc: 'Beat the Three Wardens (World 8, level 8) with no comet beasts in your six.', count: (c) => [c.noComet['8-8'] ? 1 : 0, 1], reward: { comet: 'quasar_phoenix_16' } },
-    { id: 'h_nc_king', group: 'hard', name: 'The Old Ways: the Hollow King', desc: 'Beat Morgrath the Hollow King (World 8, level 9) with no comet beasts in your six.', count: (c) => [c.noComet['8-9'] ? 1 : 0, 1], reward: { comet: 'void_stalker_17' } },
-    { id: 'h_nc_eater', group: 'hard', name: 'The Old Ways: the World-Eater', desc: 'Beat the World-Eater (World 8, level 20) with no comet beasts in your six.', count: (c) => [c.noComet['8-20'] ? 1 : 0, 1], reward: { comet: 'chrononaut_20' } },
+    // (World 8's three are levels the best old six, specials fired well, can still just win at their
+    // tuned strengths; the Wardens, the Hollow King and the World-Eater were out of reach without
+    // comet beasts once World 8 was made super hard.)
+    { id: 'h_nc_bull', group: 'hard', name: 'The Old Ways: Thunderhoof', desc: 'Beat Thunderhoof the Storm Bull (World 8, level 6) with no comet beasts in your six.', count: (c) => [c.noComet['8-6'] ? 1 : 0, 1], reward: { comet: 'quasar_phoenix_16' } },
+    { id: 'h_nc_sand', group: 'hard', name: 'The Old Ways: Sand and Flesh', desc: 'Beat Sand and Flesh (World 8, level 15) with no comet beasts in your six.', count: (c) => [c.noComet['8-15'] ? 1 : 0, 1], reward: { comet: 'void_stalker_17' } },
+    { id: 'h_nc_brood', group: 'hard', name: 'The Old Ways: Worm and Brood', desc: 'Beat Worm and Brood (World 8, level 11) with no comet beasts in your six.', count: (c) => [c.noComet['8-11'] ? 1 : 0, 1], reward: { comet: 'chrononaut_20' } },
   ];
 
   return void Object.assign(window, { COMET: {

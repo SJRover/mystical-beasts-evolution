@@ -44,7 +44,8 @@ const LIMITED = (() => {
     BEAST_TEMPLATES[b.id] = { ...b, cost: 0, evolutions: [], system: 'relic', relic: true, limited: true, baseCps: 1e20, svgParams: { body: 'relic', eyes: 'normal', color: '#ffffff', glow: true } };
   }
 
-  const now = () => Date.now();
+  // (The latest time the game has seen, so setting the phone's clock back cannot keep an event open.)
+  const now = () => Math.max(Date.now(), (typeof state !== 'undefined' && state.maxTimeSeen) || 0);
   const live = () => EVENTS.filter((e) => now() >= e.start && now() <= e.end);
   const won = (e) => !!(state.limited && state.limited[e.id] && state.limited[e.id].won);
   const prog = (e) => { const L = state.limited || (state.limited = {}); return L[e.id] || (L[e.id] = { merge6: 0, stars: [], trash15: 0, evolve6: 0, won: 0, since: now() }); };
@@ -237,6 +238,8 @@ const LIMITED = (() => {
     if (bannerShown || typeof document === 'undefined') return;
     const e = live().find((x) => !won(x));
     if (!e || !state.isTutorialCompleted) return;
+    // (Not over another popup: on the first launch after an update several can come at once.)
+    if (document.querySelector('.modal-overlay.active, .modal.active, #battle-screen') && (banner.tries = (banner.tries || 0) + 1) < 60) { setTimeout(banner, 2000); return; }
     bannerShown = true;
     const B = BEASTS[e.beast];
     const el = document.createElement('div');

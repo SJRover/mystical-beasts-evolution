@@ -27,10 +27,15 @@ const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : nul
 const RANK = ['COMMON', 'RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
 /** The collection a player is expected to have by a level (battle_data.js expect). */
 export const progress = (world, n) => D.expect(world, n);
+/** The game's data, for other tools (scratch checks of difficulty). */
+export const DATA = D;
+/** The battle engine, for tools that play their own way (scratch checks with specials). */
+export const ENGINE = BE;
 
 /** Six different beasts of the world's system, around tier `tier`, no rarer than `rarity`. */
-export function refDeck(world, n, tierShift = 0) {
-  const pr = progress(world, n);
+export function refDeck(world, n, tierShift = 0, opts = {}) {
+  // (opts.noComet: the best six without comet beasts, as a player without them would bring.)
+  const pr = opts.noComet ? { ...progress(world, n), comet: null } : progress(world, n);
   const sys = D.WORLDS[world - 1].system;
   const rule = D.level(world, n).rule;
   const top = Math.max(1, Math.round(pr.tier) + tierShift);
@@ -41,8 +46,9 @@ export function refDeck(world, n, tierShift = 0) {
   const all = Object.keys(T).filter((id) => D.canBattle(id) && !T[id].comet && (sys === 'any' || D.systemOf(id) === sys) && D.ruleAllows(rule, id, D.beastStats(id, pr.prestige)));
   const power = (id, p = pr.prestige) => { const s = D.beastStats(id, p); return s.atk * s.hp * (1 + 0.12 * (s.spd + s.rng)); };
   if (pr.comet) {
+    // (opts.allComet: six comet beasts and no old ones, a player who has grown a full comet six.)
     const cr = pr.comet;
-    const comets = Object.keys(T).filter((id) => T[id].comet && T[id].tier === cr.tier && RANK.indexOf(T[id].rarity) >= 0 && RANK.indexOf(T[id].rarity) <= RANK.indexOf(cr.rarity)).sort((a, b) => power(b, cr.prestige) - power(a, cr.prestige)).slice(0, 3);
+    const comets = Object.keys(T).filter((id) => T[id].comet && T[id].tier === cr.tier && RANK.indexOf(T[id].rarity) >= 0 && RANK.indexOf(T[id].rarity) <= RANK.indexOf(cr.rarity)).sort((a, b) => power(b, cr.prestige) - power(a, cr.prestige)).slice(0, opts.allComet ? 6 : 3);
     const old = all.filter((id) => T[id].tier <= top && RANK.indexOf(T[id].rarity) <= maxRank).sort((a, b) => power(b) - power(a)).slice(0, 6 - comets.length);
     return [...comets.map((id) => ({ id, prestige: cr.prestige })), ...old.map((id) => ({ id, prestige: pr.prestige }))];
   }

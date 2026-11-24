@@ -319,6 +319,32 @@ My plan for how the comet works (Sam left it to me):
   tab in Achievements, a Limited section in the Beastopedia. The £6.99 purchase for a missed one is
   not built.
 
+### Release prep (24 Nov, evening; RELEASE_1.5.md has the What's New text and the checklist)
+- Worlds 7 and 8 super hard, level by level: tools/harden.mjs finds each level's enemy multiplier so
+  the bot (no specials) wins World 7 about one game in five with the best old six and World 8 about
+  one in ten with whichever deck does best, never zero; each choice is checked again over 24 fresh
+  games. tools/hardjs.mjs writes battle_hard.js (BATTLE_DATA.LEVEL_MUL), applied in battle.js
+  start(). Rerun both after any recalibration of Worlds 7 or 8 (each level starts from its value).
+- World 8 is judged by the best of three decks: the reference deck (three comet beasts, three old),
+  the best six old beasts (refDeck(..., { noComet: true })) and six comet beasts at the expected
+  tier and rarity ({ allComet: true }). The first pass used only the reference deck: the old six then
+  won the last four levels eight times in eight, and six top comet beasts won nearly everything.
+  The simulator is deterministic: each deck plays five lane patterns and the result flips with tiny
+  changes of strength, so "wins of 24" really counts patterns. Fresh check at the final strengths:
+  World 7, best old six 58 of 240 games; World 8, reference deck 5 of 480, old six 24, six comets 52,
+  six top comets (Cosmic too) 179. Four World 8 levels no deck could win (8-8, 8-11, 8-14, 8-18)
+  were eased 3% at a time until one could (scratchpad easefloor.mjs).
+- The Old Ways achievements in World 8 moved to levels the best old six can still win with
+  specials (scratchpad oldways2.mjs, the strategies.mjs 'evolved' way of firing them): Thunderhoof
+  (8-6), Sand and Flesh (8-15), Worm and Brood (8-11). The Wardens, the Hollow King and the
+  World-Eater needed 19 to 23% weaker enemies before the old six could win at all. World 7's two
+  (Pyraxis, the Chimera) stay: the old six win them.
+- The comet's prestige and the Shard Incubator ask with askConfirm (an in-game popup); the browser's
+  confirm box froze the page. A first-visit explanation on the comet (cometIntro, once).
+- The Snowman's event uses state.maxTimeSeen, so turning the clock back does not extend it; the
+  banner waits until no other popup is open.
+- A real 1.4.1 save (from a checkout of main) loads into 1.5. MARKETING_VERSION is 1.5.
+
 ### Limited-time beasts (after World 7 and the comet, Sam said)
 - A shiny silver theme: the name with a metallic shine sweeping left to right, a reflective
   metallic glow round the beast.
