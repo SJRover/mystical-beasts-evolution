@@ -67,7 +67,8 @@ const BattleEngine = (() => {
           cost: (BATTLE_DATA.T(c.id) || {}).comet ? BATTLE_DATA.cometCost(tier) : BATTLE_DATA.costOfTier(tier),
           // An evolved form: its special, once a battle, and one of it on the field at a time.
           evolved: !!c.evolved, ability: c.evolved ? BATTLE_DATA.abilityOf(c.id) : null, abilityUsed: false, unit: null,
-          area: BATTLE_DATA.attackKind(c.id, c.prestige || 0) === 'area' ? 0.5 : 0, // (by look; a synced one keeps its kind)
+          // (by look; a synced one keeps its kind. 1.5: an area beast that shoots bursts for a third.)
+          area: BATTLE_DATA.attackKind(c.id, c.prestige || 0) === 'area' ? (BATTLE_DATA.battleNumbers(stats).reach >= SHOT_REACH ? 0.35 : 0.5) : 0,
         };
       });
       this.maxYours = kind === 'few' ? 5 : MAX_YOURS;

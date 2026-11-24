@@ -73,7 +73,9 @@
 
   // ------------------------------------------------------------------ the comet's own numbers
   const PRESTIGE_MAX = 10;
-  const PRESTIGE_TARGETS = [1e8, 3e9, 1e11, 3e12, 1e14, 3e15, 1e17, 3e18, 1e20, 3e21];
+  // (Tuned with a model of an active player, 24 Nov, for slow and hard progress: prestige 1 in about
+  // an hour, 3 in about seven, 5 in about a day and a bit, 8 in about two hundred hours of play.)
+  const PRESTIGE_TARGETS = [2e10, 2e12, 1e14, 5e15, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22];
   const BIOMES = ['Comet Crust', 'Ice Geyser Fields', 'Tail of Light', 'Crystal Hollows', 'Dust Storm Plains', 'Aurora Glacier', 'Chrono Craters', 'Nebula Wake', 'Stardust Sea', 'Heart of the Comet', 'The Origin'];
   /** Egg hatch odds by rarity (Sam: eggs, with a low chance of the rarest). */
   const EGG_ODDS = [['SUPER_RARE', 55], ['ULTRA_RARE', 27], ['LEGENDARY', 12], ['GODLY', 5], ['DARK_MATTER', 0.8], ['COSMIC', 0.2]];

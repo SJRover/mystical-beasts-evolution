@@ -216,10 +216,17 @@ const BATTLE_DATA = (() => {
    * close.
    */
   const AREA_LOOK = /titan|colossus|giant|glaciator|pyroclasm|magmadon|kraken|hydra|slime|leviathan|gaia|bark|amethyst|volcanis|ent_|supergiant|chitin|arachno/;
+  // 1.5 (Sam, 24 Nov: too few area attackers; Low Gravity had one, the comet none, and late on every
+  // beast shot single targets): Low Gravity's sharks and gargoyles, and five comet kinds, hit an area
+  // too. An area beast keeps it even when it reaches far enough to shoot (its shots burst).
+  const AREA_BODY = new Set(['shark', 'gargoyle']);
+  const AREA_COMET = new Set(['onyx_wyrm', 'quasar_phoenix', 'mind_leviathan', 'singularity_dragon', 'ouroboros']);
+  const areaBeast = (id) => { const t = T(id) || {}; return AREA_LOOK.test(id) || (t.system === 'low_gravity' && AREA_BODY.has((t.svgParams || {}).body)) || !!(t.comet && AREA_COMET.has(t.comet.species)); };
   function attackKind(id, prestige = 0) {
+    if (areaBeast(id)) return 'area';
     const s = beastStats(id, prestige);
     if (34 + 20 * Math.max(0, s.rng - 1) >= 74) return 'ranged';
-    return AREA_LOOK.test(id) ? 'area' : 'single';
+    return 'single';
   }
   /**
    * Enemy abilities, by who they are: leapers jump over your front line once; cloakers turn
