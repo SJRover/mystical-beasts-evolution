@@ -371,6 +371,7 @@ window.SCENES = (() => {
   const COMET_SIX = ['singularity_dragon_20', 'ouroboros_20', 'quasar_phoenix_20', 'dark_matter_leviathan', 'singularity_monarch', 'spectral_jellyfish'];
   /** A giant fight: the level, until its giant is well into the field, then a few seconds more. */
   async function giant(world, n, text, k = 1.3, secs = 5500, need = 1, minY = 420) {
+    document.getElementById('sidebar-panel').style.visibility = '';
     late(world === 8);
     for (const id of COMET_SIX) { BATTLE.B().bestPrestige[id] = 15; if (!state.unlockedBeasts.includes(id)) state.unlockedBeasts.push(id); }
     await battle(world, n, COMET_SIX);
@@ -406,6 +407,8 @@ window.SCENES = (() => {
     scatter([['singularity_dragon_20'], ['nebula_jelly_3'], ['quasar_phoenix_16'], ['emerald_serpent_6'], ['ouroboros_20'], ['prism_stag_10'], ['mind_leviathan_13'], ['grey_envoy_4']], { top: 26, bottom: 60 });
     if (typeof updateHUD === 'function') updateHUD();
     await sleep(1800);
+    // (The side panel sits just off the right edge; the band shrinks the page and would bring it into view.)
+    document.getElementById('sidebar-panel').style.visibility = 'hidden';
     band('A third world:\nthe Interstellar Comet');
   };
 

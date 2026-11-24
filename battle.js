@@ -653,8 +653,8 @@ const BATTLE = (() => {
     if (run) return;
     // (Each World 7 and 8 level's own strength, from tools/harden.mjs, else the world's.)
     const fm = (D.LEVEL_MUL && D.LEVEL_MUL[level.id]) || FOE_MUL[level.world];
-    // (Sam, 24 Nov: Worlds 1 to 6 a bit harder too, from level 4: eight per cent, beside their new traits.)
-    const fm6 = level.world <= 6 && level.n >= 4 ? 1.08 : 0;
+    // (Sam, 24 Nov: Worlds 1 to 6 a bit harder, from level 6: five per cent, beside their new traits.)
+    const fm6 = level.world <= 6 && level.n >= 6 ? 1.05 : 0;
     if (fm || fm6) level = { ...level, foeMul: fm || fm6 };
     // (Sam, 24 Nov: Worlds 1 to 6's bosses and champions bigger, so they stand out, and stronger.)
     if (level.world <= 6) level = { ...level, bigFoes: { boss: { hp: 1.6, atk: 1.3, r: 1.25, draw: 1.4 }, champ: { hp: 1.5, atk: 1.25, r: 1.15, draw: 1.25 } } };

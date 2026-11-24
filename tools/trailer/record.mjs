@@ -45,6 +45,21 @@ export const SHOWCASE = [
   { name: 'sc_crate', frames: 70 },
   { name: 'end', frames: 141 },
 ];
+// 1.5, the giants and the comet (Sam, 24 Nov): `node record.mjs --giants [shot ...]`. Music: Sam's
+// BattleWorld7Music2 from 104.925 s (two beats before the hit at 106.7; about 135 bpm, a bar of four
+// half-time beats is 3.558 s, 107 frames), then CometWorldMusic from its drop at 74.0 s (64 bpm, four
+// beats 3.75 s, 112 frames), crossfaded at the cut to the comet (build.py --giants).
+export const GIANTS = [
+  { name: 'g_chimera', frames: 160, pre: 0, until: 'boss', after: 330 },
+  { name: 'g_dragon', frames: 107, pre: 0, until: 'boss', after: 120 },
+  { name: 'g_titans', frames: 107, pre: 0, until: 'boss', after: 270 },
+  { name: 'g_eater', frames: 107, pre: 0, until: 'boss', after: 200 },
+  { name: 'g_special', frames: 107, pre: 0, until: 'boss', after: 140 },
+  { name: 'g_comet', frames: 112 },
+  { name: 'g_cosmic', frames: 112 },
+  { name: 'g_end', frames: 85 },
+];
+const GIANT = process.argv.includes('--giants');
 const SHOW = process.argv.includes('--showcase');
 const pick = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const tw = readFileSync(path.join(here, 'tw.js'), 'utf8');
@@ -64,9 +79,9 @@ console.log(await ev(`
   if (window.audio) { audio.musicEnabled = false; audio.sfxEnabled = false; if (audio.stopMusic) audio.stopMusic(); }
   return 'ready';
 `));
-for (const shot of SHOW ? SHOWCASE : PLAN) {
+for (const shot of GIANT ? GIANTS : SHOW ? SHOWCASE : PLAN) {
   if (pick.length && !pick.includes(shot.name)) continue;
-  const dir = path.join(here, 'frames', SHOW ? `showcase-${shot.name}` : shot.name);
+  const dir = path.join(here, 'frames', GIANT ? `giants-${shot.name}` : SHOW ? `showcase-${shot.name}` : shot.name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   console.log(shot.name, await ev(`__TW.autoRun(); return await TRAILER.run('${shot.name}');`), await ev(`return JSON.stringify({ battle: BATTLE.run ? BATTLE.run.level.id + (BATTLE.run.battle.result ? ' ' + BATTLE.run.battle.result : '') : null, modal: !!document.querySelector('.bt-modal'), sheets: document.querySelectorAll('.bt-sheet').length });`));

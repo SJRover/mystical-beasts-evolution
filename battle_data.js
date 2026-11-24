@@ -266,7 +266,7 @@ const BATTLE_DATA = (() => {
     switch (e.role) {
       case 'ranged': return LONG_SHOTS.includes(e.look.weapon) ? 'snipe' : LOBS.includes(e.look.weapon) ? 'mortar' : ['snipe', 'mortar', 'blink'][h % 3];
       case 'caster': return ['mortar', 'blink', 'regen'][h % 3];
-      case 'swarm': return ['bomb', 'split'][h % 2];
+      case 'swarm': return ['bomb', 'blink'][h % 2]; // (not Splits: on a horde of swarms it doubled the horde)
       case 'tank': return e.look.armor || e.look.shield ? 'thorns' : 'regen';
       case 'brute': return 'enrage';
       case 'runner': return 'blink';

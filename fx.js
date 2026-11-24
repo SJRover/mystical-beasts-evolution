@@ -153,6 +153,8 @@ const FX = (() => {
    * cocoon, a black glow rimmed in violet swells and fades, and stars fly out of it.
    */
   function cosmicBurst(x, y, scale = 1) {
+    // (Not over a battle: a cocoon can hatch on the comet while one is on, Sam 24 Nov.)
+    if (document.getElementById('battle-screen') || document.body.classList.contains('bt-in-battle')) return;
     const b = el('div', 'fx-cosmic-burst', document.body);
     b.style.left = `${x}px`; b.style.top = `${y}px`; b.style.setProperty('--k', scale);
     el('div', 'cb-glow', b);

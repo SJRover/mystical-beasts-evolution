@@ -11,21 +11,28 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 FPS = 30
 SHOW = '--showcase' in sys.argv
+# 1.5 (Sam, 24 Nov): the giants and the comet, World 7 music into the comet's (see record.mjs GIANTS).
+GIANT = '--giants' in sys.argv
 # The battle showcase (Sam, 23 Nov): its own shots and Sam's Variant 2 from its drop at 103.59 s.
 MUSIC = os.path.join(ROOT, 'PrimeSolarSystemCasualBattleMusicVariant2.mp3' if SHOW else 'PrimeSolarSystemCasualBattleMusicVariant3.mp3')
 START = 103.59 if SHOW else 47.04
-OUT_DIR = os.path.join(ROOT, 'App Store 1.4')
+OUT_DIR = os.path.join(ROOT, 'App Store 1.5' if GIANT else 'App Store 1.4')
+if GIANT:
+    MUSIC = os.path.join(ROOT, 'BattleWorld7Music2.mp3')
+    START = 104.925
+    MUSIC2 = os.path.join(ROOT, 'CometWorldMusic.mp3')
+    DROP2 = 74.0
 
 # The shot order from record.mjs's PLAN (or SHOWCASE).
 src = open(os.path.join(HERE, 'record.mjs'), encoding='utf-8').read()
-part = src[src.index('export const SHOWCASE'):] if SHOW else src[src.index('export const PLAN'):src.index('export const SHOWCASE')]
+part = src[src.index('export const GIANTS'):] if GIANT else src[src.index('export const SHOWCASE'):] if SHOW else src[src.index('export const PLAN'):src.index('export const SHOWCASE')]
 plan = re.findall(r"\{ name: '(\w+)', frames: (\d+)", part[: part.index('];')])
 seq = os.path.join(HERE, 'frames', '_all')
 shutil.rmtree(seq, ignore_errors=True)
 os.makedirs(seq)
 n = 0
 for name, count in plan:
-    d = os.path.join(HERE, 'frames', f'showcase-{name}' if SHOW else name)
+    d = os.path.join(HERE, 'frames', f'giants-{name}' if GIANT else f'showcase-{name}' if SHOW else name)
     files = sorted(f for f in os.listdir(d) if f.endswith('.jpg')) if os.path.isdir(d) else []
     if len(files) < int(count):
         sys.exit(f'{name}: {len(files)} frames, want {count}')
@@ -37,13 +44,27 @@ print('frames', n, 'seconds', round(dur, 2))
 if dur > 30 and not SHOW:
     sys.exit('over 30 seconds')
 os.makedirs(OUT_DIR, exist_ok=True)
-out = os.path.join(OUT_DIR, 'Battle Showcase 886x1920.mp4' if SHOW else 'App Preview iPhone 886x1920.mp4')
+out = os.path.join(OUT_DIR, 'Giants and the Comet 886x1920.mp4' if GIANT else 'Battle Showcase 886x1920.mp4' if SHOW else 'App Preview iPhone 886x1920.mp4')
 fade_out = 1.4
+audio_in = ['-ss', str(START), '-t', f'{dur:.3f}', '-i', MUSIC]
+audio_fx = f'[1:a]afade=t=in:st=0:d=0.12,afade=t=out:st={dur - fade_out:.3f}:d={fade_out},volume=-1dB,aresample=48000[a]'
+if GIANT:
+    # The World 7 track up to the cut to the comet, fading out over 0.6 s; the comet's track fading in
+    # over the same 0.6 s so its drop (DROP2) lands on the cut.
+    names = [m[0] for m in plan]
+    cut = sum(int(c) for nm, c in plan[: names.index('g_comet')]) / FPS
+    x = 0.6
+    audio_in = ['-ss', str(START), '-t', f'{cut + 0.2:.3f}', '-i', MUSIC, '-ss', f'{DROP2 - x:.3f}', '-t', f'{dur - cut + x:.3f}', '-i', MUSIC2]
+    d2 = int((cut - x) * 1000)
+    audio_fx = (f'[1:a]afade=t=in:st=0:d=0.12,afade=t=out:st={cut - x:.3f}:d={x}[a1];'
+                f'[2:a]afade=t=in:st=0:d={x},afade=t=out:st={dur - cut + x - fade_out:.3f}:d={fade_out},adelay={d2}|{d2}[a2];'
+                f'[a1][a2]amix=inputs=2:normalize=0,volume=-1dB,aresample=48000[a]')
+    print('cut to the comet at', round(cut, 2), 's')
 cmd = [
     'ffmpeg', '-y', '-nostdin', '-v', 'error',
     '-framerate', str(FPS), '-i', os.path.join(seq, '%05d.jpg'),
-    '-ss', str(START), '-t', f'{dur:.3f}', '-i', MUSIC,
-    '-filter_complex', f'[0:v]scale=886:1920:flags=lanczos,format=yuv420p[v];[1:a]afade=t=in:st=0:d=0.12,afade=t=out:st={dur - fade_out:.3f}:d={fade_out},volume=-1dB,aresample=48000[a]',
+    *audio_in,
+    '-filter_complex', f'[0:v]scale=886:1920:flags=lanczos,format=yuv420p[v];{audio_fx}',
     '-map', '[v]', '-map', '[a]',
     '-c:v', 'libx264', '-profile:v', 'high', '-level:v', '4.0', '-preset', 'slow',
     '-b:v', '11M', '-maxrate', '12M', '-bufsize', '22M', '-r', str(FPS), '-g', str(FPS),

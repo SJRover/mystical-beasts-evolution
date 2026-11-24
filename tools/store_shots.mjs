@@ -18,6 +18,8 @@ const BATTLE_SET = process.argv.includes('--battle');
 const GIANT_SET = process.argv.includes('--giants');
 const SCENES = GIANT_SET ? ['w8eater', 'w7boss', 'comet', 'w8duo', 'cometbattle'] : BATTLE_SET ? ['battle', 'specials', 'boss', 'worlds', 'legends'] : ['field', 'merge', 'premium', 'biomes', 'zoom', 'spin', 'beastopedia'];
 const pick = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+// (`--only=comet,w7boss`: just those scenes, keeping their numbers.)
+const only = (process.argv.find((a) => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 const sizes = pick.length ? pick : BATTLE_SET || GIANT_SET ? ['iphone', 'ipad'] : Object.keys(SIZES);
 const root = new URL(GIANT_SET ? '../App Store 1.5/' : BATTLE_SET ? '../App Store 1.4/' : '../App Store 1.3/', import.meta.url);
 
@@ -37,6 +39,7 @@ for (const key of sizes) {
   await t.sleep(5000);
   await t.evaluate(`(async () => { for (const s of ['/tools/playtest.js', '/tools/store_scenes.js']) { const x = await (await fetch(s + '?t=' + Date.now())).text(); (0, eval)(x); } return 1; })()`);
   for (let i = 0; i < SCENES.length; i++) {
+    if (only.length && !only.includes(SCENES[i])) continue;
     await t.evaluate(`SCENES.run('${SCENES[i]}')`);
     await t.sleep(800);
     writeFileSync(new URL(`${String(i + 1).padStart(2, '0')} ${SCENES[i]}.png`, out), await t.shot('png'));
