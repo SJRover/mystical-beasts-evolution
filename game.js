@@ -1082,7 +1082,8 @@ function spawnBeastOnField(beastId, x, y, evolved = false, infected = false, dea
     tierScale = 1.0 + (template.tier - 15) * 0.08; // T16: 1.08x, T17: 1.16x, T18: 1.24x, T19: 1.32x, T20: 1.40x
   }
   const oldSize = Math.round((baseSize + tierBonus) * rarityScale * evolvedScale * tierScale);
-  const finalSize = Math.round(tierCurve * rarityNudge * (evolved ? 1.1 : 1)) || oldSize;
+  // (1.5, Sam 24 Nov: low comet beasts were tiny; a comet beast's box is never under 96.)
+  const finalSize = Math.max(template.comet ? 96 : 0, Math.round(tierCurve * rarityNudge * (evolved ? 1.1 : 1)) || oldSize);
 
   container.style.width = `${finalSize}px`;
   container.style.height = `${finalSize}px`;
@@ -2990,7 +2991,7 @@ function triggerDiscoveryModal(beastId) {
   const modal = document.getElementById('discovery-modal');
   // 1.4: a Relic says so.
   const title = modal.querySelector('.modal-title');
-  if (title) title.textContent = template.limited ? 'A limited beast joins you!' : template.relic ? 'A Relic joins you!' : 'New Mutation Discovered!';
+  if (title) title.textContent = template.limited ? 'A limited beast joins you!' : template.relic ? 'A Relic joins you!' : template.comet ? 'New Comet Beast!' : 'New Mutation Discovered!';
   modal.classList.add('active');
 }
 
@@ -3357,12 +3358,10 @@ function renderShop() {
   const maxAllowedTier = getMaxAllowedTier();
   const currentSys = state.currentSolarSystem || 'prime';
 
-  // 1.5: the comet sells no beasts, only eggs (for essence, dearer each time; or for shards).
+  // 1.5: the comet sells no beasts, only eggs, and only for shards (Sam, 24 Nov: eggs for essence
+  // came too easily and made shards pointless; essence buys the comet's upgrades and prestige).
   if (currentSys === 'comet' && typeof COMET !== 'undefined') {
-    const bought = (state.shopPurchases && state.shopPurchases.comet_egg) || 0;
-    const cost = Math.round(50000 * Math.pow(6, bought));
     for (const [label, price, can, buy] of [
-      [`${formatNumber(cost)} essence`, cost, state.essence >= cost, () => { state.essence -= cost; state.shopPurchases.comet_egg = bought + 1; }],
       [`${COMET.SHARDS_PER_EGG} shards (you have ${formatNumber(state.cometShards || 0)})`, COMET.SHARDS_PER_EGG, (state.cometShards || 0) >= COMET.SHARDS_PER_EGG, () => { state.cometShards -= COMET.SHARDS_PER_EGG; }],
     ]) {
       const card = document.createElement('div');
@@ -4830,7 +4829,9 @@ function spawnPremiumCrateOnField(maxTier = 20) {
   container.setAttribute('data-land-y', landY);
   container.setAttribute('data-max-tier', maxTier);
 
-  container.innerHTML = ART.crate(true).replace('class="crate-sprite crate-v2"', 'class="crate-sprite crate-v2" style="transform: scale(1.25);"'); // 1.3
+  // (1.5: on the comet it falls as a golden premium egg.)
+  if ((state.currentSolarSystem || 'prime') === 'comet' && !state.inBeastHub && typeof COMET !== 'undefined') { container.classList.add('comet-egg', 'premium-egg'); container.innerHTML = COMET.eggSvg(true); }
+  else container.innerHTML = ART.crate(true).replace('class="crate-sprite crate-v2"', 'class="crate-sprite crate-v2" style="transform: scale(1.25);"'); // 1.3
 
   playground.appendChild(container);
 
@@ -5815,7 +5816,19 @@ function showDailySpinModal() {
   const titleEl = document.getElementById('daily-spin-title');
   const subEl = document.getElementById('daily-spin-subtitle');
   if (titleEl) titleEl.innerText = battleSpin ? 'BATTLE FREE SPIN' : 'DAILY FREE SPIN';
-  if (subEl) subEl.innerText = battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left). Tier 5+, up to Dark Matter!` : 'Spin for a free beast of Tier 5+ (up to Dark Matter!)';
+  if (subEl) subEl.innerText = spinOnComet()
+    ? (battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left), for a comet beast: Super Rare to, very rarely, Cosmic!` : 'Spin for a free comet beast: Super Rare to, very rarely, Cosmic!')
+    : battleSpin ? `A spin you won in battle (${state.battle.freeSpins} left). Tier 5+, up to Dark Matter!` : 'Spin for a free beast of Tier 5+ (up to Dark Matter!)';
+  const wheelModal = document.getElementById('daily-spin-modal');
+  if (wheelModal) wheelModal.classList.toggle('comet-wheel', spinOnComet());
+  // (The odds under the wheel: the comet's own there.)
+  const legend = document.getElementById('wheel-legend');
+  if (legend) {
+    if (!legend.dataset.prime) legend.dataset.prime = legend.innerHTML;
+    legend.innerHTML = spinOnComet()
+      ? cometSpinSegments.map((s) => `<div style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:${(RARITIES[s.rarity] || {}).color || '#ffffff'}; border-radius:3px; border:0.5px solid rgba(255,255,255,0.2);"></span> ${RARITIES[s.rarity] ? RARITIES[s.rarity].name : s.name} (${s.chance}%)</div>`).join('')
+      : legend.dataset.prime;
+  }
   
   const spinBtn = document.getElementById('wheel-spin-btn');
   spinBtn.classList.remove('disabled');
@@ -5841,10 +5854,24 @@ const dailySpinSegments = [
   { name: 'DARK MATTER', rarity: 'DARK_MATTER', startDeg: 629.64, endDeg: 630, color: '#ff00ff', text: '#fff', chance: 0.1 }
 ];
 
+// 1.5 (Sam, 24 Nov): on the comet the wheel is the comet's own, Super Rare to Cosmic, its odds
+// shifted up two rarities and a little meaner at the top (the comet is the slow road). The prize
+// is a comet beast of that rarity at a third of the tier (comet.js spinPrize).
+const cometSpinSegments = [
+  { name: 'SUPER RARE', rarity: 'SUPER_RARE', startDeg: 270, endDeg: 468, chance: 55 },
+  { name: 'ULTRA RARE', rarity: 'ULTRA_RARE', startDeg: 468, endDeg: 568.8, chance: 28 },
+  { name: 'LEGENDARY', rarity: 'LEGENDARY', startDeg: 568.8, endDeg: 612, chance: 12 },
+  { name: 'GODLY', rarity: 'GODLY', startDeg: 612, endDeg: 626.4, chance: 4 },
+  { name: 'DARK MATTER', rarity: 'DARK_MATTER', startDeg: 626.4, endDeg: 629.64, chance: 0.9 },
+  { name: 'COSMIC', rarity: 'COSMIC', startDeg: 629.64, endDeg: 630, chance: 0.1 },
+];
+const spinOnComet = () => (state.currentSolarSystem || 'prime') === 'comet' && !state.inBeastHub && typeof COMET !== 'undefined';
+const spinSegments = () => (spinOnComet() ? cometSpinSegments : dailySpinSegments);
+
 function drawDailySpinWheel() {
   const canvas = document.getElementById('wheel-canvas');
   if (!canvas) return;
-  FX.drawWheel(canvas, dailySpinSegments); // 1.3: a jewelled gold wheel (fx.js)
+  FX.drawWheel(canvas, spinSegments(), spinOnComet() ? 'comet' : null); // 1.3: a jewelled gold wheel (fx.js); 1.5 a starry one on the comet
 }
 
 const TIER_WEIGHTS = {
@@ -5867,6 +5894,11 @@ const TIER_WEIGHTS = {
 };
 
 function rollRarity() {
+  if (spinOnComet()) {
+    let r = Math.random() * 100;
+    for (const s of cometSpinSegments) { if (r < s.chance) return s.rarity; r -= s.chance; }
+    return 'SUPER_RARE';
+  }
   const roll = Math.random() * 100;
   if (roll < 50) return 'COMMON';
   if (roll < 75) return 'RARE';
@@ -5936,7 +5968,7 @@ function triggerDailySpin() {
   dailySpinWinningTier = rollTier();
   dailySpinWinningBeast = getRandomBeastForDailySpin(dailySpinWinningTier, dailySpinWinningRarity);
   
-  const winningSegment = dailySpinSegments.find(s => s.rarity === dailySpinWinningRarity);
+  const winningSegment = spinSegments().find(s => s.rarity === dailySpinWinningRarity) || spinSegments()[0];
   const startDeg = winningSegment.startDeg;
   const endDeg = winningSegment.endDeg;
   const buffer = Math.min(1.5, (endDeg - startDeg) / 3);

@@ -162,7 +162,9 @@
     const raw = document.createElement('canvas'); raw.width = raw.height = px;
     const g = raw.getContext('2d');
     g.translate(px / 2, px * 0.9);
-    if (typeof COMET_ART !== 'undefined') COMET_ART.draw(g, t.comet.species, t.comet.stage, { t: 1.3 + (t.tier % 5) * 0.37 }, px * 0.6);
+    // (Young ones drawn as big as adults in pictures: their stage shrinks them, and a hatchling
+    // was a speck in a menu. Sam, 24 Nov.)
+    if (typeof COMET_ART !== 'undefined') COMET_ART.draw(g, t.comet.species, t.comet.stage, { t: 1.3 + (t.tier % 5) * 0.37 }, px * 0.6 * COMET_ART.grow(t.comet.stage, 1));
     if (!glow) return raw;
     const c = document.createElement('canvas'); c.width = c.height = px;
     const ctx = c.getContext('2d');
@@ -180,13 +182,20 @@
   }
 
   /** A comet egg: dark and speckled with stars, a glowing crack across it. */
-  function eggSvg() {
-    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><defs><radialGradient id="cmEgg" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#7a6ad8"/><stop offset="0.55" stop-color="#2a1a5a"/><stop offset="1" stop-color="#0a0618"/></radialGradient><radialGradient id="cmEggGlow" cx="50%" cy="55%" r="50%"><stop offset="0" stop-color="#c8a8ff" stop-opacity="0.65"/><stop offset="1" stop-color="#c8a8ff" stop-opacity="0"/></radialGradient></defs>
-      <ellipse cx="50" cy="58" rx="46" ry="44" fill="url(#cmEggGlow)"/><ellipse cx="50" cy="94" rx="26" ry="5" fill="rgba(0,0,0,0.3)"/>
-      <path d="M50 12 C72 12 82 46 80 64 C78 84 64 94 50 94 C36 94 22 84 20 64 C18 46 28 12 50 12 Z" fill="url(#cmEgg)" stroke="#1c1426" stroke-width="3"/>
-      <path d="M28 52 L38 46 L44 56 L54 48 L60 58 L72 50" fill="none" stroke="#ffe8a0" stroke-width="3" stroke-linejoin="round"/><path d="M28 52 L38 46 L44 56 L54 48 L60 58 L72 50" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
-      ${[[36, 30, 2.2], [60, 26, 1.6], [66, 70, 2], [40, 74, 1.4], [52, 38, 1.2], [30, 64, 1.2], [70, 40, 1.4]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="0.85"/>`).join('')}
-      <ellipse cx="38" cy="28" rx="7" ry="4" fill="#ffffff" opacity="0.35" transform="rotate(-30 38 28)"/></svg>`;
+  function eggSvg(premium = false) {
+    // (1.5, Sam 24 Nov: a premium crate on the comet is a premium egg: gold shell, gold glow, a band
+    // of gold round it, more stars.)
+    const k = premium ? 'P' : '';
+    const shell = premium ? ['#ffe9a0', '#b8780a', '#3a2200'] : ['#7a6ad8', '#2a1a5a', '#0a0618'];
+    const glow = premium ? '#ffd84a' : '#c8a8ff';
+    const stars = [[36, 30, 2.2], [60, 26, 1.6], [66, 70, 2], [40, 74, 1.4], [52, 38, 1.2], [30, 64, 1.2], [70, 40, 1.4], ...(premium ? [[46, 20, 1.3], [74, 58, 1.5], [26, 44, 1.1], [56, 82, 1.3]] : [])];
+    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><defs><radialGradient id="cmEgg${k}" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="${shell[0]}"/><stop offset="0.55" stop-color="${shell[1]}"/><stop offset="1" stop-color="${shell[2]}"/></radialGradient><radialGradient id="cmEggGlow${k}" cx="50%" cy="55%" r="50%"><stop offset="0" stop-color="${glow}" stop-opacity="${premium ? 0.85 : 0.65}"/><stop offset="1" stop-color="${glow}" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="50" cy="58" rx="${premium ? 52 : 46}" ry="${premium ? 50 : 44}" fill="url(#cmEggGlow${k})"/><ellipse cx="50" cy="94" rx="26" ry="5" fill="rgba(0,0,0,0.3)"/>
+      <path d="M50 12 C72 12 82 46 80 64 C78 84 64 94 50 94 C36 94 22 84 20 64 C18 46 28 12 50 12 Z" fill="url(#cmEgg${k})" stroke="#1c1426" stroke-width="3"/>
+      ${premium ? '<path d="M21 66 Q50 76 79 66" fill="none" stroke="#fff3c0" stroke-width="5"/><path d="M21 66 Q50 76 79 66" fill="none" stroke="#c88a10" stroke-width="2"/>' + [30, 50, 70].map((x) => `<path d="M${x} ${x === 50 ? 67 : 66} l3 4 l-3 4 l-3 -4 z" fill="#ffffff" stroke="#c88a10" stroke-width="1"/>`).join('') : ''}
+      <path d="M28 52 L38 46 L44 56 L54 48 L60 58 L72 50" fill="none" stroke="${premium ? '#fff8d8' : '#ffe8a0'}" stroke-width="3" stroke-linejoin="round"/><path d="M28 52 L38 46 L44 56 L54 48 L60 58 L72 50" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round"/>
+      ${stars.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#ffffff" opacity="0.85"/>`).join('')}
+      <ellipse cx="38" cy="28" rx="7" ry="4" fill="#ffffff" opacity="${premium ? 0.55 : 0.35}" transform="rotate(-30 38 28)"/></svg>`;
   }
   /** A cocoon of light, tinted by what is growing inside it. */
   function cocoonSvg(rarity) {

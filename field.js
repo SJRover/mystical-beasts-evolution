@@ -64,10 +64,14 @@ const FIELD = (() => {
     if (t && ((t.comet && typeof COMET_ART !== 'undefined') || (t.limited && typeof LIMITED !== 'undefined')) && !infected) {
       const cv = document.createElement('canvas');
       cv.className = 'beast-img comet-live';
-      const n = Math.min(512, Math.round(px));
+      // (Sam, 24 Nov: the comet was much laggier than the other worlds. Its canvases are now drawn at
+      // the size shown, no bigger than 360, ten times a second at most, off screen not at all,
+      // and no more than a few in one frame: see animate().)
+      const n = Math.min(360, Math.round(size * 1.25 * DPR()));
       cv.width = cv.height = n;
       sprite.appendChild(cv);
-      container._comet = { cv, g: cv.getContext('2d'), px: n, species: t.comet ? t.comet.species : null, stage: t.comet ? t.comet.stage : 0, limited: t.limited ? id : null, glow: t.limited ? 'rgba(220,232,245,0.7)' : (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.5)', next: 0 };
+      container._comet = { cv, g: cv.getContext('2d'), px: n, species: t.comet ? t.comet.species : null, stage: t.comet ? t.comet.stage : 0, limited: t.limited ? id : null, glow: t.limited ? 'rgba(220,232,245,0.7)' : (RARITIES[t.rarity] || {}).glow || 'rgba(255,255,255,0.5)', next: Math.random() / 10, vis: true };
+      watchComet(cv, container._comet);
       drawComet(container._comet, Math.random() * 10, 0);
       const auraNow2 = ART.cached('aura', id, evolved, infected, px * 1.2);
       if (auraNow2) auraImg.src = auraNow2;
@@ -92,17 +96,54 @@ const FIELD = (() => {
     return sprite;
   }
 
+  /** Which comet canvases are on screen (a beast off screen is not redrawn). */
+  let cometSeen = null;
+  const cometWatched = new Set();
+  function watchComet(cv, cm) {
+    // (Canvases of beasts gone from the field are let go, so the watcher holds on to nothing.)
+    for (const old of cometWatched) if (!old.isConnected) { if (cometSeen) cometSeen.unobserve(old); cometWatched.delete(old); old._cm = null; }
+    cv._cm = cm;
+    cometWatched.add(cv);
+    // (A beast just hatched or fused moves at once, if the slots are not all taken.)
+    const now = performance.now();
+    if ([...cometWatched].filter((c) => c._cm && c._cm.liveUntil > now).length < COMET_LIVE + 1) { cm.liveUntil = now + COMET_TURN; cm.lastLive = now; }
+    if (typeof IntersectionObserver === 'undefined') return;
+    if (!cometSeen) cometSeen = new IntersectionObserver((list) => { for (const e of list) if (e.target._cm) e.target._cm.vis = e.isIntersecting; }, { rootMargin: '80px' });
+    cometSeen.observe(cv);
+  }
+  /** How many comet beasts have been redrawn in this frame (a few at most; the rest wait a frame). */
+  let cometFrame = -1, cometDrawn = 0, cometTurnAt = 0;
+  const COMET_PER_FRAME = 3;
+  // Live slots (Sam, 24 Nov, the comet still laggy): drawing every comet beast's artwork ten times a
+  // second kept the main thread 84% busy with twenty on the field (Prime: 22%). Now only a few move
+  // their artwork at once, a few seconds each in turn, those waiting longest first; the rest hold
+  // their last frame and still bob, sway and walk like every other beast.
+  const COMET_LIVE = 4, COMET_TURN = 3500;
+  function cometTurns(now) {
+    if (now < cometTurnAt) return;
+    cometTurnAt = now + 400;
+    const all = [];
+    for (const cv of cometWatched) if (cv.isConnected && cv._cm) all.push(cv._cm);
+    let live = all.filter((c) => c.liveUntil > now).length;
+    const waiting = all.filter((c) => !(c.liveUntil > now) && c.vis).sort((a, b) => (a.lastLive || 0) - (b.lastLive || 0));
+    for (const c of waiting) {
+      if (live >= COMET_LIVE) break;
+      c.liveUntil = now + COMET_TURN; c.lastLive = now; live++;
+    }
+  }
+
   /** One frame of a comet beast on its canvas: a soft glow of its rarity, then the beast. */
   function drawComet(c, t, walk) {
     const g = c.g, px = c.px;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, px, px);
-    const gr = g.createRadialGradient(px / 2, px * 0.62, 0, px / 2, px * 0.62, px * 0.42);
+    // (The glow stays inside the canvas: cut off at its bottom edge, it showed as a line.)
+    const gr = g.createRadialGradient(px / 2, px * 0.6, 0, px / 2, px * 0.6, px * 0.38);
     gr.addColorStop(0, c.glow); gr.addColorStop(1, 'rgba(0,0,0,0)');
     g.globalAlpha = 0.45; g.fillStyle = gr; g.fillRect(0, 0, px, px); g.globalAlpha = 1;
     g.translate(px / 2, px * 0.9);
     if (c.limited) LIMITED.draw(g, c.limited, { t, walk }, px * 0.62);
-    else COMET_ART.draw(g, c.species, c.stage, { t, walk }, px * 0.6);
+    else COMET_ART.draw(g, c.species, c.stage, { t, walk }, px * 0.6 * (COMET_ART.grow ? COMET_ART.grow(c.stage, 1) : 1));
   }
 
   /** This frame's speed multiplier for a beast, easing towards a new target every few seconds. */
@@ -176,9 +217,15 @@ const FIELD = (() => {
     const m = motionOf(b.type);
     b.lt = (b.lt === undefined ? Math.random() * 20 : b.lt) + dt;
     const t = b.lt, spd = b.spd || 1;
-    // (A comet beast's next frame, about fifteen a second.)
+    // (A comet beast's next frame, about ten a second, if it has a live slot, is on screen and this
+    // frame has room.)
     const cm = b.dom._comet;
-    if (cm && (cm.next -= dt) <= 0) { cm.next = 1 / 15; drawComet(cm, t, (b.step || t * 6) / (Math.PI * 2)); }
+    if (cm && (cm.next -= dt) <= 0 && cm.vis) {
+      const now = performance.now();
+      const frame = document.timeline ? document.timeline.currentTime : now;
+      if (frame !== cometFrame) { cometFrame = frame; cometDrawn = 0; cometTurns(now); }
+      if (cm.liveUntil > now && cometDrawn < COMET_PER_FRAME) { cometDrawn++; cm.next = 1 / 10; drawComet(cm, t, (b.step || t * 6) / (Math.PI * 2)); }
+    }
     if (b.actNext === undefined) b.actNext = 2 + Math.random() * 6;
 
     let y = 0, rot = 0, sx = 1, sy = 1, shadow = 1;

@@ -720,5 +720,7 @@ const COMET_ART = (() => {
     if (cosmic) cosmicAura(ctx, pose.t || 0, true);
     ctx.restore();
   }
-  return { draw, SPECIES, COSMIC, STAGE_K, crystal, coil, leaf, hsl, strikeK, setH: () => { h = MUTANT_ART.H; } };
+  /** Undoes part (`k` of 1) of a stage's shrinking, for drawings where a young one would be too small. */
+  const grow = (stage, k) => Math.pow(1 / STAGE_K[Math.max(1, Math.min(4, stage | 0)) - 1], k);
+  return { draw, grow, SPECIES, COSMIC, STAGE_K, crystal, coil, leaf, hsl, strikeK, setH: () => { h = MUTANT_ART.H; } };
 })();
