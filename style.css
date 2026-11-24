@@ -2935,3 +2935,16 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .unlock-beast-rarity.cosmic, .trophy-rarity.cosmic, .beastopedia-card-rarity.rarity-cosmic { background: radial-gradient(1px 1px at 18% 30%, #ffffff 60%, transparent 61%), radial-gradient(1px 1px at 64% 70%, #c8a8ff 60%, transparent 61%), radial-gradient(1.4px 1.4px at 82% 28%, #7ad8ff 60%, transparent 61%), radial-gradient(1px 1px at 40% 78%, #ffd36b 60%, transparent 61%), linear-gradient(100deg, transparent 0%, transparent 36%, rgba(255,255,255,0.5) 48%, transparent 60%, transparent 100%), #000 !important; background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 260% 100%, auto !important; color: #ffffff !important; border: 1.5px solid #c8a8ff !important; text-shadow: 0 0 4px #c8a8ff; box-shadow: 0 0 10px rgba(200,168,255,0.7); animation: cosmic-badge 2.8s linear infinite; font-weight: 800 !important; }
 @keyframes cosmic-badge { from { background-position: 0 0, 0 0, 0 0, 0 0, 130% 0; } to { background-position: 0 0, 0 0, 0 0, 0 0, -130% 0; } }
 #details-beast-evolve b { color: #c8a8ff; }
+
+/* 1.5: the Shard Incubator, above Incubator Alpha, in the comet's violet. */
+#shard-pedestal { left: 25px; bottom: 182px; }
+#shard-pedestal .shard-base { background: linear-gradient(135deg, #2a1a5a 0%, #0a0618 100%); border-color: #8a6ad8; }
+#shard-pedestal .shard-glass { border-color: rgba(200,168,255,0.5); box-shadow: inset 0 0 12px rgba(200,168,255,0.25); }
+#shard-slot-render { width: 80%; height: 80%; display: flex; justify-content: center; align-items: center; z-index: 5; }
+#shard-slot-render .beast-svg, #shard-slot-render svg { animation: float-bob 2.2s ease-in-out infinite; filter: hue-rotate(20deg) saturate(0.8); }
+#shard-pedestal .shard-label { color: #c8a8ff; }
+#shard-pedestal .shard-count { font: 800 10px Fredoka, sans-serif; color: #e6dcff; text-shadow: 0 1px 2px #000; margin-top: 1px; white-space: nowrap; }
+/* (On phones the three incubators are one row at the bottom: the Shard Incubator sits above Alpha.) */
+@media (max-width: 1024px), (max-height: 600px), (orientation: portrait) {
+  #shard-pedestal { bottom: calc(max(25px, calc(10px + env(safe-area-inset-bottom))) + 146px + 132px) !important; left: 14px !important; right: auto !important; transform: none; }
+}

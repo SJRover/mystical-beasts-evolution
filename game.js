@@ -159,11 +159,20 @@ const UPGRADE_CONFIGS = {
     costMultiplier: 14,
     maxLevel: 5,
     getValue: (lvl) => lvl
+  },
+  // 1.5: prestige 15 in Prime or Low Gravity only, slow on purpose.
+  shardFeeder: {
+    name: 'Shard Feeder',
+    desc: 'Feeds the Shard Incubator by itself with your lowest Common, Rare or Super Rare beast: up to Tier 6, two tiers more each level, one every 25 minutes, five minutes sooner each level.',
+    baseCost: 2e33,
+    costMultiplier: 12,
+    maxLevel: 5,
+    getValue: (lvl) => lvl
   }
 };
 /** 1.5: which upgrades a world's shop offers (the comet drops the ones only the early worlds needed). */
 const COMET_DROPPED_UPGRADES = ['luckCharms', 'activeClicks', 'crateAutoOpener', 'doubleMergeChance'];
-const upgradeOffered = (id) => (state.currentSolarSystem === 'comet' ? !COMET_DROPPED_UPGRADES.includes(id) : id !== 'fusionSpeed');
+const upgradeOffered = (id) => (state.currentSolarSystem === 'comet' ? !COMET_DROPPED_UPGRADES.includes(id) && id !== 'shardFeeder' : id !== 'fusionSpeed' && (id !== 'shardFeeder' || state.prestigeLevel >= PRESTIGE_MAX));
 const COMET_UPGRADE_WORDS = { crateSpeed: ['Egg Speed', 'Comet eggs fall sooner.'], crateQuality: ['Egg Quality', 'Eggs can hatch a tier higher (each level).'] };
 
 // Biome settings
@@ -430,6 +439,7 @@ function saveGame() {
     cometShards: state.cometShards || 0,
     cometUnlocked: !!state.cometUnlocked,
     shardIncubator: state.shardIncubator || null,
+    shardFeedAt: state.shardFeedAt || 0,
     inBeastHub: state.inBeastHub,
     beastHubBeasts: state.beastHubBeasts,
     lastDailySpinDate: state.lastDailySpinDate,
@@ -511,7 +521,8 @@ function loadGame() {
     state.cometCocoons = saveData.cometCocoons || [];
     state.cometShards = saveData.cometShards || 0;
     state.cometUnlocked = !!saveData.cometUnlocked;
-    state.shardIncubator = saveData.shardIncubator || null;
+    state.shardIncubator = saveData.shardIncubator && typeof saveData.shardIncubator === 'object' ? saveData.shardIncubator : null;
+    state.shardFeedAt = saveData.shardFeedAt || 0;
     state.autoOpenCrates = typeof saveData.autoOpenCrates !== 'undefined' ? saveData.autoOpenCrates : true;
     state.autoCrateDrops = typeof saveData.autoCrateDrops !== 'undefined' ? saveData.autoCrateDrops : true;
     state.doubleEssenceEndTime = saveData.doubleEssenceEndTime || 0;
@@ -723,7 +734,9 @@ function updateIncubatorsVisibility() {
   const ped2 = document.getElementById('incubator-pedestal-2');
   const ped3 = document.getElementById('incubator-pedestal-3');
 
-  if (state.inBeastHub) {
+  if (typeof COMET !== 'undefined') drawShardIncubator();
+  // (1.5: comet beasts grow by fusion and never go in an incubator, so the comet has none.)
+  if (state.inBeastHub || state.currentSolarSystem === 'comet') {
     if (ped1) ped1.style.display = 'none';
     if (ped2) ped2.style.display = 'none';
     if (ped3) ped3.style.display = 'none';
@@ -1936,7 +1949,7 @@ window.addEventListener('touchmove', (e) => {
 // 1-second clock loop
 function tickGameSeconds() {
   state.maxTimeSeen = Math.max(state.maxTimeSeen || 0, Date.now());
-  if (typeof COMET !== 'undefined') tickCocoons();
+  if (typeof COMET !== 'undefined') { tickCocoons(); tickShardIncubators(); }
   let cps = state.inBeastHub ? 0 : calculateTotalCps();
   if (isBoostActive() && !state.inBeastHub) {
     cps *= 2;
@@ -2318,6 +2331,11 @@ function dragMove(e) {
       }
     }
 
+    // 1.5: the Shard Incubator, when it is free.
+    if (typeof COMET !== 'undefined' && shardIncubatorHere() && !shardJobs()[state.currentSolarSystem] && shardable(draggedBeast.type)) {
+      const sp = document.getElementById('shard-pedestal'); if (sp) sp.classList.add('hovering-compatible');
+    }
+
     // Highlight Trash Bin
     const trashBin = document.getElementById('trash-bin');
     if (trashBin) {
@@ -2349,13 +2367,25 @@ function dragEnd(e) {
   document.getElementById('incubator-pedestal-2').classList.remove('hovering-compatible');
   const ped3 = document.getElementById('incubator-pedestal-3');
   if (ped3) ped3.classList.remove('hovering-compatible');
-  
+  const shardPed = document.getElementById('shard-pedestal');
+  if (shardPed) shardPed.classList.remove('hovering-compatible');
+
   const trashBin = document.getElementById('trash-bin');
   if (trashBin) {
     trashBin.classList.remove('hovering-compatible');
   }
 
   const bRect = dragElement.getBoundingClientRect();
+
+  // 1.5: dropped on the Shard Incubator (if it takes the beast, nothing else happens).
+  if (shardPed && typeof COMET !== 'undefined' && shardIncubatorHere()) {
+    const sr = shardPed.getBoundingClientRect();
+    if (Math.hypot(sr.left + sr.width / 2 - (bRect.left + bRect.width / 2), sr.top + sr.height / 2 - (bRect.top + bRect.height / 2)) < 75 && startShardJob(draggedBeast)) {
+      draggedBeast = null;
+      dragElement = null;
+      return;
+    }
+  }
 
   // Check drop collisions with Trash Bin
   if (trashBin) {
@@ -2373,7 +2403,7 @@ function dragEnd(e) {
     }
   }
 
-  if (!state.inBeastHub) {
+  if (!state.inBeastHub && state.currentSolarSystem !== 'comet') {
     // Check drop Y collisions with Incubator 1 (Alpha)
     const ped1 = document.getElementById('incubator-pedestal');
     const pRect1 = ped1.getBoundingClientRect();
@@ -3434,8 +3464,9 @@ function renderUpgrades() {
   const upgradesList = document.getElementById('shop-upgrades-list');
   upgradesList.innerHTML = '';
 
+  const noIncubators = state.currentSolarSystem === 'comet';
   // 1. Add Incubator 1 buy card (if locked)
-  if (!state.unlockedIncubators[0]) {
+  if (!state.unlockedIncubators[0] && !noIncubators) {
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
@@ -3455,7 +3486,7 @@ function renderUpgrades() {
   }
 
   // 2. Add Incubator 2 buy card (Prestige 3+ and Alpha unlocked and Beta locked)
-  if (state.prestigeLevel >= 3 && state.unlockedIncubators[0] && !state.unlockedIncubators[1]) {
+  if (state.prestigeLevel >= 3 && state.unlockedIncubators[0] && !state.unlockedIncubators[1] && !noIncubators) {
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
@@ -3475,7 +3506,7 @@ function renderUpgrades() {
   }
 
   // 3. Add Incubator 3 buy card (Prestige 5+ and Beta unlocked and Gamma locked)
-  if (state.prestigeLevel >= 5 && state.unlockedIncubators[1] && !state.unlockedIncubators[2]) {
+  if (state.prestigeLevel >= 5 && state.unlockedIncubators[1] && !state.unlockedIncubators[2] && !noIncubators) {
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
@@ -5061,6 +5092,75 @@ function startCometFusion(a, b) {
   mergeStats().merges++;
   saveGame();
 }
+// ------------------------------------------------------------------ 1.5: the Shard Incubators
+// At prestige 15, Prime and Low Gravity each have one: a beast dropped in is broken down into comet
+// shards over a minute or more (the bigger, the longer, and the more shards). Shards buy comet eggs.
+const shardJobs = () => (state.shardIncubator && typeof state.shardIncubator === 'object' ? state.shardIncubator : (state.shardIncubator = {}));
+const shardIncubatorHere = () => !state.inBeastHub && state.currentSolarSystem !== 'comet' && (state.prestigeLevel || 0) >= PRESTIGE_MAX;
+const shardable = (id) => { const t = BEAST_TEMPLATES[id]; return !!t && !t.comet && !isBossBeast(id) && !isRelic(id); };
+/** Puts a beast in this world's Shard Incubator; false (and why) if it cannot go in. */
+function startShardJob(beast, auto = false) {
+  const t = BEAST_TEMPLATES[beast.type];
+  if (!t) return false;
+  if (!shardable(beast.type)) { showWarning('Not this one', `${t.name} cannot be broken down into shards.`); return false; }
+  if (beast.infected) { showWarning('Infected', 'Cure it first: an infected beast gives no shards.'); return false; }
+  const jobs = shardJobs(), sys = state.currentSolarSystem;
+  if (jobs[sys]) { showWarning('Shard Incubator busy', 'It is still breaking down the last beast.'); return false; }
+  const shards = COMET.shardsFor(beast.type, beast.evolved);
+  if (!auto && (['LEGENDARY', 'GODLY', 'DARK_MATTER'].includes(t.rarity) || beast.evolved) && !confirm(`Break ${t.name} (Tier ${t.tier}) down into ${shards} comet shards? It will be gone for good.`)) return false;
+  jobs[sys] = { type: beast.type, evolved: !!beast.evolved, shards, auto, start: Date.now(), until: Date.now() + COMET.shardTime(beast.type) * 1000 };
+  removeBeastFromField(beast.id);
+  if (audio) audio.playClick();
+  drawShardIncubator();
+  saveGame();
+  return true;
+}
+/** The pedestal: shown in this world at prestige 15, the beast inside, its ring and time, and the shards you hold. */
+function drawShardIncubator() {
+  const ped = document.getElementById('shard-pedestal');
+  if (!ped) return;
+  const here = shardIncubatorHere();
+  ped.style.display = here ? 'flex' : 'none';
+  if (!here) return;
+  const cnt = document.getElementById('shard-count');
+  if (cnt) cnt.textContent = `☄ ${formatNumber(state.cometShards || 0)} shards`;
+  const job = shardJobs()[state.currentSolarSystem];
+  const slot = document.getElementById('shard-slot-render'), ov = document.getElementById('shard-progress-overlay');
+  if (!job) { if (slot.dataset.t) { slot.innerHTML = ''; slot.dataset.t = ''; } ov.style.display = 'none'; return; }
+  if (slot.dataset.t !== job.type) { slot.innerHTML = getBeastSVG(job.type, job.evolved, false); slot.dataset.t = job.type; }
+  const left = Math.max(0, (job.until - Date.now()) / 1000), k = 1 - left / Math.max(1, (job.until - job.start) / 1000);
+  ov.style.display = 'flex';
+  document.getElementById('shard-progress-ring').style.strokeDashoffset = String(263.89 * (1 - k));
+  document.getElementById('shard-countdown').textContent = left > 60 ? `${Math.floor(left / 60)}m ${Math.round(left % 60)}s` : `${Math.ceil(left)}s`;
+}
+/** The Shard Feeder upgrade: now and then, the lowest small beast goes in by itself. */
+function autoFeedShards() {
+  const lvl = (state.upgrades && state.upgrades.shardFeeder) || 0;
+  if (!lvl || !shardIncubatorHere() || draggedBeast || shardJobs()[state.currentSolarSystem]) return;
+  if (Date.now() - (state.shardFeedAt || 0) < (30 - 5 * lvl) * 60000) return;
+  const maxTier = 4 + 2 * lvl;
+  const pick = state.beastsOnField
+    .filter((b) => { const t = BEAST_TEMPLATES[b.type]; return t && shardable(b.type) && !b.infected && !b.evolved && ['COMMON', 'RARE', 'SUPER_RARE'].includes(t.rarity) && t.tier <= maxTier; })
+    .sort((a, b) => BEAST_TEMPLATES[a.type].tier - BEAST_TEMPLATES[b.type].tier)[0];
+  if (!pick) return;
+  state.shardFeedAt = Date.now();
+  startShardJob(pick, true);
+}
+/** Every second, in any world: finished jobs pay their shards (also those that finished while you were away). */
+function tickShardIncubators() {
+  const jobs = shardJobs();
+  let paid = 0, told = false;
+  for (const sys of Object.keys(jobs)) {
+    const j = jobs[sys];
+    if (j && j.until <= Date.now()) { paid += j.shards; told = told || !j.auto; state.cometShards = (state.cometShards || 0) + j.shards; jobs[sys] = null; }
+  }
+  autoFeedShards();
+  drawShardIncubator();
+  if (!paid) return;
+  if (told) spawnToastNotification('☄ Comet shards', `+${formatNumber(paid)} comet shards (you have ${formatNumber(state.cometShards)}). They buy comet eggs in the comet's shop.`, COMET.eggSvg());
+  saveGame();
+}
+
 /** The cocoons on the comet's meadow, each with a ring filling as it grows and the time left. */
 function drawCocoons() {
   const playground = document.getElementById('beast-playground');

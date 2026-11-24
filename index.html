@@ -129,6 +129,24 @@
         <div class="incubator-label" style="color: #ff3333">Incubator Gamma</div>
       </div>
 
+      <!-- 1.5: the Shard Incubator (Prime and Low Gravity at prestige 15): a beast broken down into comet shards. -->
+      <div id="shard-pedestal" class="incubator-pedestal-container" style="display:none" title="Drag a beast here to break it down into comet shards">
+        <div class="incubator-pedestal-base shard-base">
+          <div class="incubator-pedestal-glass shard-glass">
+            <div id="shard-slot-render"></div>
+            <div id="shard-progress-overlay" class="incubator-timer-overlay" style="display:none">
+              <svg viewBox="0 0 100 100" class="incubator-timer-ring">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none" />
+                <circle id="shard-progress-ring" cx="50" cy="50" r="42" stroke="#c8a8ff" stroke-width="8" fill="none" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+              </svg>
+              <div id="shard-countdown" class="incubator-countdown-text"></div>
+            </div>
+          </div>
+        </div>
+        <div class="incubator-label shard-label">Shard Incubator</div>
+        <div id="shard-count" class="shard-count"></div>
+      </div>
+
       <!-- TOP HUD (Points, CPS, Multipliers) -->
       <div id="hud-overlay">
         <!-- Essence Count -->
