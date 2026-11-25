@@ -410,7 +410,8 @@ body {
   bottom: 22px;
   border: 2px dashed #ffd700;
   border-radius: 42px;
-  animation: pulse-dashed 1.2s linear infinite;
+  /* (1.5: no pulse-dashed here: it animates an SVG stroke these boxes do not have, so it showed nothing
+     but restyled the pedestals every frame of a hold.) */
   pointer-events: none;
 }
 
