@@ -21,7 +21,9 @@ const ready = await t.evaluate(`(async () => {
   state.isTutorialCompleted = true;
   document.querySelectorAll('.modal.active, .modal-overlay.active').forEach((m) => m.classList.remove('active'));
   PT.dismiss(); PT.clear();
-  for (let i = 0; i < ${COUNT}; i++) { const p = WORLD.viewPct(8 + (i % 8) * 11, 18 + Math.floor(i / 8) * 13); spawnBeastOnField('sparky', p.x, p.y, false, false); }
+  // (PRESTIGE=n BEAST=id: a biome and a beast to test with, 25 Nov: lag at prestige 13.)
+  ${process.env.PRESTIGE ? `state.prestigeLevel = ${Number(process.env.PRESTIGE)}; applyBiomeBg(state.prestigeLevel); await new Promise((r) => setTimeout(r, 1500));` : ''}
+  for (let i = 0; i < ${COUNT}; i++) { const p = WORLD.viewPct(8 + (i % 8) * 11, 18 + Math.floor(i / 8) * 13); spawnBeastOnField('${process.env.BEAST || 'sparky'}', p.x, p.y, false, false); }
   await new Promise((r) => setTimeout(r, 1500));
   return state.beastsOnField.length;
 })()`);

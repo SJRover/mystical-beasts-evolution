@@ -1563,6 +1563,10 @@ function gameLoop() {
       b.lastWalkChange = now + ((isBossBeast(b.type) || b.infected) ? 600 + Math.random() * 700 : 1500 + Math.random() * 3000);
     }
 
+    // 1.5 (Sam, 25 Nov: holding a beast to merge was very laggy on the phone): while one is held, the
+    // rest stand still (no wandering, no body language), so a hold costs little and the beast you
+    // aim for stays where it is. Their crystals, clocks and the plague go on.
+    if (!(draggedBeast && dragStartedMoving && draggedBeast !== b)) {
     // Move in percentage space using cached dimensions
     // 1.3: speeding up and slowing down over time, and bursts of speed (averages 1).
     const spdMul = FIELD.speed(b, dt);
@@ -1599,6 +1603,7 @@ function gameLoop() {
     }
     // 1.3: body language and actions (hops, swirls, bursts) with their particles.
     FIELD.animate(b, dt);
+    }
 
     // Drop crystals (Infected beasts and shadow enemies drop nothing!)
     if (!b.infected && !isBossBeast(b.type)) {
@@ -1726,7 +1731,7 @@ function gameLoop() {
 
   // 1.3: beasts bump off one another instead of walking through (not the one being dragged, nor
   // shadow enemies, which must reach their prey).
-  FIELD.collide(state.beastsOnField, width, height);
+  if (!(draggedBeast && dragStartedMoving)) FIELD.collide(state.beastsOnField, width, height); // (none while a beast is held: the rest stand still then)
 
   // 2. Autocollector timers
   if (state.upgrades.autoCollector > 0) {

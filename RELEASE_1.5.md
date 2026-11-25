@@ -29,6 +29,27 @@ ALSO
 - Every beast shows its element, and the battle picker filters by element, marking what the giants are weak to.
 - New battle music for Worlds 4 to 6 and a new comet track.
 
+## App Store description (1.5)
+
+Merge mystical beasts, grow them into legends, and lead them into battle against giants.
+
+Collect cute beasts, drag matching ones together and watch them evolve into rarer, stronger forms, from Common all the way to Dark Matter. Every beast earns essence for you, even while you are away, so your meadow keeps growing. Ascend through sixteen biomes in each of two solar systems, Prime and Low Gravity, and discover more than 170 beasts across the game.
+
+THE INTERSTELLAR COMET
+Reach the top of both solar systems and a comet comes into view: a third world with fifteen alien beasts, the rarest in the universe. Hatch them from comet eggs, fuse them in cocoons from hatchling to ascended, and chase the Cosmic ones.
+
+BATTLE MODE
+Build a team of six and fight across eight worlds. Play cheap, fast beasts as tanks up front and long-range beasts behind them, fire specials at the right moment, and use each enemy's weakness. Face snipers, bomb-lobbers, splitting swarms and huge bosses.
+
+GIANT MUTANT BOSSES
+Worlds 7 and 8 are full of giants with attacks you can see coming: the Omega Chimera, the World-Eater, and two or three titans at once. Find their weak elements and bring the right beasts.
+
+LIMITED BEASTS
+Win rare limited beasts by finishing challenges before time runs out, then they are gone for good.
+
+ALSO
+Daily spins, premium crates, achievements with real rewards, origami Folded Legends, stained-glass Relics and a Beastopedia to complete.
+
 ## Before release (checked 24 Nov)
 
 - [x] MARKETING_VERSION 1.5 (ios/App/App.xcodeproj); build numbers come from Codemagic.
