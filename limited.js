@@ -227,7 +227,7 @@ const LIMITED = (() => {
   }
   const svgCache = new Map();
   function svg(id) {
-    if (!svgCache.has(id)) svgCache.set(id, `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><image href="${canvasFor(id, 192).toDataURL('image/png')}" x="0" y="0" width="100" height="100"/></svg>`);
+    if (!svgCache.has(id)) svgCache.set(id, `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="overflow:hidden"><image href="${canvasFor(id, 192).toDataURL('image/png')}" x="0" y="0" width="100" height="100"/></svg>`);
     return svgCache.get(id);
   }
 
@@ -292,7 +292,7 @@ const LIMITED = (() => {
       card.className = `beastopedia-card limited-card ${has ? '' : 'locked limited-shadow'}`;
       card.dataset.id = e.beast;
       // (Numbered like every other beast, the shining Limited tag on the right: Sam, 24 Nov.)
-      card.innerHTML = `<div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-limited" style="font-weight:bold; font-size:8px; text-transform:uppercase;"><span class="rarity-shine limited-shine">Limited</span></span></div>
+      card.innerHTML = `${has && typeof ELEMENT_ICON !== 'undefined' && ELEMENT_ICON[B.element] ? `<span class="pedia-elem" title="${ELEMENTS[B.element].name}">${ELEMENT_ICON[B.element]}</span>` : ''}<div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-limited" style="font-weight:bold; font-size:8px; text-transform:uppercase;"><span class="rarity-shine limited-shine">Limited</span></span></div>
         <div class="beastopedia-card-icon">${svg(e.beast)}</div>
         <div class="beastopedia-card-name" style="font-size:9px;margin-top:4px;text-align:center;">${has ? B.name : isLive ? `Until ${e.endText}` : 'Missed'}</div>
         ${has ? '' : `<div class="limited-how">${isLive ? 'Tap for the challenges' : e.challenges.map((c) => c.text.split('.')[0]).join(' · ')}</div>`}`;

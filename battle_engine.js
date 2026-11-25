@@ -383,7 +383,8 @@ const BattleEngine = (() => {
       this.spread(dt);
       // Coin piles.
       for (const side of ['you', 'foe']) {
-        const takers = this.units.filter((u) => u.side !== side && u.state === 'capture').length;
+        // (Not one in the air: Sam, 25 Nov, Gorrak took coins mid-leap.)
+        const takers = this.units.filter((u) => u.side !== side && u.state === 'capture' && !u.airborne).length;
         if (takers) {
           const was = this.piles[side];
           this.piles[side] = Math.max(0, was - takers * dt);

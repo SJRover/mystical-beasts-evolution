@@ -413,6 +413,7 @@ const MUTANTS = (() => {
         c.from = { x: u.x, y: u.y }; c.to = { x: clampX(p.x, u.r + 10), y: Math.min(AH - 160, Math.max(200, p.y)) };
         c.zone = zone(b, { shape: 'ring', x: c.to.x, y: c.to.y, r: m.r, at, owner: u.uid, type: m.type });
         u.airborne = true;
+        u.state = 'walk'; u.capturing = false; // (off the pile while in the air)
         c.noStop = true;
         break;
       }

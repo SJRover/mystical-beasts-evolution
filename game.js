@@ -62,15 +62,16 @@ const PRESTIGE_TARGETS = [
   25000000000000000,       // lvl 4 -> 5 (25Qa)
   1000000000000000000,     // lvl 5 -> 6 (1Qi)
   50000000000000000000,    // lvl 6 -> 7 (50Qi)
-  2500000000000000000000,  // lvl 7 -> 8 (2.5Sx)
-  125000000000000000000000, // lvl 8 -> 9 (125Sx)
-  5000000000000000000000000, // lvl 9 -> 10 (5Sp)
-  250000000000000000000000000, // lvl 10 -> 11 (250Sp)
-  10000000000000000000000000000, // lvl 11 -> 12 (10Oc)
-  // 1.5: the last three ascents, the same climb (x50, x50, x40).
-  5e29,                    // lvl 12 -> 13 (500Oc)
-  2.5e31,                  // lvl 13 -> 14 (25No)
-  1e33                     // lvl 14 -> 15 (1Dc)
+  // 1.5 (Sam, 25 Nov: at prestige 12, four Tier 20s overnight made 7%; evolutions take far longer
+  // since 1.4): from level 7 the targets are lower, half at 7, a fifth from 8 on.
+  1.25e21,                 // lvl 7 -> 8 (1.25Sx; was 2.5Sx)
+  2.5e22,                  // lvl 8 -> 9 (25Sx; was 125Sx)
+  1e24,                    // lvl 9 -> 10 (1Sp; was 5Sp)
+  5e25,                    // lvl 10 -> 11 (50Sp; was 250Sp)
+  2e27,                    // lvl 11 -> 12 (2Oc; was 10Oc)
+  1e29,                    // lvl 12 -> 13 (100Oc; was 500Oc)
+  5e30,                    // lvl 13 -> 14 (5No; was 25No)
+  2e32                     // lvl 14 -> 15 (200No; was 1Dc)
 ];
 // 1.5: prestige 15 is the highest in each solar system (16 biomes, prestige 0 to 15).
 const PRESTIGE_MAX = 15;
@@ -1447,6 +1448,19 @@ function openCrate(crateId, x, y) {
 }
 
 // Toast notification
+// 1.5 (Sam, 25 Nov: a double mutation, Tier 15 evolutions or a plague stacked popups down the whole
+// screen): two at the top at most, a new one taking the oldest one's place; a tap on one closes it.
+(function capToastStack() {
+  const go = () => {
+    const c = document.getElementById('toast-container');
+    if (!c) return;
+    const trim = () => { const list = [...c.children]; while (list.length > 2) list.shift().remove(); };
+    new MutationObserver(trim).observe(c, { childList: true });
+    c.addEventListener('click', (e) => { const t = e.target.closest('#toast-container > *'); if (t) t.remove(); });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
+
 function spawnToastNotification(title, desc, iconSvg) {
   const container = document.getElementById('toast-container');
   if (!container) return;
@@ -2320,25 +2334,10 @@ function dragMove(e) {
     dragElement.classList.add('dragging');
 
     // Highlight merge candidates
-    const beastTemplate = BEAST_TEMPLATES[draggedBeast.type];
+    // (1.5, Sam 24-25 Nov: comet beasts of different tiers, Tier 20s, and a Tier 19 with a Tier 20 lit
+    // up though none of them merge. The rings now follow the merge's own rules: mergeWorks.)
     if (!isBossBeast(draggedBeast.type)) {
-      state.beastsOnField.forEach(b => {
-        const bTemplate = BEAST_TEMPLATES[b.type];
-        // 1.5 (Sam, 24 Nov: a Tier 1 and a Tier 2 comet beast were shown as a match): comet beasts
-        // light up only where the comet's own rule says they fuse.
-        if ((beastTemplate && beastTemplate.comet) || (bTemplate && bTemplate.comet)) {
-          if (b.id !== draggedBeast.id && typeof COMET !== 'undefined' && COMET.fusionOf(draggedBeast.type, b.type).to) b.dom.classList.add('hovering-compatible');
-          return;
-        }
-        const isSameTier = (beastTemplate && bTemplate && beastTemplate.tier === bTemplate.tier);
-        const isBothLegendary = (beastTemplate && bTemplate && beastTemplate.rarity === 'LEGENDARY' && bTemplate.rarity === 'LEGENDARY');
-        if (b.id !== draggedBeast.id && 
-            (isSameTier || isBothLegendary) && 
-            b.evolved === draggedBeast.evolved && 
-            b.infected === draggedBeast.infected) {
-          b.dom.classList.add('hovering-compatible');
-        }
-      });
+      for (const b of state.beastsOnField) if (mergeWorks(draggedBeast, b)) b.dom.classList.add('hovering-compatible');
     }
 
     // Highlight Incubators (if unlocked and vacant and NOT in Beast Hub)
@@ -2567,6 +2566,32 @@ function executeMerge(beastA, beastB) {
   executeMergeInner(beastA, beastB);
   checkMergeAchievements();
 }
+/**
+ * 1.5: whether two beasts on the field would merge if one were dropped on the other: the drop's
+ * rules (same tier, no relics or bosses, evolved with evolved, infected with infected) and
+ * executeMergeInner's (the result must be able to evolve, or the Legendary, Tier 15 and Tier 19
+ * specials); a comet beast by the comet's fusion rule. For the rings that show the matches.
+ */
+function mergeWorks(a, b) {
+  const ta = BEAST_TEMPLATES[a.type], tb = BEAST_TEMPLATES[b.type];
+  if (!ta || !tb || a.id === b.id) return false;
+  if (ta.comet || tb.comet) return typeof COMET !== 'undefined' && !!COMET.fusionOf(a.type, b.type).to;
+  if (isBossBeast(a.type) || isBossBeast(b.type) || ta.relic || tb.relic) return false;
+  if (ta.tier !== tb.tier || a.evolved !== b.evolved || a.infected !== b.infected) return false;
+  if ((ta.rarity === 'LEGENDARY' && tb.rarity === 'LEGENDARY' && ta.tier < 15) || ta.tier === 15 || ta.tier === 19) return true;
+  let t = ta;
+  if (a.type !== b.type) {
+    if (ta.tier >= 16) {
+      const R = ['COMMON', 'RARE', 'SUPER_RARE', 'ULTRA_RARE', 'LEGENDARY', 'GODLY', 'DARK_MATTER'];
+      if (R.indexOf(tb.rarity) > R.indexOf(ta.rarity)) t = tb;
+    } else {
+      const sys = state.currentSolarSystem || 'prime';
+      t = Object.values(BEAST_TEMPLATES).find((x) => x.tier === ta.tier && x.rarity === 'COMMON' && (x.system || 'prime') === sys) || ta;
+    }
+  }
+  return !!(t.evolutions && t.evolutions.length);
+}
+
 function executeMergeInner(beastA, beastB) {
   let template = BEAST_TEMPLATES[beastA.type];
   const targetTemplate = BEAST_TEMPLATES[beastB.type];
@@ -3378,7 +3403,7 @@ function renderShop() {
       const card = document.createElement('div');
       card.className = 'shop-card comet-egg-card';
       card.innerHTML = `<div class="shop-card-icon" style="width:54px;height:54px">${COMET.eggSvg()}</div><div class="shop-card-info"><div class="shop-card-name">Comet Egg</div><div class="shop-card-desc">Hatches a comet beast: Super Rare to, very rarely, Cosmic.</div></div><button class="shop-buy-btn" ${can ? '' : 'disabled'}>${label}</button>`;
-      card.querySelector('button').addEventListener('click', () => { if (!can) return; buy(); spawnCrateOnField(); if (audio) audio.playClick(); saveGame(); renderShop(); updateHUD(); });
+      onTap(card.querySelector('button'), () => { if (!can) return; buy(); spawnCrateOnField(); if (audio) audio.playClick(); saveGame(); renderShop(); updateHUD(); });
       beastList.appendChild(card);
     }
   }
@@ -3419,9 +3444,11 @@ function renderShop() {
     beastList.appendChild(card);
   });
 
-  const buyButtons = beastList.querySelectorAll('.shop-buy-btn');
+  // (1.5, Sam 25 Nov: a delay before a bought beast came, as there was with upgrades: a tap now counts
+  // as the finger lifts. Only beast buttons: the comet's egg buttons have their own.)
+  const buyButtons = beastList.querySelectorAll('.shop-buy-btn[data-id]');
   buyButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
+    onTap(btn, () => {
       const id = btn.getAttribute('data-id');
       const cost = parseFloat(btn.getAttribute('data-cost'));
       buyBeastFromShop(id, cost);
@@ -3429,6 +3456,23 @@ function renderShop() {
   });
 
   renderUpgrades();
+}
+
+/**
+ * 1.4/1.5: a tap that counts the moment the finger lifts (the browser's click comes late on a
+ * phone, and a quick second tap was taken as a double tap and lost). A finger that moved is a
+ * scroll. The click that follows is ignored; a click on its own (a mouse) still works.
+ */
+function onTap(btn, act) {
+  let down = null, tapped = 0;
+  btn.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; });
+  btn.addEventListener('pointerup', (e) => {
+    if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10 || btn.disabled) { down = null; return; }
+    down = null;
+    tapped = performance.now();
+    act();
+  });
+  btn.addEventListener('click', () => { if (performance.now() - tapped < 600) return; act(); });
 }
 
 function buyBeastFromShop(beastId, cost) {
@@ -3711,6 +3755,7 @@ function renderBeastopedia() {
       const rarityName = rarityInfo ? rarityInfo.name : 'Common';
       
       card.innerHTML = `
+        ${isUnlocked && ELEMENT_ICON[template.element] ? `<span class="pedia-elem" title="${ELEMENTS[template.element].name}">${ELEMENT_ICON[template.element]}</span>` : ''}
         <div class="beastopedia-card-num">
           <span>#${(index + 1).toString().padStart(2, '0')}</span>
           <span class="beastopedia-card-rarity rarity-${template.rarity.toLowerCase()}" style="${template.rarity !== 'DARK_MATTER' ? `color: ${rarityColor};` : ''} font-weight: bold; font-size: 8px; text-transform: uppercase; ${isUnlocked ? '' : 'opacity: 0.45;'}">
@@ -3768,6 +3813,7 @@ function renderBeastopedia() {
         card.className = `beastopedia-card comet-card ${tier ? '' : 'locked'}`;
         card.setAttribute('data-id', id);
         card.innerHTML = `
+          ${tier && t && ELEMENT_ICON[t.element] ? `<span class="pedia-elem" title="${ELEMENTS[t.element].name}">${ELEMENT_ICON[t.element]}</span>` : ''}
           <div class="beastopedia-card-num"><span>#${String(i + 1).padStart(2, '0')}</span><span class="beastopedia-card-rarity rarity-${s.rarity.toLowerCase()}" style="color:${r.color}; font-weight:bold; font-size:8px; text-transform:uppercase;">${rarityHtml(s.rarity)}</span></div>
           <div class="beastopedia-card-icon ${tier ? '' : 'comet-shadow'}">${getBeastSVG(id, false, false)}</div>
           <div class="beastopedia-card-name" style="font-size:9px; margin-top:4px; text-align:center;">${tier ? s.name : 'Unknown'}</div>
@@ -3847,7 +3893,7 @@ function updateDetailsModalContent() {
   const merges = state.trophyCounts[detailsBeastId] || 0;
   
   document.getElementById('details-beast-info').innerText = 
-    `Tier ${template.tier} | ${elementLabel} Element | Produces +${cpsText}/s | Merged: ${merges} times`;
+    `Tier ${template.tier} | ${ELEMENT_ICON[template.element] || ''} ${elementLabel} Element | Produces +${cpsText}/s | Merged: ${merges} times`;
 
   document.getElementById('details-beast-lore').innerText = template.lore;
   // 1.4: how far this species is towards its evolved form.
@@ -6069,7 +6115,8 @@ function setupDailySpin() {
   
   const spinBtn = document.getElementById('wheel-spin-btn');
   if (spinBtn) {
-    spinBtn.addEventListener('click', triggerDailySpin);
+    // (1.5, Sam 25 Nov: it sometimes took two taps on the phone, the first taken as a hover: now the tap counts as the finger lifts.)
+    onTap(spinBtn, () => { if (!spinBtn.disabled) triggerDailySpin(); });
   }
   
   const claimBtn = document.getElementById('daily-spin-claim-btn');

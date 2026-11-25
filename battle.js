@@ -483,6 +483,9 @@ const BATTLE = (() => {
     const sort = b.pickSort;
     // (1.5, Sam 24 Nov: pick by how they attack too: up close, from range, or on an area.)
     if (!sort.kind) sort.kind = 'all';
+    if (!sort.elem) sort.elem = 'all';
+    // (The elements this level's giants are weak to, for the filter: Sam, 25 Nov.)
+    const weakHere = new Set(typeof MUTANTS !== 'undefined' ? (level.bossIds || []).flatMap((bid) => Object.keys((MUTANTS.BOSSES[bid] || {}).weak || {})) : []);
     const kindOf = (id) => { const k = D.attackKind(id, prestigeOf(id)); return k === 'single' ? 'melee' : k; };
     const known = !!b.played[level.id] || cleared(level.id);
     const sh = sheet(level.boss ? `${n}. ${known ? level.name : 'Boss level'}` : `${w.name} ${n}`, level.boss ? (known ? 'Boss level' : 'Who is it? Play to find out') : D.PATTERNS[level.pattern].name);
@@ -506,7 +509,7 @@ const BATTLE = (() => {
         const sp = hasSpecial(id, i);
         return `<button class="bt-slot${abil} ${t.legend ? 'legend' : ''} ${sp ? 'evo' : ''}" data-id="${id}" data-slot="${i}" style="--rc:${rarityColour(id)}"><img data-pic="${id}" ${evolvedOwned(id) ? 'data-evo="1"' : ''} alt=""><b>T${synced() && cap.tier ? Math.min(t.tier, cap.tier) : t.tier}</b>${sp ? `<em>${(D.ABILITIES[D.abilityOf(id)] || {}).icon || '✦'}</em>` : ''}${prestigeOf(id) && !synced() ? `<i>P${prestigeOf(id)}</i>` : ''}</button>`;
       }).join('');
-      let pool = mine.filter((id) => (sort.rarity === 'all' || D.T(id).rarity === sort.rarity) && (sort.kind === 'all' || kindOf(id) === sort.kind));
+      let pool = mine.filter((id) => (sort.rarity === 'all' || D.T(id).rarity === sort.rarity) && (sort.kind === 'all' || kindOf(id) === sort.kind) && (sort.elem === 'all' || (sort.elem === 'weak' ? weakHere.has(D.T(id).element) : D.T(id).element === sort.elem)));
       pool.sort((a, c) => (sortValue(a, sort.key) - sortValue(c, sort.key)) * sort.dir);
       pool = [...pool.filter((id) => ok(id)), ...pool.filter((id) => !ok(id))];
       const list = pool.map((id) => {
@@ -519,7 +522,7 @@ const BATTLE = (() => {
         const ab = specialOwned(id) ? D.ABILITIES[D.abilityOf(id)] : null;
         return `<button class="bt-pick ${inDeck ? 'in' : ''} ${allowed ? '' : 'barred'} ${t.legend ? 'legend' : ''}" data-id="${id}">
           <img data-pic="${id}" alt="">
-          <div class="bt-pick-body"><div class="bt-pick-name">${t.name}${prestigeOf(id) ? ` <i class="bt-prest">Prestige ${prestigeOf(id)}</i>` : ''}${t.legend ? ' <i class="bt-prest legend">Legend</i>' : ''}</div>
+          <div class="bt-pick-body"><div class="bt-pick-name">${typeof ELEMENT_ICON !== 'undefined' && ELEMENT_ICON[t.element] ? `<span class="bt-elem ${weakHere.has(t.element) ? 'weak' : ''}" title="${ELEMENTS[t.element].name}${weakHere.has(t.element) ? ': a weak spot here' : ''}">${ELEMENT_ICON[t.element]}</span> ` : ''}${t.name}${prestigeOf(id) ? ` <i class="bt-prest">Prestige ${prestigeOf(id)}</i>` : ''}${t.legend ? ' <i class="bt-prest legend">Legend</i>' : ''}</div>
           <div class="bt-pick-meta"><span style="color:${rarityColour(id)}">Tier ${t.tier} ${RARITIES[t.rarity].name}</span>${sy ? ` <b class="bt-synced">⇩ T${tierNow}</b>` : ''} · 💧${sy ? D.costOfTier(tierNow) : D.costOf(id)} · ${sy ? tierNow : D.cooldownOf(id)}s${allowed ? '' : ' · <b class="bt-no">not allowed here</b>'}</div>
           <div class="bt-stats">${statChips(s)}${kindChip(sy ? (34 + 20 * Math.max(0, s.rng - 1) >= 74 ? 'ranged' : D.attackKind(id, prestigeOf(id)) === 'area' ? 'area' : 'single') : D.attackKind(id, prestigeOf(id)))}</div>
           ${ab ? `<span class="bt-evo-chip">✦ Evolved: ${ab.icon} ${ab.name} <small>in a left slot</small></span>` : ''}</div>
@@ -552,6 +555,7 @@ const BATTLE = (() => {
         <div class="bt-sortbar">
           <div class="bt-sorts">${SORTS.map(([k, name]) => `<button class="bt-sort ${sort.key === k ? 'on' : ''}" data-k="${k}">${name}</button>`).join('')}<button class="bt-sort dir" data-dir="1">${sort.dir < 0 ? '↓ High' : '↑ Low'}</button></div>
           <select class="bt-rarity-filter" aria-label="Rarity">${['all', ...RANK].map((r) => `<option value="${r}" ${sort.rarity === r ? 'selected' : ''}>${r === 'all' ? 'All rarities' : RARITIES[r].name}</option>`).join('')}</select>
+          <select class="bt-rarity-filter bt-elem-filter" aria-label="Element">${[['all', 'All elements'], ...(weakHere.size ? [['weak', '★ Weak spots here']] : []), ...Object.keys(ELEMENTS).map((k) => [k, `${ELEMENT_ICON[k] || ''} ${ELEMENTS[k].name}${weakHere.has(k) ? ' ★ weak spot' : ''}`])].map(([k, name]) => `<option value="${k}" ${sort.elem === k ? 'selected' : ''}>${name}</option>`).join('')}</select>
           <select class="bt-rarity-filter bt-kind-filter" aria-label="Attack">${[['all', 'All attacks'], ['melee', 'Melee'], ['ranged', 'Ranged'], ['area', 'Area']].map(([k, name]) => `<option value="${k}" ${sort.kind === k ? 'selected' : ''}>${name}</option>`).join('')}</select>
         </div>
         <div class="bt-picks">${list || '<div class="bt-dim">No beasts match.</div>'}</div>
@@ -626,7 +630,8 @@ const BATTLE = (() => {
         if (btn.dataset.dir) sort.dir = -sort.dir; else sort.key = btn.dataset.k;
         draw();
       }));
-      sh.body.querySelector('.bt-rarity-filter:not(.bt-kind-filter)').addEventListener('change', (e) => { sort.rarity = e.target.value; draw(); });
+      sh.body.querySelector('.bt-rarity-filter:not(.bt-kind-filter):not(.bt-elem-filter)').addEventListener('change', (e) => { sort.rarity = e.target.value; draw(); });
+      sh.body.querySelector('.bt-elem-filter').addEventListener('change', (e) => { sort.elem = e.target.value; draw(); });
       sh.body.querySelector('.bt-kind-filter').addEventListener('change', (e) => { sort.kind = e.target.value; draw(); });
       sh.body.querySelectorAll('.bt-perk').forEach((btn) => btn.addEventListener('click', () => {
         const p = D.PERKS.find((x) => x.id === btn.dataset.perk);

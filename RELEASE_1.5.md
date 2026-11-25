@@ -25,6 +25,9 @@ ALSO
 - Bosses and champions in Worlds 1 to 6 are bigger and stronger.
 - More area attackers among the beasts.
 - No more black bars beside the battlefield on phones.
+- Higher prestiges need less essence, now that evolutions take longer.
+- Every beast shows its element, and the battle picker filters by element, marking what the giants are weak to.
+- New battle music for Worlds 4 to 6 and a new comet track.
 
 ## Before release (checked 24 Nov)
 
