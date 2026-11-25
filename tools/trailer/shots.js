@@ -318,7 +318,18 @@ window.TRAILER = (() => {
   };
 
   // ------------------------------------------------------------ 1.5: the giants and the comet (Sam, 24 Nov)
-  const SIX15 = ['singularity_dragon_20', 'ouroboros_20', 'quasar_phoenix_20', 'dark_matter_leviathan', 'singularity_monarch', 'spectral_jellyfish'];
+  const SIX15 = ['singularity_dragon_20', 'ouroboros_1', 'mind_leviathan_1', 'ouroboros_3', 'eclipse_seraph_4', 'architect_4'];
+  /** Keep the field full, the tanks first and towards the giant, the snipers after (they stop far back on their own). */
+  function crowd(b) {
+    if (!b || b.result) return;
+    const bosses = b.units.filter((u) => u.boss && u.state !== 'dying');
+    const bx = bosses.length ? bosses.reduce((a, u) => a + u.x, 0) / bosses.length / BattleEngine.ARENA.w : 0.5;
+    for (const i of [1, 2, 3, 4, 5, 0]) {
+      if (!b.canDeploy(i)) continue;
+      const x = Math.max(0.15, Math.min(0.85, bx + (Math.random() - 0.5) * (i <= 2 ? 0.3 : 0.45)));
+      b.deploy(i, x);
+    }
+  }
   /** Far into the game: Worlds 1 to 6 won (and World 7 for World 8), the comet reached, no banner. */
   function late15(w8) {
     const B = BATTLE.B();
@@ -345,11 +356,11 @@ window.TRAILER = (() => {
     run.cam.x += (tx - run.cam.x) * (snap ? 1 : 0.05); run.cam.y += (ty - run.cam.y) * (snap ? 1 : 0.05);
     snap = false;
   }
-  function giantShot(text, k = 1.25, specials = 2, every = 7) {
+  function giantShot(text, k = 1.25, specials = 2, every = 3) {
     specialsLeft = specials;
     snap = true;
     act = (f) => {
-      playCards(f, every);
+      if (f % every === 0) crowd(BATTLE.run && BATTLE.run.battle);
       followGiants(k);
       if (f >= 8 && f % 4 === 0) specialNear(260);
       if (f === 0) { snap = true; followGiants(k); caption(text || '', 21); }

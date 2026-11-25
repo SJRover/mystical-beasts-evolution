@@ -177,7 +177,7 @@
   const svgCache = new Map();
   /** For getBeastSVG (menus, cards, toasts): the picture inside an svg, made once. */
   function svg(id) {
-    if (!svgCache.has(id)) svgCache.set(id, `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><image href="${canvasFor(id, 192).toDataURL('image/png')}" x="0" y="0" width="100" height="100"/></svg>`);
+    if (!svgCache.has(id)) svgCache.set(id, `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="overflow:hidden"><image href="${canvasFor(id, 192).toDataURL('image/png')}" x="0" y="0" width="100" height="100"/></svg>`);
     return svgCache.get(id);
   }
 

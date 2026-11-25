@@ -815,7 +815,7 @@ class AudioEngine {
     // 1.5: on the comet, Sam's comet music instead.
     const comet = !!(window.state && window.state.currentSolarSystem === 'comet');
     if (!this.lgTracks) this.lgTracks = this.lgPlaylist.slice();
-    this.lgPlaylist = comet ? ['CometWorldMusic.mp3', 'CometWorldMusic2.mp3'] : this.lgTracks;
+    this.lgPlaylist = comet ? ['CometWorldMusic.mp3', 'CometWorldMusic2.mp3', 'CometWorldMusic3.mp3'] : this.lgTracks;
     this.lgCurrentTrackIdx = 0;
     this.playLgTrack(this.lgCurrentTrackIdx);
   }

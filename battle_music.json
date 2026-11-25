@@ -10,7 +10,9 @@
  },
  "low_gravity": {
   "casual": [
-   "LowGravityBattleLevelMusicVariant1.mp3"
+   "LowGravityBattleLevelMusicVariant1.mp3",
+   "LowGravityBattleLevelMusicVariant2.mp3",
+   "LowGravityBattleLevelMusicVariant3.mp3"
   ],
   "boss": [
    "LowGravityBattleBossLevelMusic.mp3"

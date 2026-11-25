@@ -13,6 +13,9 @@ const ELEMENTS = {
   VOID: { name: 'Void', color: '#4b0082', theme: 'void' },
   DEITY: { name: 'Deity', color: '#e6e6fa', theme: 'deity' }
 };
+// 1.5 (Sam, 25 Nov: World 7 and 8 bosses are weak to elements, but which beasts are which was hard
+// to tell): an icon for each, on Beastopedia cards, in a beast's details and in the battle picker.
+const ELEMENT_ICON = { LIGHT: '☀️', FIRE: '🔥', WATER: '💧', EARTH: '🌿', WIND: '🌪️', COSMIC: '🌌', VOID: '🕳️', DEITY: '✨' };
 
 const RARITIES = {
   COMMON: { name: 'Common', color: '#b0c4de', multiplier: 1, glow: 'none' },

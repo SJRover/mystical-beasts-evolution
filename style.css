@@ -2956,19 +2956,25 @@ body.interactive-tutorial-active:not(.stage-1) .crate-container {
 .comet-card { border-color: rgba(200,168,255,0.28); background: radial-gradient(circle at 50% 40%, rgba(200,168,255,0.08), rgba(255,255,255,0.02) 70%); }
 .comet-card .comet-shadow svg { filter: brightness(0) opacity(0.35); }
 .comet-card-tier { font: 700 8px "Outfit", sans-serif; color: #c8a8ff; margin-top: 1px; white-space: nowrap; }
-.comet-card .beastopedia-card-icon svg { transform: scale(1.2); transform-origin: 50% 75%; }
+/* (1.5: comet and limited pictures stay inside their box, as big as everyone else's: scaled up and
+   spilling out, they overlapped the cards' borders on the phone.) */
+.comet-card .beastopedia-card-icon svg, .limited-card .beastopedia-card-icon svg { width: 100%; height: 100%; overflow: hidden; }
 .comet-card .beastopedia-card-num { z-index: 3; }
 .comet-card .beastopedia-card-icon { position: relative; z-index: 1; }
 /* (Sam, 24 Nov: the rarity tag sits where it does on every other card. The number never shrinks and
    the tag gives way instead, so the two never overlap.) */
 .beastopedia-card-num { gap: 4px; }
 .beastopedia-card-num > span:first-child { flex: none; }
-.beastopedia-card-num .beastopedia-card-rarity.rarity-dark_matter, .beastopedia-card-num .beastopedia-card-rarity.rarity-cosmic, .beastopedia-card-num .beastopedia-card-rarity.rarity-limited { font-size: 7px !important; padding: 1px 3px !important; letter-spacing: -0.3px; white-space: nowrap; }
+.beastopedia-card-num .beastopedia-card-rarity.rarity-dark_matter, .beastopedia-card-num .beastopedia-card-rarity.rarity-cosmic, .beastopedia-card-num .beastopedia-card-rarity.rarity-limited { padding: 1px 2px !important; letter-spacing: -0.4px; white-space: nowrap; }
+/* (The same count pill on every section head, the Limited one too.) */
+.limited-section-head .comet-count { font-size: 11px; color: var(--color-text-dim); background: rgba(255,255,255,0.07); padding: 2px 8px; border-radius: 20px; font-family: monospace; }
 /* The shining rarity text, Cosmic and Limited (not the names). */
 .rarity-shine { -webkit-background-clip: text; background-clip: text; color: transparent !important; background-size: 250% 100%; }
 .cosmic-shine { background-image: linear-gradient(100deg, #ffffff 0%, #ffffff 34%, #c8a8ff 44%, #ffffff 50%, #7ad8ff 57%, #ffffff 66%, #ffffff 100%); animation: cosmic-sheen 2.4s linear infinite; }
 .limited-shine { background-image: linear-gradient(100deg, #1a2232 0%, #1a2232 36%, #ffffff 47%, #1a2232 58%, #1a2232 100%); animation: limited-sheen 2.4s linear infinite; text-shadow: none; }
 .limited-plain { color: #eef3f8; }
+/* 1.5: a discovered beast's element, small, in the card's top corner under its rarity. */
+.beastopedia-card .pedia-elem { position: absolute; top: 19px; right: 6px; font-size: 10px; line-height: 1; z-index: 4; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6)); pointer-events: none; }
 /* 1.5: Cosmic hatches: a black glow rimmed in violet, and stars flying out (fx.js cosmicBurst). */
 .fx-cosmic-burst { position: fixed; width: 0; height: 0; z-index: 9000; pointer-events: none; }
 .fx-cosmic-burst .cb-glow { position: absolute; width: calc(240px * var(--k, 1)); height: calc(240px * var(--k, 1)); left: calc(-120px * var(--k, 1)); top: calc(-120px * var(--k, 1)); border-radius: 50%; background: radial-gradient(circle, #000 0%, #05010d 36%, rgba(60,24,140,0.75) 54%, rgba(180,107,255,0.35) 63%, transparent 72%); animation: cb-glow 1.6s ease-out forwards; }
